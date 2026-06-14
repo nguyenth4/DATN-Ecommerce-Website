@@ -1,0 +1,35 @@
+.sidebar {
+  width: 250px;
+  background-color: var(--bg-elevated);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-header {
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+.sidebar-header h2 {
+  font-size: 18px;
+  margin: 0;
+  color: var(--primary-color);
+}
+.sidebar-nav {
+  padding: 20px 0;
+  flex: 1;
+}
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  color: var(--text-color);
+  transition: all 0.3s ease;
+}
+.sidebar-item:hover {
+  background-color: var(--secondary-color);
+  color: var(--primary-color);
+}
