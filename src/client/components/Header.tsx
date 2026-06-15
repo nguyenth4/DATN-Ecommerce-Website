@@ -1,38 +1,26 @@
 import { Link } from 'react-router-dom';
-import { ShoppingCart, User, Sun, Moon } from 'lucide-react';
-import { useTheme } from '../../shared/components/ThemeProvider';
-import './Header.css';
 
 const Header = () => {
-  const { theme, setTheme } = useTheme();
-
   return (
-    <header className="header">
-      <div className="container header-content">
-        <Link to="/" className="logo">
-          TechStore
+    <nav className="navbar">
+      <Link to="/" className="navbar-brand">Shop<span>Flow</span></Link>
+      <ul className="navbar-nav">
+        <li><Link to="/" className="active">Trang chủ</Link></li>
+        <li><Link to="/products">Sản phẩm</Link></li>
+        <li><Link to="/account">Tài khoản</Link></li>
+      </ul>
+      <div className="navbar-actions">
+        <button className="btn-icon" title="Tìm kiếm"><i className="bi bi-search"></i></button>
+        <button className="btn-icon" title="Yêu thích"><i className="bi bi-heart"></i></button>
+        <Link to="/cart" className="btn-icon pos-relative" title="Giỏ hàng">
+          <i className="bi bi-bag"></i>
+          <span className="badge-count cart-badge-count">3</span>
         </Link>
-        <nav className="nav-links">
-          <Link to="/products">Điện thoại</Link>
-          <Link to="/accessories">Phụ kiện</Link>
-          <Link to="/news">Tin tức</Link>
-        </nav>
-        <div className="header-actions">
-          <button 
-            className="theme-toggle"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          >
-            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
-          <Link to="/cart" className="icon-btn">
-            <ShoppingCart size={20} />
-          </Link>
-          <Link to="/account" className="icon-btn">
-            <User size={20} />
-          </Link>
-        </div>
+        <Link to="/admin" className="btn-admin">
+          <i className="bi bi-grid-3x3-gap"></i> Admin Panel
+        </Link>
       </div>
-    </header>
+    </nav>
   );
 };
 
