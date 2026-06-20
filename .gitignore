@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Custom ignores
+.node/
+.npm-cache/
+shopflow-ui/
+

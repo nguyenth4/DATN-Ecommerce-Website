@@ -1,29 +1,66 @@
-.topbar {
-  height: var(--header-height);
-  background-color: var(--bg-elevated);
-  border-bottom: 1px solid var(--border-color);
+.admin-topbar {
+  height: var(--header-h);
+  background: white;
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 1.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 50;
 }
-.topbar-search .search-input {
-  padding: 8px 16px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-color);
-  background-color: var(--secondary-color);
-  color: var(--text-color);
-  width: 250px;
+.topbar-title {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  letter-spacing: 1px;
 }
-.topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.admin-profile {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 500;
+.topbar-actions { display: flex; align-items: center; gap: 0.8rem; }
+.topbar-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg);
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  color: var(--dark);
+  transition: var(--transition);
+  position: relative;
 }
+.topbar-btn:hover { background: var(--border); }
+.topbar-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+}
+.topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.topbar-user:hover { background: var(--bg); }
+.topbar-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--dark);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.topbar-name { font-size: 0.85rem; font-weight: 600; }
