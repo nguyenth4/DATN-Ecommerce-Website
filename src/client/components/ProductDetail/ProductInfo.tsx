@@ -1,0 +1,240 @@
+import React from 'react';
+import { Link } from 'react-router-dom';
+
+interface ProductInfoProps {
+  product: {
+    category: string;
+    title: string;
+    subtitle: string;
+    rating: number;
+  };
+  colors: Array<{ name: string; hex: string; img: string; }>;
+  storages: string[];
+  selectedColor: string;
+  selectedStorage: string;
+  activeVariant: {
+    price: number;
+    oldPrice: number;
+    stock: number;
+    sku: string;
+  };
+  qty: number;
+  reviewsCount: number;
+  onColorChange: (colorName: string, colorImg: string) => void;
+  onStorageChange: (storage: string) => void;
+  onQtyChange: (action: 'inc' | 'dec') => void;
+}
+
+const ProductInfo: React.FC<ProductInfoProps> = ({
+  product,
+  colors,
+  storages,
+  selectedColor,
+  selectedStorage,
+  activeVariant,
+  qty,
+  reviewsCount,
+  onColorChange,
+  onStorageChange,
+  onQtyChange,
+}) => {
+  const discountPercent = Math.round(
+    ((activeVariant.oldPrice - activeVariant.price) / activeVariant.oldPrice) * 100
+  );
+
+  return (
+    <div>
+      <div className="product-detail-cat">{product.category}</div>
+      <h1 className="product-detail-title" style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{product.title}</h1>
+      <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>{product.subtitle}</p>
+
+      <div className="flex-center" style={{ marginBottom: '1.2rem', gap: '0.8rem' }}>
+        <div className="stars" style={{ color: '#ffc107', fontWeight: 'bold' }}>
+          {"★".repeat(Math.round(product.rating)) + "☆".repeat(5 - Math.round(product.rating))}
+        </div>
+        <span className="text-xs text-muted">{product.rating} ({reviewsCount} đánh giá)</span>
+        <span style={{ width: '1px', height: '14px', background: 'var(--border)' }}></span>
+        {activeVariant.stock > 0 ? (
+          <span className="text-xs text-success" style={{ fontWeight: 600 }}>
+            <i className="bi bi-check-circle-fill"></i> Còn hàng ({activeVariant.stock} sản phẩm)
+          </span>
+        ) : (
+          <span className="text-xs text-danger" style={{ fontWeight: 600 }}>
+            <i className="bi bi-x-circle-fill"></i> Hết hàng tạm thời
+          </span>
+        )}
+      </div>
+
+      {/* DYNAMIC PRICE */}
+      <div className="product-detail-price" style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--accent)', marginBottom: '1.5rem' }}>
+        {activeVariant.price.toLocaleString('vi-VN')}đ{" "}
+        <span style={{ fontSize: '1.1rem', textDecoration: 'line-through', color: 'var(--gray)', fontWeight: 500, marginLeft: '0.5rem' }}>
+          {activeVariant.oldPrice.toLocaleString('vi-VN')}đ
+        </span>
+        <span className="text-xs" style={{ background: 'var(--accent)', color: 'white', padding: '0.25rem 0.5rem', borderRadius: '4px', fontWeight: 700, verticalAlign: 'middle', marginLeft: '0.8rem', fontSize: '0.75rem' }}>
+          -{discountPercent}%
+        </span>
+      </div>
+
+      {/* DYNAMIC COLOR SELECTION */}
+      <div className="variant-section" style={{ marginBottom: '1.2rem' }}>
+        <div className="variant-label" style={{ marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 600 }}>
+          Màu sắc: <strong style={{ color: 'var(--dark)' }}>{selectedColor}</strong>
+        </div>
+        <div className="variant-options" style={{ display: 'flex', gap: '0.8rem' }}>
+          {colors.map((col, idx) => (
+            <button 
+              key={idx}
+              className={`color-btn ${selectedColor === col.name ? 'active' : ''}`} 
+              style={{ 
+                background: col.hex, 
+                width: '32px', 
+                height: '32px', 
+                borderRadius: '50%', 
+                border: selectedColor === col.name ? '2px solid var(--dark)' : '1px solid var(--border)',
+                boxShadow: selectedColor === col.name ? '0 0 0 2px white inset' : 'none',
+                cursor: 'pointer',
+                transition: 'transform 0.2s'
+              }} 
+              title={col.name}
+              onClick={() => onColorChange(col.name, col.img)}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* DYNAMIC STORAGE SELECTION */}
+      <div className="variant-section" style={{ marginBottom: '1.5rem' }}>
+        <div className="variant-label" style={{ marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 600 }}>
+          Dung lượng: <strong style={{ color: 'var(--dark)' }}>{selectedStorage}</strong>
+        </div>
+        <div className="variant-options" style={{ display: 'flex', gap: '0.8rem' }}>
+          {storages.map((size) => (
+            <button 
+              key={size}
+              className={`storage-btn ${selectedStorage === size ? 'active' : ''}`}
+              style={{
+                padding: '0.5rem 1.2rem',
+                border: selectedStorage === size ? '1.5px solid var(--dark)' : '1px solid var(--border)',
+                borderRadius: 'var(--radius)',
+                background: selectedStorage === size ? 'var(--dark)' : '#fff',
+                color: selectedStorage === size ? '#fff' : 'var(--dark)',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onClick={() => onStorageChange(size)}
+            >
+              {size}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* QUANTITY */}
+      <div className="variant-section" style={{ marginBottom: '1.5rem' }}>
+        <div className="variant-label" style={{ marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 600 }}>Số lượng</div>
+        <div className="qty-control" style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
+          <button 
+            className="qty-btn" 
+            style={{ width: '36px', height: '36px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.1rem' }}
+            onClick={() => onQtyChange('dec')}
+            disabled={activeVariant.stock === 0}
+          >
+            <i className="bi bi-dash"></i>
+          </button>
+          <input 
+            type="text" 
+            className="qty-value" 
+            value={activeVariant.stock > 0 ? qty : 0} 
+            readOnly 
+            style={{ width: '40px', height: '36px', textAlign: 'center', border: 'none', borderLeft: '1px solid var(--border)', borderRight: '1px solid var(--border)', fontWeight: 600 }} 
+          />
+          <button 
+            className="qty-btn" 
+            style={{ width: '36px', height: '36px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.1rem' }}
+            onClick={() => onQtyChange('inc')}
+            disabled={activeVariant.stock === 0}
+          >
+            <i className="bi bi-plus"></i>
+          </button>
+        </div>
+      </div>
+
+      {/* ACTIONS */}
+      <div className="product-actions" style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
+        <button 
+          className="btn btn-primary btn-add-cart" 
+          style={{ flex: 1, padding: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+          disabled={activeVariant.stock === 0}
+          onClick={() => alert(`Đã thêm ${qty} sản phẩm iPhone 16 Pro (${selectedColor} / ${selectedStorage}) vào giỏ hàng!`)}
+        >
+          <i className="bi bi-bag-plus"></i> Thêm giỏ hàng
+        </button>
+        <Link 
+          to={activeVariant.stock > 0 ? "/checkout" : "#"} 
+          className={`btn btn-accent ${activeVariant.stock === 0 ? 'disabled-link' : ''}`}
+          style={{ 
+            flex: 1, 
+            padding: '0.9rem', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            gap: '0.5rem',
+            background: activeVariant.stock === 0 ? '#cccccc' : 'var(--accent)',
+            borderColor: activeVariant.stock === 0 ? '#cccccc' : 'var(--accent)',
+            color: '#fff',
+            pointerEvents: activeVariant.stock === 0 ? 'none' : 'auto',
+            textAlign: 'center'
+          }}
+        >
+          <i className="bi bi-lightning-charge"></i> Mua ngay
+        </Link>
+        <button className="btn-icon" style={{ width: '48px', height: '48px', border: '1.5px solid var(--border)', borderRadius: 'var(--radius)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'white' }}>
+          <i className="bi bi-heart"></i>
+        </button>
+      </div>
+
+      {/* META */}
+      <div className="product-meta" style={{ borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
+        <div className="product-meta-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.4rem 0', fontSize: '0.9rem' }}>
+          <strong>Thương hiệu</strong>
+          <span>Apple</span>
+        </div>
+        <div className="product-meta-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.4rem 0', fontSize: '0.9rem' }}>
+          <strong>Mã sản phẩm (SKU)</strong>
+          <span>{activeVariant.sku}</span>
+        </div>
+        <div className="product-meta-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.4rem 0', fontSize: '0.9rem' }}>
+          <strong>Tình trạng hàng</strong>
+          <span style={{ color: activeVariant.stock > 0 ? 'var(--success)' : 'var(--accent)', fontWeight: 600 }}>
+            {activeVariant.stock > 0 ? `Còn hàng (${activeVariant.stock} chiếc)` : "Hết hàng"}
+          </span>
+        </div>
+        <div className="product-meta-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.4rem 0', fontSize: '0.9rem' }}>
+          <strong>Giao hàng</strong>
+          <span className="text-success"><i className="bi bi-truck"></i> GHN / GHTK – Giao tận nhà 1-3 ngày</span>
+        </div>
+      </div>
+
+      {/* TRUST BADGES */}
+      <div className="flex-center" style={{ gap: '1.5rem', marginTop: '1.5rem', padding: '1rem', background: 'var(--bg)', borderRadius: 'var(--radius)', justifyContent: 'space-between' }}>
+        <div style={{ textAlign: 'center', flex: 1 }} className="text-xs text-muted">
+          <i className="bi bi-shield-check" style={{ fontSize: '1.4rem', color: 'var(--success)', display: 'block', marginBottom: '0.3rem' }}></i>BH 12 tháng
+        </div>
+        <div style={{ textAlign: 'center', flex: 1 }} className="text-xs text-muted">
+          <i className="bi bi-arrow-return-left" style={{ fontSize: '1.4rem', color: 'var(--info)', display: 'block', marginBottom: '0.3rem' }}></i>Đổi trả 30 ngày
+        </div>
+        <div style={{ textAlign: 'center', flex: 1 }} className="text-xs text-muted">
+          <i className="bi bi-truck" style={{ fontSize: '1.4rem', color: 'var(--accent)', display: 'block', marginBottom: '0.3rem' }}></i>Giao miễn phí
+        </div>
+        <div style={{ textAlign: 'center', flex: 1 }} className="text-xs text-muted">
+          <i className="bi bi-credit-card" style={{ fontSize: '1.4rem', color: 'var(--dark)', display: 'block', marginBottom: '0.3rem' }}></i>Thanh toán an toàn
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ProductInfo;
