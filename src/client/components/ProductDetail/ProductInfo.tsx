@@ -168,7 +168,7 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
           className="btn btn-primary btn-add-cart" 
           style={{ flex: 1, padding: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
           disabled={activeVariant.stock === 0}
-          onClick={() => alert(`Đã thêm ${qty} sản phẩm iPhone 16 Pro (${selectedColor} / ${selectedStorage}) vào giỏ hàng!`)}
+          onClick={() => alert(`Đã thêm ${qty} sản phẩm ${product.title} (${selectedColor} / ${selectedStorage}) vào giỏ hàng!`)}
         >
           <i className="bi bi-bag-plus"></i> Thêm giỏ hàng
         </button>
