@@ -14,7 +14,7 @@ export const productService = {
   async getProducts(params?: ProductQueryParams) {
     try {
       const { products, count, offset, limit } = await medusa.store.product.list({
-        fields: '*variants,*variants.prices,*categories', // fetch relational data
+        fields: '*variants,*variants.prices,*categories,*metadata', // fetch relational data
         ...params,
       });
       return { products, count, offset, limit };
@@ -41,7 +41,7 @@ export const productService = {
   async getProduct(id: string) {
     try {
       const { product } = await medusa.store.product.retrieve(id, {
-        fields: '*variants,*variants.prices,*categories,*options',
+        fields: '*variants,*variants.prices,*categories,*options,*metadata',
       });
       return product;
     } catch (error) {

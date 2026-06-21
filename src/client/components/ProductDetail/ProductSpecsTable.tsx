@@ -16,7 +16,7 @@ const ProductSpecsTable: React.FC<ProductSpecsTableProps> = ({ specifications })
                 <strong>{key}</strong>
               </td>
               <td style={{ padding: '0.8rem 0', fontSize: '0.85rem', color: '#111' }}>
-                {val}
+                {typeof val === 'object' ? JSON.stringify(val) : String(val)}
               </td>
             </tr>
           ))}

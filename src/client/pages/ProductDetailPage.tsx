@@ -222,9 +222,35 @@ const ProductDetailPage = () => {
     alert("Cảm ơn bạn đã gửi đánh giá sản phẩm! 🎉");
   };
 
-  // Phân tích thông tin bổ sung và video của sản phẩm
-  const { videoUrl, specifications } = useMemo(() => {
-    return getSpecsAndVideo(product?.handle, product?.title);
+  // Phân tích thông tin bổ sung và video của sản phẩm từ metadata Medusa
+  const { videoUrl, specifications, trustInfo } = useMemo(() => {
+    const meta = product?.metadata || {};
+    
+    // Ưu tiên lấy từ metadata nếu có, nếu không fallback về logic cũ
+    let finalVideo = meta.video_url || meta.video;
+    let finalSpecs = meta.specifications || meta.specs;
+    const finalTrust = meta.trust_info || meta.trust;
+
+    // Parse specifications nếu nó là chuỗi JSON
+    if (typeof finalSpecs === 'string') {
+      try {
+        finalSpecs = JSON.parse(finalSpecs);
+      } catch (e) {
+        console.error("Error parsing specifications JSON", e);
+      }
+    }
+
+    if (!finalVideo || !finalSpecs) {
+      const fallback = getSpecsAndVideo(product?.handle, product?.title);
+      finalVideo = finalVideo || fallback.videoUrl;
+      finalSpecs = finalSpecs || fallback.specifications;
+    }
+
+    return { 
+      videoUrl: finalVideo as string, 
+      specifications: finalSpecs as Record<string, string>,
+      trustInfo: finalTrust
+    };
   }, [product]);
 
   if (isLoading) {
@@ -359,7 +385,14 @@ const ProductDetailPage = () => {
               <div id="panelDesc" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '3rem' }}>
                 {/* Mô tả bên trái */}
                 <div style={{ lineHeight: 1.8, color: '#333' }}>
-                  <p style={{ marginBottom: '1.2rem', fontSize: '1rem' }}>{product.description || 'Chưa có mô tả chi tiết cho sản phẩm này.'}</p>
+                  {product.metadata?.detailed_description ? (
+                    <div 
+                      dangerouslySetInnerHTML={{ __html: product.metadata.detailed_description }} 
+                      style={{ marginBottom: '1.2rem', fontSize: '1rem' }}
+                    />
+                  ) : (
+                    <p style={{ marginBottom: '1.2rem', fontSize: '1rem' }}>{product.description || 'Chưa có mô tả chi tiết cho sản phẩm này.'}</p>
+                  )}
                   
                   <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: '1.5rem 0 0.8rem' }}>Đặc điểm nổi bật</h3>
                   <ul style={{ paddingLeft: '1.2rem', marginBottom: '2rem' }}>
@@ -396,24 +429,45 @@ const ProductDetailPage = () => {
                       <i className="bi bi-shield-fill-check" style={{ fontSize: '1.2rem', color: 'var(--success)' }}></i> CAM KẾT CHẤT LƯỢNG & DỊCH VỤ
                     </h4>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.2rem' }}>
-                      <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'start' }}>
-                        <div style={{ background: '#e8f5e9', color: '#2e7d32', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <i className="bi bi-award" style={{ fontSize: '1.2rem' }}></i>
-                        </div>
-                        <div>
-                          <strong style={{ display: 'block', fontSize: '0.85rem' }}>100% Hàng Chính Hãng</strong>
-                          <span style={{ fontSize: '0.75rem', color: '#666', lineHeight: 1.4, display: 'block' }}>Sản phẩm mới nguyên seal, chính ngạch, cam kết hoàn tiền nếu phát hiện hàng nhái.</span>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'start' }}>
-                        <div style={{ background: '#e3f2fd', color: '#1565c0', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <i className="bi bi-arrow-repeat" style={{ fontSize: '1.2rem' }}></i>
-                        </div>
-                        <div>
-                          <strong style={{ display: 'block', fontSize: '0.85rem' }}>1 Đổi 1 Trong 30 Ngày</strong>
-                          <span style={{ fontSize: '0.75rem', color: '#666', lineHeight: 1.4, display: 'block' }}>Hỗ trợ 1 đổi 1 nhanh chóng nếu có lỗi từ nhà sản xuất trong tháng đầu.</span>
-                        </div>
-                      </div>
+                      {trustInfo && Array.isArray(trustInfo) ? (
+                        trustInfo.map((item: any, idx: number) => (
+                          <div key={idx} style={{ display: 'flex', gap: '0.8rem', alignItems: 'start' }}>
+                            <div style={{ 
+                              background: item.bg || '#e8f5e9', 
+                              color: item.color || '#2e7d32', 
+                              width: '36px', height: '36px', borderRadius: '50%', 
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 
+                            }}>
+                              <i className={`bi ${item.icon || 'bi-award'}`} style={{ fontSize: '1.2rem' }}></i>
+                            </div>
+                            <div>
+                              <strong style={{ display: 'block', fontSize: '0.85rem' }}>{item.title}</strong>
+                              <span style={{ fontSize: '0.75rem', color: '#666', lineHeight: 1.4, display: 'block' }}>{item.description}</span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <>
+                          <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'start' }}>
+                            <div style={{ background: '#e8f5e9', color: '#2e7d32', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <i className="bi bi-award" style={{ fontSize: '1.2rem' }}></i>
+                            </div>
+                            <div>
+                              <strong style={{ display: 'block', fontSize: '0.85rem' }}>100% Hàng Chính Hãng</strong>
+                              <span style={{ fontSize: '0.75rem', color: '#666', lineHeight: 1.4, display: 'block' }}>Sản phẩm mới nguyên seal, chính ngạch, cam kết hoàn tiền nếu phát hiện hàng nhái.</span>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'start' }}>
+                            <div style={{ background: '#e3f2fd', color: '#1565c0', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <i className="bi bi-arrow-repeat" style={{ fontSize: '1.2rem' }}></i>
+                            </div>
+                            <div>
+                              <strong style={{ display: 'block', fontSize: '0.85rem' }}>1 Đổi 1 Trong 30 Ngày</strong>
+                              <span style={{ fontSize: '0.75rem', color: '#666', lineHeight: 1.4, display: 'block' }}>Hỗ trợ 1 đổi 1 nhanh chóng nếu có lỗi từ nhà sản xuất trong tháng đầu.</span>
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
 
