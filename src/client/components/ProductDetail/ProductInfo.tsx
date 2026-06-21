@@ -7,6 +7,7 @@ interface ProductInfoProps {
     title: string;
     subtitle: string;
     rating: number;
+    rawProduct?: any; // Dữ liệu sản phẩm thô để truy vấn giá option
   };
   colors: Array<{ name: string; hex: string; img: string; }>;
   storages: string[];
@@ -42,6 +43,47 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
     ((activeVariant.oldPrice - activeVariant.price) / activeVariant.oldPrice) * 100
   );
 
+  // Lấy giá cho từng tuỳ chọn dung lượng
+  const getStoragePrice = (size: string) => {
+    const raw = product.rawProduct;
+    if (!raw || !raw.variants) return 0;
+    
+    // Tìm tuỳ chọn dung lượng
+    const storageOptionId = raw.options?.find((o: any) => o.title === 'Dung lượng' || o.title === 'Storage')?.id;
+    // Lấy variant đầu tiên khớp với dung lượng này
+    const variant = raw.variants.find((v: any) =>
+      v.options?.some((opt: any) => opt.option_id === storageOptionId && opt.value === size)
+    );
+    return variant?.prices?.find((p: any) => p.currency_code === 'vnd')?.amount
+        || variant?.prices?.[0]?.amount
+        || 0;
+  };
+
+  // Lấy giá cho từng tuỳ chọn màu sắc (dựa vào dung lượng đang được chọn)
+  const getColorPrice = (colorName: string) => {
+    const raw = product.rawProduct;
+    if (!raw || !raw.variants) return 0;
+
+    const colorOptionId = raw.options?.find((o: any) => o.title === 'Màu sắc' || o.title === 'Color')?.id;
+    const storageOptionId = raw.options?.find((o: any) => o.title === 'Dung lượng' || o.title === 'Storage')?.id;
+
+    // Tìm variant khớp với cả màu sắc này và dung lượng đang chọn
+    const variant = raw.variants.find((v: any) => {
+      const matchColor = v.options?.some((opt: any) => opt.option_id === colorOptionId && opt.value === colorName);
+      let matchStorage = true;
+      if (storageOptionId && selectedStorage) {
+        matchStorage = v.options?.some((opt: any) => opt.option_id === storageOptionId && opt.value === selectedStorage);
+      }
+      return matchColor && matchStorage;
+    }) || raw.variants.find((v: any) =>
+      v.options?.some((opt: any) => opt.option_id === colorOptionId && opt.value === colorName)
+    );
+
+    return variant?.prices?.find((p: any) => p.currency_code === 'vnd')?.amount
+        || variant?.prices?.[0]?.amount
+        || 0;
+  };
+
   return (
     <div>
       <div className="product-detail-cat">{product.category}</div>
@@ -76,61 +118,99 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
         </span>
       </div>
 
-      {/* DYNAMIC COLOR SELECTION */}
-      <div className="variant-section" style={{ marginBottom: '1.2rem' }}>
-        <div className="variant-label" style={{ marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 600 }}>
-          Màu sắc: <strong style={{ color: 'var(--dark)' }}>{selectedColor}</strong>
+      {/* DYNAMIC STORAGE SELECTION (CellphoneS Style) */}
+      {storages.length > 0 && (
+        <div className="variant-section" style={{ marginBottom: '1.5rem' }}>
+          <div className="variant-label" style={{ marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 600 }}>
+            Chọn dung lượng: <strong style={{ color: 'var(--dark)' }}>{selectedStorage}</strong>
+          </div>
+          <div className="variant-options" style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+            {storages.map((size) => {
+              const price = getStoragePrice(size);
+              return (
+                <button 
+                  key={size}
+                  className={`storage-btn ${selectedStorage === size ? 'active' : ''}`}
+                  style={{
+                    flex: '1 1 calc(25% - 0.6rem)',
+                    minWidth: '85px',
+                    padding: '0.5rem 0.4rem',
+                    border: selectedStorage === size ? '2px solid #d70018' : '1px solid var(--border)',
+                    borderRadius: '8px',
+                    background: selectedStorage === size ? '#fef2f2' : '#fff',
+                    color: 'var(--dark)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '2px'
+                  }}
+                  onClick={() => onStorageChange(size)}
+                >
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>{size}</span>
+                  {price > 0 && (
+                    <span style={{ fontSize: '0.7rem', color: selectedStorage === size ? '#d70018' : '#555', fontWeight: 500 }}>
+                      {price.toLocaleString('vi-VN')}đ
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
-        <div className="variant-options" style={{ display: 'flex', gap: '0.8rem' }}>
-          {colors.map((col, idx) => (
-            <button 
-              key={idx}
-              className={`color-btn ${selectedColor === col.name ? 'active' : ''}`} 
-              style={{ 
-                background: col.hex, 
-                width: '32px', 
-                height: '32px', 
-                borderRadius: '50%', 
-                border: selectedColor === col.name ? '2px solid var(--dark)' : '1px solid var(--border)',
-                boxShadow: selectedColor === col.name ? '0 0 0 2px white inset' : 'none',
-                cursor: 'pointer',
-                transition: 'transform 0.2s'
-              }} 
-              title={col.name}
-              onClick={() => onColorChange(col.name, col.img)}
-            />
-          ))}
-        </div>
-      </div>
+      )}
 
-      {/* DYNAMIC STORAGE SELECTION */}
-      <div className="variant-section" style={{ marginBottom: '1.5rem' }}>
-        <div className="variant-label" style={{ marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 600 }}>
-          Dung lượng: <strong style={{ color: 'var(--dark)' }}>{selectedStorage}</strong>
+      {/* DYNAMIC COLOR SELECTION (CellphoneS Style with Image Thumbnails) */}
+      {colors.length > 0 && (
+        <div className="variant-section" style={{ marginBottom: '1.2rem' }}>
+          <div className="variant-label" style={{ marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 600 }}>
+            Chọn màu sắc: <strong style={{ color: 'var(--dark)' }}>{selectedColor}</strong>
+          </div>
+          <div className="variant-options" style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+            {colors.map((col, idx) => {
+              const price = getColorPrice(col.name);
+              return (
+                <button 
+                  key={idx}
+                  className={`color-btn-card ${selectedColor === col.name ? 'active' : ''}`} 
+                  style={{ 
+                    flex: '1 1 calc(33.333% - 0.6rem)',
+                    minWidth: '120px',
+                    padding: '0.5rem 0.6rem',
+                    border: selectedColor === col.name ? '2px solid #d70018' : '1px solid var(--border)',
+                    borderRadius: '8px',
+                    background: selectedColor === col.name ? '#fef2f2' : '#fff',
+                    color: 'var(--dark)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    textAlign: 'left'
+                  }} 
+                  title={col.name}
+                  onClick={() => onColorChange(col.name, col.img)}
+                >
+                  <img 
+                    src={col.img} 
+                    alt={col.name} 
+                    style={{ width: '32px', height: '32px', objectFit: 'contain' }}
+                  />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, lineHeight: '1.2' }}>{col.name}</span>
+                    {price > 0 && (
+                      <span style={{ fontSize: '0.68rem', color: selectedColor === col.name ? '#d70018' : '#555', fontWeight: 500 }}>
+                        {price.toLocaleString('vi-VN')}đ
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
-        <div className="variant-options" style={{ display: 'flex', gap: '0.8rem' }}>
-          {storages.map((size) => (
-            <button 
-              key={size}
-              className={`storage-btn ${selectedStorage === size ? 'active' : ''}`}
-              style={{
-                padding: '0.5rem 1.2rem',
-                border: selectedStorage === size ? '1.5px solid var(--dark)' : '1px solid var(--border)',
-                borderRadius: 'var(--radius)',
-                background: selectedStorage === size ? 'var(--dark)' : '#fff',
-                color: selectedStorage === size ? '#fff' : 'var(--dark)',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-              onClick={() => onStorageChange(size)}
-            >
-              {size}
-            </button>
-          ))}
-        </div>
-      </div>
+      )}
 
       {/* QUANTITY */}
       <div className="variant-section" style={{ marginBottom: '1.5rem' }}>

@@ -273,6 +273,7 @@ const ProductDetailPage = () => {
                 title: product.title,
                 subtitle: product.subtitle || '',
                 rating: 4.8, // Đánh giá mặc định
+                rawProduct: product, // Truyền raw product để tính toán giá/ảnh của option
               }}
               colors={colors}
               storages={storages}
