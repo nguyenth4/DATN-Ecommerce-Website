@@ -7,16 +7,30 @@ import ProductSpecsTable from '../components/ProductDetail/ProductSpecsTable';
 import ProductReviewsTab from '../components/ProductDetail/ProductReviewsTab';
 
 // Color mapper to display colors dynamically on the client side
-const getColorHexAndImg = (colorName: string, fallbackImg: string) => {
-  const map: Record<string, { hex: string; img: string }> = {
-    "Titan Sa Mạc": { hex: "#c2b4a4", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-titan-sa-mac.png" },
-    "Titan Đen": { hex: "#3b3c3e", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-titan-den.png" },
-    "Titan Trắng": { hex: "#f2f1ed", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-titan-trang.png" },
-    "Titan Tự Nhiên": { hex: "#a4a09c", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-titan-tu-nhien.png" },
-    "Titan Xám": { hex: "#7a7d80", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/s/a/samsung-s25-ultra-gray.png" },
-    "Xanh Titan": { hex: "#2e3b4e", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/s/a/samsung-s25-ultra-blue.png" },
-  };
-  return map[colorName] || { hex: "#cccccc", img: fallbackImg };
+const getColorHexAndImg = (colorName: string, fallbackImg: string, handle: string = '') => {
+  const h = handle.toLowerCase();
+  
+  if (h.includes('iphone-16')) {
+    const map: Record<string, { hex: string; img: string }> = {
+      "Titan Sa Mạc": { hex: "#c2b4a4", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-titan-sa-mac.png" },
+      "Titan Đen": { hex: "#3b3c3e", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-titan-den.png" },
+      "Titan Trắng": { hex: "#f2f1ed", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-titan-trang.png" },
+      "Titan Tự Nhiên": { hex: "#a4a09c", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-titan-tu-nhien.png" },
+    };
+    return map[colorName] || { hex: "#cccccc", img: fallbackImg };
+  }
+
+  if (h.includes('s25') || h.includes('samsung')) {
+    const map: Record<string, { hex: string; img: string }> = {
+      "Titan Xám": { hex: "#7a7d80", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/s/a/samsung-s25-ultra-gray.png" },
+      "Titan Đen": { hex: "#252627", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/s/a/samsung-s25-ultra-black.png" },
+      "Titan Xanh": { hex: "#2e3b4e", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/s/a/samsung-s25-ultra-blue.png" },
+      "Titan Bạc": { hex: "#d1d5db", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/s/a/samsung-s25-ultra-silver.png" },
+    };
+    return map[colorName] || { hex: "#cccccc", img: fallbackImg };
+  }
+
+  return { hex: "#cccccc", img: fallbackImg };
 };
 
 // Fallback technical specifications and YouTube review videos based on handle
@@ -78,7 +92,7 @@ const ProductDetailPage = () => {
     if (!product || !product.options) return [];
     const colorOpt = product.options.find((o: any) => o.title === 'Màu sắc' || o.title === 'Color');
     return colorOpt?.values?.map((v: any) => {
-      const info = getColorHexAndImg(v.value, product.thumbnail || '');
+      const info = getColorHexAndImg(v.value, product.thumbnail || '', product.handle);
       return { name: v.value, hex: info.hex, img: info.img };
     }) || [];
   }, [product]);
@@ -261,7 +275,13 @@ const ProductDetailPage = () => {
             <ProductGallery
               activeImage={activeImage || product.thumbnail || ''}
               images={colors}
-              onImageClick={(img) => setActiveImage(img)}
+              onImageClick={(img) => {
+                setActiveImage(img);
+                const matchedColor = colors.find((c) => c.img === img);
+                if (matchedColor) {
+                  setSelectedColor(matchedColor.name);
+                }
+              }}
               productTitle={product.title}
               videoUrl={videoUrl}
             />
