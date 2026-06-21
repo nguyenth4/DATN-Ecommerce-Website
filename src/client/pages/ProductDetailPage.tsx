@@ -6,74 +6,20 @@ import ProductInfo from '../components/ProductDetail/ProductInfo';
 import ProductSpecsTable from '../components/ProductDetail/ProductSpecsTable';
 import ProductReviewsTab from '../components/ProductDetail/ProductReviewsTab';
 
-// Color mapper to display colors dynamically on the client side
-const getColorHexAndImg = (colorName: string, fallbackImg: string, handle: string = '') => {
-  const h = handle.toLowerCase();
-  
-  if (h.includes('iphone-16')) {
-    const map: Record<string, { hex: string; img: string }> = {
-      "Titan Sa Mạc": { hex: "#c2b4a4", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-titan-sa-mac.png" },
-      "Titan Đen": { hex: "#3b3c3e", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-titan-den.png" },
-      "Titan Trắng": { hex: "#f2f1ed", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-titan-trang.png" },
-      "Titan Tự Nhiên": { hex: "#a4a09c", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-titan-tu-nhien.png" },
-    };
-    return map[colorName] || { hex: "#cccccc", img: fallbackImg };
-  }
-
-  if (h.includes('s25') || h.includes('samsung')) {
-    const map: Record<string, { hex: string; img: string }> = {
-      "Titan Xám": { hex: "#7a7d80", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/s/a/samsung-s25-ultra-gray.png" },
-      "Titan Đen": { hex: "#252627", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/s/a/samsung-s25-ultra-black.png" },
-      "Titan Xanh": { hex: "#2e3b4e", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/s/a/samsung-s25-ultra-blue.png" },
-      "Titan Bạc": { hex: "#d1d5db", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/s/a/samsung-s25-ultra-silver.png" },
-    };
-    return map[colorName] || { hex: "#cccccc", img: fallbackImg };
-  }
-
-  return { hex: "#cccccc", img: fallbackImg };
-};
-
-// Fallback technical specifications and YouTube review videos based on handle
-const getSpecsAndVideo = (handle: string = '', title: string = '') => {
-  const lowercaseHandle = handle.toLowerCase();
-  if (lowercaseHandle.includes('iphone-16')) {
-    return {
-      videoUrl: 'https://www.youtube.com/watch?v=eDqfg_W9VDo',
-      specifications: {
-        "Màn hình": "6.3 inches, Super Retina XDR OLED, 120Hz",
-        "Hệ điều hành": "iOS 18",
-        "Camera sau": "48 MP + 48 MP + 12 MP",
-        "Camera trước": "12 MP",
-        "Chipset": "Apple A18 Pro",
-        "RAM": "8 GB",
-        "Dung lượng pin": "3582 mAh, sạc nhanh 25W"
-      }
-    };
-  }
-  if (lowercaseHandle.includes('samsung-galaxy-s25') || lowercaseHandle.includes('s25')) {
-    return {
-      videoUrl: 'https://www.youtube.com/watch?v=FcoW0gK4H-s',
-      specifications: {
-        "Màn hình": "6.8 inches, Dynamic AMOLED 2X, 120Hz",
-        "Hệ điều hành": "Android 15, One UI 7",
-        "Camera sau": "200 MP + 50 MP + 12 MP + 10 MP",
-        "Camera trước": "12 MP",
-        "Chipset": "Snapdragon 8 Elite",
-        "RAM": "12 GB",
-        "Dung lượng pin": "5000 mAh, sạc nhanh 45W"
-      }
-    };
-  }
-  return {
-    videoUrl: '',
-    specifications: {
-      "Màn hình": "Màn hình tràn viền độ phân giải cao",
-      "Hệ điều hành": "Hệ điều hành mới nhất",
-      "Camera": "Độ phân giải sắc nét",
-      "Chipset": "Hiệu năng mạnh mẽ",
-      "Dung lượng pin": "Pin dung lượng lớn, sạc nhanh"
-    }
+// Dữ liệu màu sắc dự phòng cơ bản nếu không có ánh xạ hình ảnh riêng cho từng biến thể
+const getColorHex = (colorName: string) => {
+  const map: Record<string, string> = {
+    "Đen": "#000000",
+    "Trắng": "#ffffff",
+    "Xám": "#808080",
+    "Bạc": "#c0c0c0",
+    "Vàng": "#ffd700",
+    "Hồng": "#ffc0cb",
+    "Xanh dương": "#0000ff",
+    "Xanh lá": "#008000",
+    "Titan": "#8e8e93"
   };
+  return map[colorName] || "#cccccc";
 };
 
 const ProductDetailPage = () => {
@@ -92,10 +38,23 @@ const ProductDetailPage = () => {
     if (!product || !product.options) return [];
     const colorOpt = product.options.find((o: any) => o.title === 'Màu sắc' || o.title === 'Color');
     return colorOpt?.values?.map((v: any) => {
-      const info = getColorHexAndImg(v.value, product.thumbnail || '', product.handle);
-      return { name: v.value, hex: info.hex, img: info.img };
+      // Lấy hex từ metadata của value nếu có (Medusa 2.0 extension), hoặc fallback cơ bản
+      const hex = v.metadata?.hex || getColorHex(v.value);
+      // Lấy hình ảnh từ metadata của value (nếu bạn gán ảnh riêng cho từng màu trong Medusa)
+      const img = v.metadata?.image || product.thumbnail || '';
+      return { name: v.value, hex, img };
     }) || [];
   }, [product]);
+
+  // Bộ sưu tập tất cả ảnh từ phần Media của Medusa
+  const allImages = useMemo(() => {
+    if (!product) return [];
+    const imagesFromMedia = product.images?.map((img: any) => img.url) || [];
+    const imagesFromVariants = colors.map(c => c.img);
+    
+    // Gom tất cả lại và loại bỏ trùng lặp
+    return Array.from(new Set([product.thumbnail, ...imagesFromMedia, ...imagesFromVariants])).filter(Boolean) as string[];
+  }, [product, colors]);
 
   const storages = useMemo(() => {
     if (!product || !product.options) return [];
@@ -226,24 +185,18 @@ const ProductDetailPage = () => {
   const { videoUrl, specifications, trustInfo } = useMemo(() => {
     const meta = product?.metadata || {};
     
-    // Ưu tiên lấy từ metadata nếu có, nếu không fallback về logic cũ
-    let finalVideo = meta.video_url || meta.video;
-    let finalSpecs = meta.specifications || meta.specs;
-    const finalTrust = meta.trust_info || meta.trust;
+    // Chỉ lấy từ metadata Medusa
+    let finalVideo = meta.video_url || meta.video || '';
+    let finalSpecs = meta.specifications || meta.specs || null;
+    const finalTrust = meta.trust_info || meta.trust || null;
 
     // Parse specifications nếu nó là chuỗi JSON
-    if (typeof finalSpecs === 'string') {
+    if (typeof finalSpecs === 'string' && finalSpecs.trim().startsWith('{')) {
       try {
         finalSpecs = JSON.parse(finalSpecs);
       } catch (e) {
         console.error("Error parsing specifications JSON", e);
       }
-    }
-
-    if (!finalVideo || !finalSpecs) {
-      const fallback = getSpecsAndVideo(product?.handle, product?.title);
-      finalVideo = finalVideo || fallback.videoUrl;
-      finalSpecs = finalSpecs || fallback.specifications;
     }
 
     return { 
@@ -300,9 +253,10 @@ const ProductDetailPage = () => {
             {/* Gallery Component */}
             <ProductGallery
               activeImage={activeImage || product.thumbnail || ''}
-              images={colors}
+              images={allImages}
               onImageClick={(img) => {
                 setActiveImage(img);
+                // Nếu click vào ảnh mẫu của một màu sắc, tự động chọn màu đó luôn
                 const matchedColor = colors.find((c) => c.img === img);
                 if (matchedColor) {
                   setSelectedColor(matchedColor.name);
@@ -474,7 +428,13 @@ const ProductDetailPage = () => {
                 </div>
 
                 {/* Thông số kỹ thuật Component bên phải */}
-                <ProductSpecsTable specifications={specifications} />
+                {specifications ? (
+                  <ProductSpecsTable specifications={specifications} />
+                ) : (
+                  <div style={{ background: '#f8f9fa', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border)', textAlign: 'center' }}>
+                    <p className="text-muted" style={{ fontSize: '0.85rem' }}>Chưa có thông số kỹ thuật chi tiết.</p>
+                  </div>
+                )}
               </div>
             )}
 

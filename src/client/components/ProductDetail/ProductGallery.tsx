@@ -2,7 +2,7 @@ import React from 'react';
 
 interface ProductGalleryProps {
   activeImage: string;
-  images: Array<{ name: string; hex: string; img: string; }>;
+  images: string[];
   onImageClick: (img: string) => void;
   productTitle: string;
   videoUrl?: string;
@@ -110,14 +110,14 @@ const ProductGallery: React.FC<ProductGalleryProps> = ({
         )}
 
         {/* Regular Images */}
-        {images.map((col, idx) => (
+        {images.map((img, idx) => (
           <div 
             key={idx} 
-            className={`thumb ${activeImage === col.img ? 'active' : ''}`} 
+            className={`thumb ${activeImage === img ? 'active' : ''}`} 
             style={{
               width: '70px',
               height: '70px',
-              border: activeImage === col.img ? '2px solid var(--dark)' : '1px solid var(--border)',
+              border: activeImage === img ? '2px solid var(--dark)' : '1px solid var(--border)',
               borderRadius: '8px',
               cursor: 'pointer',
               overflow: 'hidden',
@@ -126,9 +126,9 @@ const ProductGallery: React.FC<ProductGalleryProps> = ({
               alignItems: 'center',
               justifyContent: 'center'
             }}
-            onClick={() => onImageClick(col.img)}
+            onClick={() => onImageClick(img)}
           >
-            <img src={col.img} alt="" style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} />
+            <img src={img} alt="" style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} />
           </div>
         ))}
       </div>
