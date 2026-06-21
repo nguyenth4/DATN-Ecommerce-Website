@@ -200,7 +200,7 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
       <div className="product-meta" style={{ borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
         <div className="product-meta-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.4rem 0', fontSize: '0.9rem' }}>
           <strong>Thương hiệu</strong>
-          <span>Apple</span>
+          <span>{product.title.toLowerCase().includes('samsung') ? 'Samsung' : product.title.toLowerCase().includes('iphone') ? 'Apple' : 'Chính hãng'}</span>
         </div>
         <div className="product-meta-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.4rem 0', fontSize: '0.9rem' }}>
           <strong>Mã sản phẩm (SKU)</strong>
