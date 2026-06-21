@@ -12,8 +12,9 @@
     "lint": "turbo lint",
     "test": "turbo test",
     "backend:seed": "turbo seed --filter=@dtc/backend",
-    "backend:dev": "turbo dev --filter=@dtc/backend",
-    "storefront:dev": "turbo dev --filter=@dtc/storefront"
+    "backend:dev": "cd apps/backend && npm run dev",
+    "storefront:dev": "turbo dev --filter=@dtc/storefront",
+    "seed-phones": "medusa exec ./apps/backend/src/scripts/seed-phones.ts"
   },
   "pnpm": {
     "overrides": {

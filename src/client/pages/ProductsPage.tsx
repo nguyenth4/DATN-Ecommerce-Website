@@ -1,6 +1,17 @@
 import { Link } from 'react-router-dom';
+import { useProductController } from '../controllers/useProductController';
 
 const ProductsPage = () => {
+  const { products, loading } = useProductController();
+
+  if (loading) {
+    return (
+      <div className="container" style={{ padding: '100px 0', textAlign: 'center' }}>
+        <h2>Đang tải sản phẩm...</h2>
+      </div>
+    );
+  }
+
   return (
     <>
       {/* PAGE HEADER */}
@@ -103,59 +114,25 @@ const ProductsPage = () => {
               </div>
 
               <div className="products-grid">
-                {/* Product 1 */}
-                <Link to="/products/1" className="product-card">
-                  <div className="product-card-img">
-                    <img src="https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=600&q=80" alt="" />
-                    <span className="product-badge badge-new">Mới</span>
-                    <button className="product-card-btn-add btn-add-cart" onClick={(e) => e.preventDefault()}><i className="bi bi-plus"></i></button>
-                  </div>
-                  <div className="product-card-body">
-                    <div className="product-category">Điện thoại</div>
-                    <div className="product-name">iPhone 16 Pro 128GB</div>
-                    <div className="product-price-row"><span className="product-price">26.990.000đ</span></div>
-                  </div>
-                </Link>
-                {/* Product 2 */}
-                <Link to="/products/2" className="product-card">
-                  <div className="product-card-img">
-                    <img src="https://images.unsplash.com/photo-1587033411391-5d9e51cce126?w=600&q=80" alt="" />
-                    <span className="product-badge badge-sale">-20%</span>
-                    <button className="product-card-btn-add btn-add-cart" onClick={(e) => e.preventDefault()}><i className="bi bi-plus"></i></button>
-                  </div>
-                  <div className="product-card-body">
-                    <div className="product-category">Điện thoại</div>
-                    <div className="product-name">Samsung Galaxy S25 Ultra</div>
-                    <div className="product-price-row">
-                      <span className="product-price">23.990.000đ</span>
-                      <span className="product-price-old">29.990.000đ</span>
-                    </div>
-                  </div>
-                </Link>
-                {/* Product 3 */}
-                <Link to="/products/3" className="product-card">
-                  <div className="product-card-img">
-                    <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&q=80" alt="" />
-                    <button className="product-card-btn-add btn-add-cart" onClick={(e) => e.preventDefault()}><i className="bi bi-plus"></i></button>
-                  </div>
-                  <div className="product-card-body">
-                    <div className="product-category">Tai nghe</div>
-                    <div className="product-name">Sony WH-1000XM5</div>
-                    <div className="product-price-row"><span className="product-price">8.490.000đ</span></div>
-                  </div>
-                </Link>
-                {/* Product 4 */}
-                <Link to="/products/4" className="product-card">
-                  <div className="product-card-img">
-                    <img src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80" alt="" />
-                    <button className="product-card-btn-add btn-add-cart" onClick={(e) => e.preventDefault()}><i className="bi bi-plus"></i></button>
-                  </div>
-                  <div className="product-card-body">
-                    <div className="product-category">Smartwatch</div>
-                    <div className="product-name">Apple Watch Ultra 2</div>
-                    <div className="product-price-row"><span className="product-price">19.990.000đ</span></div>
-                  </div>
-                </Link>
+                {products.length === 0 ? (
+                  <p>Không có sản phẩm nào.</p>
+                ) : (
+                  products.map((product) => (
+                    <Link to={`/products/${product.id}`} className="product-card" key={product.id}>
+                      <div className="product-card-img">
+                        <img src={product.image || "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=600&q=80"} alt={product.name} />
+                        <button className="product-card-btn-add btn-add-cart" onClick={(e) => { e.preventDefault(); /* TODO: Add to cart */ }}><i className="bi bi-plus"></i></button>
+                      </div>
+                      <div className="product-card-body">
+                        <div className="product-category">{product.category || 'Điện thoại'}</div>
+                        <div className="product-name">{product.name}</div>
+                        <div className="product-price-row">
+                          <span className="product-price">{product.price.toLocaleString()}đ</span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))
+                )}
               </div>
 
               {/* PAGINATION */}

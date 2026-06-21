@@ -1,40 +1,71 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { mockProduct, mockRelatedProducts } from './mockProductData';
 import ProductGallery from '../components/ProductDetail/ProductGallery';
 import ProductInfo from '../components/ProductDetail/ProductInfo';
 import ProductSpecsTable from '../components/ProductDetail/ProductSpecsTable';
 import ProductReviewsTab from '../components/ProductDetail/ProductReviewsTab';
+import { ProductService } from '../services/product.service';
 
 const ProductDetailPage = () => {
-  const product = mockProduct;
-
-  // Ép kiểu rõ ràng để tránh lỗi TypeScript do kiểu hỗn hợp trong mockProduct.options
-  const colors = product.options[0].values as Array<{ name: string; hex: string; img: string; }>;
-  const storages = product.options[1].values as string[];
+  const { id } = useParams();
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   // 1. Quản lý State lựa chọn Biến thể
-  const [selectedColor, setSelectedColor] = useState(colors[0].name);
-  const [selectedStorage, setSelectedStorage] = useState("128GB");
-  const [activeVariant, setActiveVariant] = useState(product.variants[0]);
+  const [selectedColor, setSelectedColor] = useState("");
+  const [selectedStorage, setSelectedStorage] = useState("");
+  const [activeVariant, setActiveVariant] = useState<any>(null);
   const [qty, setQty] = useState(1);
 
   // 2. Quản lý Gallery Ảnh
-  const [activeImage, setActiveImage] = useState(colors[0].img);
+  const [activeImage, setActiveImage] = useState("");
 
   // 3. Quản lý Tabs
   const [activeTab, setActiveTab] = useState<'desc' | 'reviews'>('desc');
 
   // 4. Quản lý Danh sách Đánh giá (hỗ trợ submit đánh giá mới động)
-  const [reviews, setReviews] = useState(product.reviewsList);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [newReviewName, setNewReviewName] = useState('');
   const [newReviewRating, setNewReviewRating] = useState(5);
   const [newReviewComment, setNewReviewComment] = useState('');
 
+  // Lấy dữ liệu sản phẩm từ DB
+  useEffect(() => {
+    const loadProduct = async () => {
+      setLoading(true);
+      if (id) {
+        const data = await ProductService.getProductById(id);
+        if (data) {
+          // Merge dynamic data with mock data structure to avoid breaking UI
+          const mergedProduct = {
+            ...mockProduct,
+            title: data.name || mockProduct.title,
+            description: data.description || mockProduct.description,
+            category: data.category || mockProduct.category,
+            // Cập nhật giá cho variant mặc định
+          };
+          if (data.image) {
+             (mergedProduct.options[0].values[0] as any).img = data.image;
+          }
+          
+          setProduct(mergedProduct);
+          setSelectedColor((mergedProduct.options[0].values[0] as any).name as string);
+          setSelectedStorage(mergedProduct.options[1].values[0] as string);
+          setActiveImage(data.image || (mergedProduct.options[0].values[0] as any).img);
+          setReviews(mergedProduct.reviewsList || []);
+        }
+      }
+      setLoading(false);
+    };
+    loadProduct();
+  }, [id]);
+
   // Tự động tìm variant phù hợp mỗi khi người dùng đổi Color hoặc Storage
   useEffect(() => {
+    if (!product) return;
     const variant = product.variants.find(
-      v => v.color === selectedColor && v.storage === selectedStorage
+      (v: any) => v.color === selectedColor && v.storage === selectedStorage
     );
     if (variant) {
       setActiveVariant(variant);
@@ -43,7 +74,7 @@ const ProductDetailPage = () => {
         setQty(variant.stock);
       }
     }
-  }, [selectedColor, selectedStorage]);
+  }, [selectedColor, selectedStorage, product]);
 
   // Cập nhật ảnh chính tương ứng khi đổi màu sắc
   const handleColorChange = (colorName: string, colorImg: string) => {
@@ -86,6 +117,26 @@ const ProductDetailPage = () => {
     setNewReviewRating(5);
     alert("Cảm ơn bạn đã gửi đánh giá sản phẩm! 🎉");
   };
+
+  if (loading) {
+    return (
+      <div className="container" style={{ padding: '100px 0', textAlign: 'center' }}>
+        <h2>Đang tải chi tiết sản phẩm...</h2>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="container" style={{ padding: '100px 0', textAlign: 'center' }}>
+        <h2>Không tìm thấy sản phẩm!</h2>
+        <Link to="/products" className="btn btn-primary mt-2">Quay lại</Link>
+      </div>
+    );
+  }
+
+  const colors = product.options[0].values as Array<{ name: string; hex: string; img: string; }>;
+  const storages = product.options[1].values as string[];
 
   return (
     <>
