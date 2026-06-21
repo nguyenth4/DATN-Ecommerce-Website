@@ -1,23 +1,26 @@
-import { useState, useEffect } from 'react';
-import { ProductService } from '../services/product.service';
+import { useProducts } from '../services/product.service';
 
 export const useProductController = () => {
-  const [products, setProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  // We can fetch a default list of featured products
+  const { data, isLoading } = useProducts({ limit: 4 });
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true);
-      const data = await ProductService.getProducts();
-      setProducts(data as any[]);
-      setLoading(false);
+  // Map the Medusa product shape to match the previous mock shape if needed, 
+  // or return raw products. The previous shape had 'image', 'name', 'price'.
+  const products = data?.products?.map((p: any) => {
+    // get price from variants
+    const price = p.variants?.[0]?.prices?.[0]?.amount || 0;
+    
+    return {
+      id: p.id,
+      name: p.title,
+      image: p.thumbnail,
+      price: price,
+      category: p.categories?.[0]?.name || 'Sản phẩm'
     };
-
-    fetchProducts();
-  }, []);
+  }) || [];
 
   return {
     products,
-    loading
+    loading: isLoading
   };
 };

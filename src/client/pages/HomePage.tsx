@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useProductController } from '../controllers/useProductController';
+import ProductCard from '../components/ProductCard';
 
 const HomePage = () => {
   const { products, loading } = useProductController();
@@ -57,20 +58,8 @@ const HomePage = () => {
             <p>Đang tải dữ liệu...</p>
           ) : (
             <div className="products-grid">
-              {products.slice(0, 4).map((product) => (
-                <div key={product.id} className="product-card">
-                  <div className="product-card-img">
-                    <img src={product.image || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&q=80"} alt={product.name} />
-                    <button className="product-card-btn-add btn-add-cart"><i className="bi bi-plus"></i></button>
-                  </div>
-                  <div className="product-card-body">
-                    <div className="product-category">Danh mục</div>
-                    <div className="product-name">{product.name}</div>
-                    <div className="product-price-row">
-                      <span className="product-price">{product.price.toLocaleString()}đ</span>
-                    </div>
-                  </div>
-                </div>
+              {products.slice(0, 4).map((product: any) => (
+                <ProductCard key={product.id} product={product} />
               ))}
             </div>
           )}
