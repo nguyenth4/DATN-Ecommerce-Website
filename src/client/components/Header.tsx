@@ -7,6 +7,7 @@ const Header = () => {
       <ul className="navbar-nav">
         <li><Link to="/" className="active">Trang chủ</Link></li>
         <li><Link to="/products">Sản phẩm</Link></li>
+        <li><Link to="/compare">So sánh</Link></li>
         <li><Link to="/account">Tài khoản</Link></li>
       </ul>
       <div className="navbar-actions">

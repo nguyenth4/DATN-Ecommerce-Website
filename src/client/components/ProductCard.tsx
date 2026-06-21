@@ -30,15 +30,29 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           alt={name} 
         />
         {product.badge && <span className={`product-badge ${product.badge === 'Mới' ? 'badge-new' : 'badge-sale'}`}>{product.badge}</span>}
-        <button 
-          className="product-card-btn-add btn-add-cart" 
-          onClick={(e) => {
-            e.preventDefault();
-            alert('Đã thêm vào giỏ hàng!');
-          }}
-        >
-          <i className="bi bi-plus"></i>
-        </button>
+        <div className="product-card-actions">
+          <button 
+            className="product-card-btn-action" 
+            title="So sánh"
+            onClick={(e) => {
+              e.preventDefault();
+              alert(`Đã thêm ${name} vào danh sách so sánh!`);
+              // Logic to add ID to localStorage would go here
+            }}
+          >
+            <i className="bi bi-arrow-left-right"></i>
+          </button>
+          <button 
+            className="product-card-btn-add btn-add-cart" 
+            title="Thêm vào giỏ"
+            onClick={(e) => {
+              e.preventDefault();
+              alert('Đã thêm vào giỏ hàng!');
+            }}
+          >
+            <i className="bi bi-plus"></i>
+          </button>
+        </div>
       </div>
       <div className="product-card-body">
         <div className="product-category">{category}</div>
