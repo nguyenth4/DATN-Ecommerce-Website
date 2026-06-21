@@ -6,6 +6,32 @@ const CheckoutPage = () => {
   const [paymentMethod, setPaymentMethod] = useState('vnpay');
   const [shippingMethod, setShippingMethod] = useState('ghn');
 
+  // Logic chọn địa chỉ động
+  const [selectedCity, setSelectedCity] = useState("Hồ Chí Minh");
+  const [selectedDistrict, setSelectedDistrict] = useState("Quận 1");
+
+  const locationData: Record<string, string[]> = {
+    "Hồ Chí Minh": ["Quận 1", "Quận 3", "Quận 7", "Quận Bình Thạnh", "Quận Tân Bình", "TP. Thủ Đức"],
+    "Hà Nội": ["Quận Hoàn Kiếm", "Quận Đống Đa", "Quận Ba Đình", "Quận Hai Bà Trưng", "Quận Cầu Giấy"],
+    "Đà Nẵng": ["Quận Hải Châu", "Quận Thanh Khê", "Quận Liên Chiểu"],
+    "Cần Thơ": ["Quận Ninh Kiều", "Quận Bình Thủy", "Quận Cái Răng"]
+  };
+
+  const wardData: Record<string, string[]> = {
+    "Quận 1": ["Phường Bến Nghé", "Phường Bến Thành", "Phường Đa Kao", "Phường Tân Định"],
+    "Quận 7": ["Phường Tân Phong", "Phường Phú Mỹ", "Phường Tân Thuận Đông"],
+    "Quận Hoàn Kiếm": ["Phường Hàng Đào", "Phường Tràng Tiền", "Phường Phan Chu Trinh"],
+    "TP. Thủ Đức": ["Phường Thảo Điền", "Phường An Phú", "Phường Bình Trưng Tây"]
+  };
+
+  const handleCityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const city = e.target.value;
+    setSelectedCity(city);
+    // Reset district khi đổi city
+    const firstDistrict = locationData[city]?.[0] || "";
+    setSelectedDistrict(firstDistrict);
+  };
+
   const handlePlaceOrder = () => {
     if (paymentMethod === 'vnpay' || paymentMethod === 'momo' || paymentMethod === 'zalopay') {
       alert(`Đang chuyển hướng đến cổng thanh toán online...\nNgười thụ hưởng: Huỳnh Trần Khang Hỷ\nSố tiền: 35.515.000đ`);
@@ -70,21 +96,28 @@ const CheckoutPage = () => {
                 <div className="form-row">
                   <div className="form-group mb-3" style={{ flex: 1 }}>
                     <label className="form-label">Tỉnh / Thành phố *</label>
-                    <select className="form-control">
+                    <select className="form-control" value={selectedCity} onChange={handleCityChange}>
                       <option value="">Chọn tỉnh/thành...</option>
-                      <option selected>Hồ Chí Minh</option>
-                      <option>Hà Nội</option>
-                      <option>Đà Nẵng</option>
-                      <option>Cần Thơ</option>
+                      {[
+                        "Hồ Chí Minh", "Hà Nội", "Đà Nẵng", "Hải Phòng", "Cần Thơ",
+                        "Bình Dương", "Đồng Nai", "Khánh Hòa", "Lâm Đồng", "Long An",
+                        "Quảng Ninh", "Bà Rịa - Vũng Tàu", "Thừa Thiên Huế", "Bắc Ninh",
+                        "Hải Dương", "Thanh Hóa", "Nghệ An", "Kiên Giang", "An Giang",
+                        "Tiền Giang", "Vĩnh Long", "Bến Tre", "Tây Ninh", "Bình Thuận",
+                        "Ninh Thuận", "Phú Yên", "Bình Định", "Quảng Nam", "Thái Nguyên",
+                        "Nam Định", "Thái Bình", "Hưng Yên"
+                      ].map(city => (
+                        <option key={city} value={city}>{city}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="form-group mb-3" style={{ flex: 1 }}>
                     <label className="form-label">Quận / Huyện *</label>
-                    <select className="form-control">
+                    <select className="form-control" value={selectedDistrict} onChange={(e) => setSelectedDistrict(e.target.value)}>
                       <option value="">Chọn quận/huyện...</option>
-                      <option selected>Quận 1</option>
-                      <option>Quận 7</option>
-                      <option>Quận Bình Thạnh</option>
+                      {(locationData[selectedCity] || []).map(dist => (
+                        <option key={dist} value={dist}>{dist}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -93,7 +126,9 @@ const CheckoutPage = () => {
                     <label className="form-label">Phường / Xã *</label>
                     <select className="form-control">
                       <option value="">Chọn phường/xã...</option>
-                      <option selected>Phường Bến Nghé</option>
+                      {(wardData[selectedDistrict] || ["Phường 1", "Phường 2", "Phường 3"]).map(ward => (
+                        <option key={ward} value={ward}>{ward}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="form-group mb-3" style={{ flex: 2 }}>
