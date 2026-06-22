@@ -103,6 +103,7 @@ const Header = () => {
             <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>Home</NavLink>
             <NavLink to="/products" className={({ isActive }) => isActive ? 'active' : ''}>Shop</NavLink>
             <NavLink to="/cart" className={({ isActive }) => isActive ? 'active' : ''}>Cart</NavLink>
+            <NavLink to="/checkout" className={({ isActive }) => isActive ? 'active' : ''}>Thanh toán</NavLink>
             <NavLink to="/contact" className={({ isActive }) => isActive ? 'active' : ''}>Contact</NavLink>
           </div>
           <span className="nav-cta">UP TO <strong>60% OFF</strong> ALL ITEMS</span>

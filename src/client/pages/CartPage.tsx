@@ -143,7 +143,7 @@ const CartPage = () => {
 
                 <div className="cart-line is-total"><span>Total</span><span>${total.toFixed(2)}</span></div>
 
-                <a href="#" className="btn btn--indigo btn--block">Proceed to checkout →</a>
+                <Link to="/checkout" className="btn btn--indigo btn--block">Tiến hành thanh toán →</Link>
 
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--s3)', marginTop: 'var(--s5)', flexWrap: 'wrap' }}>
                   {['VISA', 'MASTERCARD', 'AMEX', 'PAYPAL', 'APPLE PAY'].map((method) => (
@@ -157,7 +157,7 @@ const CartPage = () => {
                 </div>
 
                 <p style={{ marginTop: 'var(--s5)', fontSize: '11px', fontFamily: 'var(--ff-mono)', color: 'var(--fg-mute)', textAlign: 'center', lineHeight: 1.6 }}>
-                  Encrypted checkout · SSL secured. Your payment information is never stored on our servers.
+                  Giao dịch <Link to="/checkout" style={{ color: 'inherit', textDecoration: 'underline' }}>thanh toán</Link> được mã hoá · Bảo mật SSL. Thông tin thanh toán không bao giờ được lưu trữ trên máy chủ của chúng tôi.
                 </p>
               </aside>
 
