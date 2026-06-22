@@ -6,6 +6,7 @@ import {
   LogIn, 
   AlertCircle 
 } from 'lucide-react';
+import '../styles/auth.css';
 
 const LoginPage = () => {
   return (
@@ -13,7 +14,7 @@ const LoginPage = () => {
       {/* VISUAL SIDE */}
       <div className="auth-visual">
         <div className="auth-visual-img">
-          <img src="https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=900&q=80" alt="" />
+          <img src="https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=900&q=80" alt="Tech Gadgets" />
           <div className="auth-visual-overlay"></div>
         </div>
         <div className="auth-visual-content">

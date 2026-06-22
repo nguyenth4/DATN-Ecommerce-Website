@@ -9,6 +9,7 @@ import {
   XCircle, 
   UserPlus 
 } from 'lucide-react';
+import '../styles/auth.css';
 
 const RegisterPage = () => {
   return (
@@ -16,7 +17,7 @@ const RegisterPage = () => {
       {/* VISUAL SIDE */}
       <div className="auth-visual">
         <div className="auth-visual-img">
-          <img src="https://images.unsplash.com/photo-1607082349566-187342175e2f?w=900&q=80" alt="" />
+          <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=900&q=80" alt="Tech Studio Headphones" />
           <div className="auth-visual-overlay"></div>
         </div>
         <div className="auth-visual-content">

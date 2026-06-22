@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
   ShieldCheck, 
   MapPin, 
@@ -11,10 +11,7 @@ import {
   ShoppingBag, 
   CheckCircle2,
   Lock,
-  Phone,
-  User,
-  Mail,
-  MessageSquare
+  User
 } from 'lucide-react';
 import './CheckoutPage.css';
 

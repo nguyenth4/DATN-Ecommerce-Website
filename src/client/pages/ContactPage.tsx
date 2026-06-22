@@ -5,8 +5,7 @@ import {
   MessageSquare, 
   MapPin, 
   Clock, 
-  ArrowRight, 
-  ChevronRight 
+  ArrowRight
 } from 'lucide-react';
 
 const ContactPage = () => {

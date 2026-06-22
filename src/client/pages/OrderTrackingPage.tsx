@@ -6,9 +6,7 @@ import {
   CheckCircle, 
   Truck, 
   Home, 
-  ChevronRight, 
-  Package,
-  Clock
+  Package
 } from 'lucide-react';
 
 const OrderTrackingPage = () => {

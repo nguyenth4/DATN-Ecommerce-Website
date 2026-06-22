@@ -6,7 +6,6 @@ export interface ProductQueryParams {
   limit?: number;
   offset?: number;
   category_id?: string[];
-  id?: string | string[];
   q?: string;
   order?: string;
 }

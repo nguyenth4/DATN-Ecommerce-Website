@@ -9,9 +9,9 @@ import {
   MapPin, 
   CreditCard, 
   ShoppingBag, 
-  Receipt,
-  Search
+  Receipt
 } from 'lucide-react';
+import '../styles/order-success.css';
 
 const OrderSuccessPage = () => {
   return (

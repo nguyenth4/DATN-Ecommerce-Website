@@ -6,9 +6,7 @@ import {
   ArrowRight, 
   ChevronRight, 
   Heart, 
-  Star, 
-  ShoppingCart,
-  Mail
+  Star
 } from 'lucide-react';
 
 const HomePage = () => {
