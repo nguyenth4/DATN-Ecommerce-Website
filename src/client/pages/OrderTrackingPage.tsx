@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import '../styles/order-tracking.css';
 
 const OrderTrackingPage = () => {
   return (
