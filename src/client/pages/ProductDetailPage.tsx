@@ -1,490 +1,305 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { useProduct, useProducts } from '../services/product.service';
-import ProductGallery from '../components/ProductDetail/ProductGallery';
-import ProductInfo from '../components/ProductDetail/ProductInfo';
-import ProductSpecsTable from '../components/ProductDetail/ProductSpecsTable';
-import ProductReviewsTab from '../components/ProductDetail/ProductReviewsTab';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 
-// Dữ liệu màu sắc dự phòng cơ bản nếu không có ánh xạ hình ảnh riêng cho từng biến thể
-const getColorHex = (colorName: string) => {
-  const map: Record<string, string> = {
-    "Đen": "#000000",
-    "Trắng": "#ffffff",
-    "Xám": "#808080",
-    "Bạc": "#c0c0c0",
-    "Vàng": "#ffd700",
-    "Hồng": "#ffc0cb",
-    "Xanh dương": "#0000ff",
-    "Xanh lá": "#008000",
-    "Titan": "#8e8e93"
-  };
-  return map[colorName] || "#cccccc";
+const THUMBS = [
+  'photo-1608043152269-423dbba4e7e1',
+  'photo-1545454675-3531b543be5d',
+  'photo-1589003077984-894e133dabab',
+  'photo-1518770660439-4636190af475',
+  'photo-1574920162043-b872873f19c8',
+];
+
+const RELATED = [
+  { img: 'photo-1606220945770-b5b6c2c55bf1', name: 'Beats Studio Buds Pro', price: '$280', stock: 67, stars: '★★★★☆', count: 312 },
+  { img: 'photo-1523275335684-37898b6baf30', name: 'Apple Watch Series 9', price: '$680', stock: 41, stars: '★★★★★', count: 245, badge: 'New' },
+  { img: 'photo-1590658268037-6bf12165a8df', name: 'Apple AirPods V57', price: '$680', stock: 12, stars: '★★★★★', count: 124 },
+  { img: 'photo-1565849904461-04a58ad377e0', name: 'Samsung S21 Ultra', price: '$2,580', was: '$2,780', stock: 24, stars: '★★★★★', count: 212, badge: 'Sale' },
+  { img: 'photo-1502920917128-1aa500764cbd', name: 'Canon EOS R7 DSLR', price: '$1,920', stock: 24, stars: '★★★★☆', count: 67 },
+];
+
+const SPECS = [
+  { label: 'Chip', value: 'Apple S7 SiP' },
+  { label: 'Drivers', value: '4-inch high-excursion woofer, 5 beam-forming tweeters' },
+  { label: 'Connectivity', value: 'Wi-Fi 4, Bluetooth 5.0, Thread, U1' },
+  { label: 'Spatial audio', value: 'Yes, with dynamic head tracking' },
+  { label: 'Dimensions', value: '168 × 142 mm · 2.3 kg' },
+  { label: 'In the box', value: 'HomePod, power cable (1.8 m), documentation' },
+  { label: 'Warranty', value: '2-year limited' },
+];
+
+const RATING_BREAKDOWN = [
+  { stars: 5, pct: 82 },
+  { stars: 4, pct: 14 },
+  { stars: 3, pct: 3 },
+  { stars: 2, pct: 1 },
+  { stars: 1, pct: 0 },
+];
+
+const REVIEWS = [
+  { name: 'Mira K.', time: '2 days ago', stars: '★★★★★', text: 'Bought a stereo pair for the living room. The room-sensing makes a real difference — they adapt to where you put them. Setup was 90 seconds with the iPhone handoff.' },
+  { name: 'Devan R.', time: '1 week ago', stars: '★★★★★', text: 'Replaced my old Sonos with this. Spatial audio is genuinely impressive on Atmos tracks. Build quality is excellent. Only wish it had a 3.5 mm jack for guests.' },
+];
+
+const tdLabelStyle = {
+  padding: 'var(--s4) 0', color: 'var(--fg-mute)',
+  fontFamily: 'var(--ff-mono)', fontSize: 'var(--text-xs)',
+  letterSpacing: '0.06em', textTransform: 'uppercase', width: '40%',
 };
+const tdValStyle = { padding: 'var(--s4) 0', fontWeight: 600 };
 
 const ProductDetailPage = () => {
-  const { id } = useParams<{ id: string }>();
-  const { data: product, isLoading, error } = useProduct(id || '');
-
-  // 1. Quản lý State lựa chọn Biến thể
-  const [selectedColor, setSelectedColor] = useState('');
-  const [selectedStorage, setSelectedStorage] = useState('');
+  const [activeThumb, setActiveThumb] = useState(0);
   const [qty, setQty] = useState(1);
-  const [activeImage, setActiveImage] = useState('');
-  const [activeTab, setActiveTab] = useState<'desc' | 'reviews'>('desc');
+  const [color, setColor] = useState(0);
+  const [config, setConfig] = useState(1);
+  const [care, setCare] = useState(0);
+  const navigate = useNavigate();
 
-  // 2. Map Options từ Medusa API
-  const colors = useMemo(() => {
-    if (!product || !product.options) return [];
-    const colorOpt = product.options.find((o: any) => o.title === 'Màu sắc' || o.title === 'Color');
-    return colorOpt?.values?.map((v: any) => {
-      // Lấy hex từ metadata của value nếu có (Medusa 2.0 extension), hoặc fallback cơ bản
-      const hex = v.metadata?.hex || getColorHex(v.value);
-      // Lấy hình ảnh từ metadata của value (nếu bạn gán ảnh riêng cho từng màu trong Medusa)
-      const img = v.metadata?.image || product.thumbnail || '';
-      return { name: v.value, hex, img };
-    }) || [];
-  }, [product]);
+  const colors = [
+    { hex: '#FFFFFF', label: 'White' },
+    { hex: '#0F172A', label: 'Midnight' },
+    { hex: '#F97316', label: 'Orange' },
+    { hex: '#4F46E5', label: 'Indigo' },
+  ];
+  const configs = ['Single', 'Stereo pair · save $40', '3-pack · save $120'];
+  const carePlans = ['No coverage', '2 years · $39', '3 years · $59'];
 
-  // Bộ sưu tập tất cả ảnh từ phần Media của Medusa
-  const allImages = useMemo(() => {
-    if (!product) return [];
-    const imagesFromMedia = product.images?.map((img: any) => img.url) || [];
-    const imagesFromVariants = colors.map(c => c.img);
-    
-    // Gom tất cả lại và loại bỏ trùng lặp
-    return Array.from(new Set([product.thumbnail, ...imagesFromMedia, ...imagesFromVariants])).filter(Boolean) as string[];
-  }, [product, colors]);
-
-  const storages = useMemo(() => {
-    if (!product || !product.options) return [];
-    const storageOpt = product.options.find((o: any) => o.title === 'Dung lượng' || o.title === 'Storage');
-    return storageOpt?.values?.map((v: any) => v.value) || [];
-  }, [product]);
-
-  // Khởi tạo lựa chọn ban đầu khi dữ liệu tải xong
-  useEffect(() => {
-    if (product) {
-      if (colors.length > 0) {
-        setSelectedColor(colors[0].name);
-        setActiveImage(colors[0].img);
-      }
-      if (storages.length > 0) {
-        setSelectedStorage(storages[0]);
-      }
-    }
-  }, [product, colors, storages]);
-
-  // Tìm active variant tương ứng với màu và dung lượng đang chọn
-  const activeVariant = useMemo(() => {
-    if (!product || !product.variants) return null;
-    const colorOptionId = product.options?.find((o: any) => o.title === 'Màu sắc' || o.title === 'Color')?.id;
-    const storageOptionId = product.options?.find((o: any) => o.title === 'Dung lượng' || o.title === 'Storage')?.id;
-
-    return product.variants.find((v: any) => {
-      let matchColor = true;
-      let matchStorage = true;
-
-      if (colorOptionId) {
-        matchColor = v.options?.some((opt: any) => opt.option_id === colorOptionId && opt.value === selectedColor);
-      }
-      if (storageOptionId) {
-        matchStorage = v.options?.some((opt: any) => opt.option_id === storageOptionId && opt.value === selectedStorage);
-      }
-
-      return matchColor && matchStorage;
-    });
-  }, [product, selectedColor, selectedStorage]);
-
-  // Mapped active variant props cho Component con
-  const activeVariantMapped = useMemo(() => {
-    const price = activeVariant?.prices?.find((p: any) => p.currency_code === 'vnd')?.amount || activeVariant?.prices?.[0]?.amount || 0;
-    return {
-      price: price,
-      oldPrice: price * 1.15, // Tạo giá cũ giả lập để hiển thị tag giảm giá đẹp mắt
-      stock: activeVariant?.inventory_quantity ?? 100, // Mặc định 100 nếu không quản lý kho chi tiết
-      sku: activeVariant?.sku || 'SKU-GENERIC',
-    };
-  }, [activeVariant]);
-
-  // 3. Fetch sản phẩm liên quan
-  const categoryId = product?.categories?.[0]?.id;
-  const { data: relatedData } = useProducts(
-    categoryId ? { category_id: [categoryId], limit: 5 } : undefined
-  );
-
-  const relatedProducts = useMemo(() => {
-    if (!relatedData?.products) return [];
-    return relatedData.products
-      .filter((p: any) => p.id !== id)
-      .slice(0, 4)
-      .map((p: any) => {
-        const price = p.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount || p.variants?.[0]?.prices?.[0]?.amount || 0;
-        return {
-          id: p.id,
-          name: p.title,
-          img: p.thumbnail || 'https://via.placeholder.com/350',
-          price: price.toLocaleString('vi-VN') + 'đ',
-          category: p.categories?.[0]?.name || 'Sản phẩm',
-        };
-      });
-  }, [relatedData, id]);
-
-  // 4. Quản lý reviews cục bộ
-  const [reviews, setReviews] = useState<Array<{ name: string; rating: number; date: string; comment: string }>>([
-    { name: "Nguyễn Văn A", rating: 5, date: "15/06/2026", comment: "Sản phẩm dùng cực kỳ mượt mà, chụp ảnh đẹp xuất sắc. Rất đáng đồng tiền bát gạo!" },
-    { name: "Trần Thị B", rating: 4, date: "10/06/2026", comment: "Giao hàng nhanh, máy đẹp nguyên seal. Tuy nhiên hộp hơi móp nhẹ lúc vận chuyển." }
-  ]);
-  const [newReviewName, setNewReviewName] = useState('');
-  const [newReviewRating, setNewReviewRating] = useState(5);
-  const [newReviewComment, setNewReviewComment] = useState('');
-
-  // Thay đổi màu sắc và ảnh chính
-  const handleColorChange = (colorName: string, colorImg: string) => {
-    setSelectedColor(colorName);
-    setActiveImage(colorImg);
-  };
-
-  // Tăng giảm số lượng
-  const handleQtyChange = (action: 'inc' | 'dec') => {
-    if (action === 'dec') {
-      if (qty > 1) setQty(qty - 1);
-    } else {
-      if (qty < activeVariantMapped.stock) {
-        setQty(qty + 1);
-      }
-    }
-  };
-
-  // Gửi review mới
-  const handleAddReview = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newReviewName.trim() || !newReviewComment.trim()) {
-      alert("Vui lòng nhập đầy đủ thông tin tên và nội dung bình luận!");
-      return;
-    }
-
-    const today = new Date();
-    const formattedDate = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
-
-    const newReview = {
-      name: newReviewName,
-      rating: newReviewRating,
-      date: formattedDate,
-      comment: newReviewComment
-    };
-
-    setReviews([newReview, ...reviews]);
-    setNewReviewName('');
-    setNewReviewComment('');
-    setNewReviewRating(5);
-    alert("Cảm ơn bạn đã gửi đánh giá sản phẩm! 🎉");
-  };
-
-  // Phân tích thông tin bổ sung và video của sản phẩm từ metadata Medusa
-  const { videoUrl, specifications, trustInfo } = useMemo(() => {
-    const meta = product?.metadata || {};
-    
-    // Chỉ lấy từ metadata Medusa
-    let finalVideo = meta.video_url || meta.video || '';
-    let finalSpecs = meta.specifications || meta.specs || null;
-    const finalTrust = meta.trust_info || meta.trust || null;
-
-    // Parse specifications nếu nó là chuỗi JSON
-    if (typeof finalSpecs === 'string' && finalSpecs.trim().startsWith('{')) {
-      try {
-        finalSpecs = JSON.parse(finalSpecs);
-      } catch (e) {
-        console.error("Error parsing specifications JSON", e);
-      }
-    }
-
-    return { 
-      videoUrl: finalVideo as string, 
-      specifications: finalSpecs as Record<string, string>,
-      trustInfo: finalTrust
-    };
-  }, [product]);
-
-  if (isLoading) {
-    return (
-      <div className="container flex-center" style={{ minHeight: '400px', flexDirection: 'column', gap: '1rem' }}>
-        <div style={{ width: '40px', height: '40px', border: '3px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
-        <p className="text-muted">Đang tải thông tin sản phẩm...</p>
-        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
-
-  if (error || !product) {
-    return (
-      <div className="container" style={{ padding: '100px 20px', textAlign: 'center' }}>
-        <h2>Không tìm thấy sản phẩm</h2>
-        <p className="text-muted" style={{ margin: '1rem 0 2rem' }}>Sản phẩm có thể đã bị xóa hoặc không tồn tại.</p>
-        <Link to="/products" className="btn btn-primary">Quay lại danh sách</Link>
-      </div>
-    );
-  }
-
-  const categoryName = product.categories?.[0]?.name || 'Sản phẩm';
+  const decreaseQty = () => setQty((q) => Math.max(1, q - 1));
+  const increaseQty = () => setQty((q) => q + 1);
 
   return (
     <>
-      {/* BREADCRUMB */}
-      <div className="page-header" style={{ padding: '1rem 2rem' }}>
+      <nav className="nav-bar" aria-label="Primary">
         <div className="container">
-          <div className="breadcrumb">
-            <Link to="/">Trang chủ</Link>
-            <span>/</span>
-            <Link to="/products">Sản phẩm</Link>
-            <span>/</span>
-            <span>{categoryName}</span>
-            <span>/</span>
-            <span>{product.title}</span>
+          <a href="/shop" className="all-cats">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+            All Categories
+          </a>
+          <div className="main-nav">
+            <Link to="/">Home</Link>
+            <Link to="/shop">Shop ▾</Link>
+            <Link to="/product" aria-current="page">Products</Link>
+            <Link to="/cart">Cart</Link>
+            <Link to="/contact">Contact</Link>
           </div>
+          <span className="nav-cta">UP TO <strong>60% OFF</strong> ALL ITEMS</span>
         </div>
+      </nav>
+
+      <div className="drawer" id="drawer" aria-hidden="true">
+        <div className="drawer-head">
+          <Link to="/" className="brand"><span className="brand-mark">S</span> Sprylo</Link>
+          <button className="drawer-close">Close ✕</button>
+        </div>
+        <Link to="/">Home</Link>
+        <Link to="/shop">Shop</Link>
+        <Link to="/product">Products</Link>
+        <Link to="/cart">Cart</Link>
+        <Link to="/contact">Contact</Link>
       </div>
 
-      {/* PRODUCT DETAIL */}
-      <section className="section products-section-bg">
+      <main id="main">
         <div className="container">
-          <div className="product-detail-grid">
-            
-            {/* Gallery Component */}
-            <ProductGallery
-              activeImage={activeImage || product.thumbnail || ''}
-              images={allImages}
-              onImageClick={(img) => {
-                setActiveImage(img);
-                // Nếu click vào ảnh mẫu của một màu sắc, tự động chọn màu đó luôn
-                const matchedColor = colors.find((c) => c.img === img);
-                if (matchedColor) {
-                  setSelectedColor(matchedColor.name);
-                }
-              }}
-              productTitle={product.title}
-              videoUrl={videoUrl}
-            />
-
-            {/* Info Component */}
-            <ProductInfo
-              product={{
-                category: categoryName,
-                title: product.title,
-                subtitle: product.subtitle || '',
-                rating: 4.8, // Đánh giá mặc định
-                rawProduct: product, // Truyền raw product để tính toán giá/ảnh của option
-              }}
-              colors={colors}
-              storages={storages}
-              selectedColor={selectedColor}
-              selectedStorage={selectedStorage}
-              activeVariant={activeVariantMapped}
-              qty={qty}
-              reviewsCount={reviews.length}
-              onColorChange={handleColorChange}
-              onStorageChange={setSelectedStorage}
-              onQtyChange={handleQtyChange}
-            />
-
+          <div className="crumbs" style={{ paddingTop: 'var(--s5)' }}>
+            <Link to="/">Home</Link> <span className="sep">›</span> <Link to="/shop">Shop</Link> <span className="sep">›</span> <span>Speakers</span>
           </div>
 
-          {/* TABS: Mô tả / Đánh giá */}
-          <div style={{ marginTop: '4rem' }}>
-            <div className="flex-center" style={{ gap: 0, borderBottom: '2px solid var(--border)', marginBottom: '2rem' }}>
-              <button 
-                id="tabDesc" 
-                style={{ 
-                  padding: '0.8rem 2rem', 
-                  fontFamily: 'var(--font-body)', 
-                  fontSize: '0.85rem', 
-                  fontWeight: 700, 
-                  textTransform: 'uppercase', 
-                  letterSpacing: '0.5px', 
-                  border: 'none', 
-                  background: 'none', 
-                  cursor: 'pointer', 
-                  borderBottom: activeTab === 'desc' ? '2px solid var(--dark)' : '2px solid transparent', 
-                  marginBottom: '-2px', 
-                  color: activeTab === 'desc' ? 'var(--dark)' : 'var(--gray)' 
-                }}
-                onClick={() => setActiveTab('desc')}
-              >
-                Mô tả sản phẩm
-              </button>
-              <button 
-                id="tabReview" 
-                style={{ 
-                  padding: '0.8rem 2rem', 
-                  fontFamily: 'var(--font-body)', 
-                  fontSize: '0.85rem', 
-                  fontWeight: 700, 
-                  textTransform: 'uppercase', 
-                  letterSpacing: '0.5px', 
-                  border: 'none', 
-                  background: 'none', 
-                  cursor: 'pointer', 
-                  borderBottom: activeTab === 'reviews' ? '2px solid var(--dark)' : '2px solid transparent', 
-                  marginBottom: '-2px', 
-                  color: activeTab === 'reviews' ? 'var(--dark)' : 'var(--gray)' 
-                }}
-                onClick={() => setActiveTab('reviews')}
-              >
-                Đánh giá ({reviews.length})
-              </button>
-            </div>
+          <section className="product-detail">
 
-            {/* TAB PANEL: MÔ TẢ */}
-            {activeTab === 'desc' && (
-              <div id="panelDesc" style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '3rem' }}>
-                {/* Mô tả bên trái */}
-                <div style={{ lineHeight: 1.8, color: '#333' }}>
-                  {product.metadata?.detailed_description ? (
-                    <div 
-                      dangerouslySetInnerHTML={{ __html: product.metadata.detailed_description }} 
-                      style={{ marginBottom: '1.2rem', fontSize: '1rem' }}
-                    />
-                  ) : (
-                    <p style={{ marginBottom: '1.2rem', fontSize: '1rem' }}>{product.description || 'Chưa có mô tả chi tiết cho sản phẩm này.'}</p>
-                  )}
-                  
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: '1.5rem 0 0.8rem' }}>Đặc điểm nổi bật</h3>
-                  <ul style={{ paddingLeft: '1.2rem', marginBottom: '2rem' }}>
-                    <li style={{ marginBottom: '0.6rem', listStyleType: 'disc' }}>Thiết kế sang trọng, gia công tỉ mỉ với chất liệu cao cấp.</li>
-                    <li style={{ marginBottom: '0.6rem', listStyleType: 'disc' }}>Hiệu năng mạnh mẽ vượt trội, tối ưu tốt cho mọi tác vụ hàng ngày.</li>
-                    <li style={{ marginBottom: '0.6rem', listStyleType: 'disc' }}>Hệ thống camera cải tiến, ghi lại hình ảnh sắc nét trong mọi điều kiện ánh sáng.</li>
-                    <li style={{ marginBottom: '0.6rem', listStyleType: 'disc' }}>Thời lượng pin bền bỉ, tích hợp công nghệ sạc nhanh thông minh.</li>
-                  </ul>
-
-                  {/* KHUYẾN MÃI & ƯU ĐÃI (CellphoneS Style) */}
-                  <div style={{ background: '#fff9f9', border: '1px solid #ffcccc', borderRadius: '8px', padding: '1.5rem', marginBottom: '2rem' }}>
-                    <h4 style={{ color: '#d9534f', fontSize: '1.05rem', fontWeight: 700, margin: '0 0 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <i className="bi bi-gift-fill" style={{ fontSize: '1.2rem' }}></i> KHUYẾN MÃI & ƯU ĐÃI ĐẶC BIỆT
-                    </h4>
-                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                      <li style={{ display: 'flex', gap: '0.6rem', alignItems: 'start', fontSize: '0.9rem' }}>
-                        <i className="bi bi-check-circle-fill" style={{ color: '#28a745', marginTop: '3px' }}></i>
-                        <span><strong>Miễn phí vận chuyển:</strong> Giao hàng siêu tốc toàn quốc cho đơn hàng từ 10.000.000đ.</span>
-                      </li>
-                      <li style={{ display: 'flex', gap: '0.6rem', alignItems: 'start', fontSize: '0.9rem' }}>
-                        <i className="bi bi-check-circle-fill" style={{ color: '#28a745', marginTop: '3px' }}></i>
-                        <span><strong>Ưu đãi chủ thẻ:</strong> Giảm thêm 500.000đ khi trả góp 0% qua thẻ tín dụng Techcombank, VIB.</span>
-                      </li>
-                      <li style={{ display: 'flex', gap: '0.6rem', alignItems: 'start', fontSize: '0.9rem' }}>
-                        <i className="bi bi-check-circle-fill" style={{ color: '#28a745', marginTop: '3px' }}></i>
-                        <span><strong>Thu cũ đổi mới:</strong> Hỗ trợ trợ giá lên tới 2.000.000đ khi thu mua máy cũ tại cửa hàng.</span>
-                      </li>
-                    </ul>
-                  </div>
-
-                  {/* CAM KẾT VÀ QUYỀN LỢI */}
-                  <div style={{ background: '#f8f9fa', border: '1px solid var(--border)', borderRadius: '8px', padding: '1.5rem' }}>
-                    <h4 style={{ fontSize: '1.05rem', fontWeight: 700, margin: '0 0 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <i className="bi bi-shield-fill-check" style={{ fontSize: '1.2rem', color: 'var(--success)' }}></i> CAM KẾT CHẤT LƯỢNG & DỊCH VỤ
-                    </h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.2rem' }}>
-                      {trustInfo && Array.isArray(trustInfo) ? (
-                        trustInfo.map((item: any, idx: number) => (
-                          <div key={idx} style={{ display: 'flex', gap: '0.8rem', alignItems: 'start' }}>
-                            <div style={{ 
-                              background: item.bg || '#e8f5e9', 
-                              color: item.color || '#2e7d32', 
-                              width: '36px', height: '36px', borderRadius: '50%', 
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 
-                            }}>
-                              <i className={`bi ${item.icon || 'bi-award'}`} style={{ fontSize: '1.2rem' }}></i>
-                            </div>
-                            <div>
-                              <strong style={{ display: 'block', fontSize: '0.85rem' }}>{item.title}</strong>
-                              <span style={{ fontSize: '0.75rem', color: '#666', lineHeight: 1.4, display: 'block' }}>{item.description}</span>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <>
-                          <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'start' }}>
-                            <div style={{ background: '#e8f5e9', color: '#2e7d32', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                              <i className="bi bi-award" style={{ fontSize: '1.2rem' }}></i>
-                            </div>
-                            <div>
-                              <strong style={{ display: 'block', fontSize: '0.85rem' }}>100% Hàng Chính Hãng</strong>
-                              <span style={{ fontSize: '0.75rem', color: '#666', lineHeight: 1.4, display: 'block' }}>Sản phẩm mới nguyên seal, chính ngạch, cam kết hoàn tiền nếu phát hiện hàng nhái.</span>
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'start' }}>
-                            <div style={{ background: '#e3f2fd', color: '#1565c0', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                              <i className="bi bi-arrow-repeat" style={{ fontSize: '1.2rem' }}></i>
-                            </div>
-                            <div>
-                              <strong style={{ display: 'block', fontSize: '0.85rem' }}>1 Đổi 1 Trong 30 Ngày</strong>
-                              <span style={{ fontSize: '0.75rem', color: '#666', lineHeight: 1.4, display: 'block' }}>Hỗ trợ 1 đổi 1 nhanh chóng nếu có lỗi từ nhà sản xuất trong tháng đầu.</span>
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                </div>
-
-                {/* Thông số kỹ thuật Component bên phải */}
-                {specifications ? (
-                  <ProductSpecsTable specifications={specifications} />
-                ) : (
-                  <div style={{ background: '#f8f9fa', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border)', textAlign: 'center' }}>
-                    <p className="text-muted" style={{ fontSize: '0.85rem' }}>Chưa có thông số kỹ thuật chi tiết.</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* TAB PANEL: ĐÁNH GIÁ */}
-            {activeTab === 'reviews' && (
-              <ProductReviewsTab
-                reviews={reviews}
-                rating={4.8}
-                newReviewName={newReviewName}
-                newReviewRating={newReviewRating}
-                newReviewComment={newReviewComment}
-                setNewReviewName={setNewReviewName}
-                setNewReviewRating={setNewReviewRating}
-                setNewReviewComment={setNewReviewComment}
-                onAddReview={handleAddReview}
-              />
-            )}
-          </div>
-
-          {/* RELATED PRODUCTS */}
-          {relatedProducts.length > 0 && (
-            <div style={{ marginTop: '5rem' }}>
-              <div className="section-header">
-                <div className="section-header-row">
-                  <div>
-                    <div className="section-title">SẢN PHẨM LIÊN QUAN</div>
-                  </div>
-                  <Link to="/products" className="see-all">XEM TẤT CẢ <i className="bi bi-arrow-right"></i></Link>
-                </div>
-              </div>
-              <div className="products-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem' }}>
-                {relatedProducts.map((p) => (
-                  <Link key={p.id} to={`/products/${p.id}`} className="product-card" style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
-                    <div className="product-card-img" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#fff', borderRadius: 'var(--radius)', overflow: 'hidden', height: '220px', border: '1px solid var(--border)' }}>
-                      <img src={p.img} alt={p.name} style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} />
-                      <button className="product-card-btn-add btn-add-cart" onClick={(e) => { e.preventDefault(); alert(`Đã thêm ${p.name} vào giỏ hàng!`); }}><i className="bi bi-plus"></i></button>
-                    </div>
-                    <div className="product-card-body" style={{ padding: '1rem 0' }}>
-                      <div className="product-category" style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: '#999', fontWeight: 600 }}>{p.category}</div>
-                      <div className="product-name" style={{ fontSize: '0.9rem', fontWeight: 700, margin: '0.3rem 0', color: 'var(--dark)' }}>{p.name}</div>
-                      <div className="product-price-row"><span className="product-price" style={{ color: 'var(--accent)', fontWeight: 800 }}>{p.price}</span></div>
-                    </div>
-                  </Link>
+            <div className="gallery">
+              <div className="gallery-thumbs">
+                {THUMBS.map((thumb, i) => (
+                  <button
+                    key={thumb}
+                    className={activeThumb === i ? 'is-active' : ''}
+                    onClick={() => setActiveThumb(i)}
+                  >
+                    <img src={`https://images.unsplash.com/${thumb}?w=200&q=80&auto=format&fit=crop`} alt="" />
+                  </button>
                 ))}
               </div>
+              <figure className="gallery-main">
+                <img src={`https://images.unsplash.com/${THUMBS[activeThumb]}?w=900&q=80&auto=format&fit=crop`} alt="HomePod 2nd Gen speaker" />
+              </figure>
             </div>
-          )}
+
+            <div className="pdp-info">
+              <span className="pdp-cat">⚡ Audio · Featured</span>
+              <h1>Apple HomePod 2nd Gen Speaker</h1>
+              <div className="rating-row">
+                <span style={{ color: 'var(--amber)', fontSize: '16px' }}>★★★★★</span>
+                <span>4.9 / 5 · 312 reviews</span>
+                <span style={{ color: 'var(--rule-strong)' }}>|</span>
+                <span style={{ color: 'var(--emerald)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ width: '6px', height: '6px', background: 'var(--emerald)', borderRadius: '999px', display: 'inline-block' }}></span>
+                  In stock · 22 items
+                </span>
+              </div>
+              <p className="desc">Spatial audio, room-sensing tech, and the centrepiece of your Apple ecosystem. Built-in S7 chip, dynamic computational audio, and seamless handoff from iPhone. The new HomePod is designed to disappear into your room and fill it with sound.</p>
+
+              <div className="price-row">
+                <span className="now">$280</span>
+                <span className="was">$320</span>
+                <span className="save">Save 12%</span>
+              </div>
+
+              <div className="option-block">
+                <div className="label">Color</div>
+                <div className="color-swatches">
+                  {colors.map((c, i) => (
+                    <button
+                      key={c.label}
+                      className={color === i ? 'is-active' : ''}
+                      style={{ background: c.hex, borderRadius: '999px', outlineColor: 'var(--rule-strong)' }}
+                      aria-label={c.label}
+                      onClick={() => setColor(i)}
+                    ></button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="option-block">
+                <div className="label">Configuration</div>
+                <div className="option-pills">
+                  {configs.map((c, i) => (
+                    <button
+                      key={c}
+                      className={config === i ? 'is-active' : ''}
+                      onClick={() => setConfig(i)}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="option-block">
+                <div className="label">AppleCare+</div>
+                <div className="option-pills">
+                  {carePlans.map((c, i) => (
+                    <button
+                      key={c}
+                      className={care === i ? 'is-active' : ''}
+                      onClick={() => setCare(i)}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pdp-cta">
+                <div className="qty">
+                  <button type="button" aria-label="Decrease" onClick={decreaseQty}>−</button>
+                  <input type="text" value={qty} inputMode="numeric" aria-label="Quantity" readOnly />
+                  <button type="button" aria-label="Increase" onClick={increaseQty}>+</button>
+                </div>
+                <Link to="/cart" className="btn btn--indigo" style={{ flex: 1, minWidth: '160px' }}>Add to cart →</Link>
+                <Link to="/cart" className="btn btn--ink">Buy now</Link>
+                <button className="icon-btn" aria-label="Add to wishlist" style={{ background: 'var(--bg)' }}>♡</button>
+              </div>
+
+              <div className="pdp-features">
+                <div className="pf"><span className="ic">⚡</span><span>Free shipping over $50</span></div>
+                <div className="pf"><span className="ic">↺</span><span>30-day free returns</span></div>
+                <div className="pf"><span className="ic">★</span><span>2-year limited warranty</span></div>
+                <div className="pf"><span className="ic">✓</span><span>Authentic Apple product</span></div>
+              </div>
+            </div>
+
+          </section>
+
+          {/* Specs + reviews split */}
+          <section className="section" style={{ paddingTop: 0 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s8)' }}>
+
+              <div>
+                <h2 style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--s5)' }}>Specifications</h2>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
+                  <tbody>
+                    {SPECS.map((spec, i) => (
+                      <tr key={spec.label} style={i < SPECS.length - 1 ? { borderBottom: '1px solid var(--rule)' } : undefined}>
+                        <td style={tdLabelStyle}>{spec.label}</td>
+                        <td style={tdValStyle}>{spec.value}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div>
+                <h2 style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--s5)' }}>Reviews</h2>
+                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 'var(--s5)', alignItems: 'center', padding: 'var(--s5)', background: 'var(--bg)', borderRadius: 'var(--r)', marginBottom: 'var(--s5)' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontFamily: 'var(--ff-display)', fontSize: '48px', fontWeight: 800, color: 'var(--ink)', lineHeight: 1 }}>4.9</div>
+                    <div style={{ color: 'var(--amber)', fontSize: '18px' }}>★★★★★</div>
+                    <div style={{ fontFamily: 'var(--ff-mono)', fontSize: '11px', color: 'var(--fg-mute)', marginTop: '4px' }}>312 reviews</div>
+                  </div>
+                  <div style={{ display: 'grid', gap: '6px', fontFamily: 'var(--ff-mono)', fontSize: 'var(--text-xs)', color: 'var(--fg-soft)' }}>
+                    {RATING_BREAKDOWN.map((r) => (
+                      <div key={r.stars} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ width: '16px' }}>{r.stars}</span>
+                        <span style={{ flex: 1, height: '6px', background: 'var(--rule)', borderRadius: '999px', overflow: 'hidden' }}>
+                          <span style={{ display: 'block', width: `${r.pct}%`, height: '100%', background: 'var(--amber)' }}></span>
+                        </span>
+                        <span style={{ width: '28px', textAlign: 'right' }}>{r.pct}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {REVIEWS.map((review) => (
+                  <article key={review.name} style={{ borderBottom: '1px solid var(--rule)', paddingBottom: 'var(--s5)', marginBottom: 'var(--s5)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <strong style={{ fontFamily: 'var(--ff-display)', fontWeight: 700 }}>{review.name}</strong>
+                      <span style={{ fontFamily: 'var(--ff-mono)', fontSize: '11px', color: 'var(--fg-mute)' }}>{review.time}</span>
+                    </div>
+                    <div style={{ color: 'var(--amber)', fontSize: '14px', marginBottom: '6px' }}>{review.stars}</div>
+                    <p style={{ fontSize: 'var(--text-sm)', color: 'var(--fg-soft)', lineHeight: 1.6 }}>{review.text}</p>
+                  </article>
+                ))}
+
+                <a href="#" className="btn btn--ghost btn--block">Read all 312 reviews →</a>
+              </div>
+
+            </div>
+          </section>
+
+          {/* Related products */}
+          <section className="section">
+            <div className="section-head">
+              <h2>You may also like</h2>
+              <Link to="/shop" className="view-all">All products →</Link>
+            </div>
+            <div className="products">
+              {RELATED.map((p) => (
+                <article className="product-card" key={p.name}>
+                  <div className="img-wrap">
+                    {p.badge && (
+                      <span className={`badge ${p.badge === 'Sale' ? 'badge--sale' : ''}`}>{p.badge}</span>
+                    )}
+                    <button className="wishlist">♡</button>
+                    <img src={`https://images.unsplash.com/${p.img}?w=500&q=80&auto=format&fit=crop`} alt={p.name} />
+                  </div>
+                  <div className="stock"><span className="dot"></span>In stock · {p.stock} items</div>
+                  <Link to="/product" className="name">{p.name}</Link>
+                  <div className="price">
+                    <span className="now">{p.price}</span>
+                    {p.was && <span className="was">{p.was}</span>}
+                  </div>
+                  <div className="stars">{p.stars} <span className="count">({p.count})</span></div>
+                  <Link to="/cart" className="btn">Order now →</Link>
+                </article>
+              ))}
+            </div>
+          </section>
 
         </div>
-      </section>
+      </main>
     </>
   );
 };
