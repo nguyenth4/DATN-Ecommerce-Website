@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { medusa } from '../../shared/lib/medusa';
 
 export interface ProductQueryParams {
+  id?: string | string[];
   limit?: number;
   offset?: number;
   category_id?: string[];
