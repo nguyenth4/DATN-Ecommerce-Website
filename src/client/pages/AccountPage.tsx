@@ -260,6 +260,16 @@ const AccountPage = () => {
                           value={firstName} 
                           onChange={(e) => setFirstName(e.target.value)} 
                         />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Tên *</label>
+                        <input 
+                          type="text" 
+                          className="form-control" 
+                          value={lastName} 
+                          onChange={(e) => setLastName(e.target.value)} 
+                        />
+                      </div>
                     </div>
                     <div className="form-group">
                       <label className="form-label">Email *</label>
@@ -301,10 +311,6 @@ const AccountPage = () => {
                         value={dob} 
                         onChange={(e) => setDob(e.target.value)} 
                       />
-                    </div>
-                    <div className="flex-center" style={{ justifyContent: 'flex-end', gap: '0.8rem', marginTop: '1.8rem' }}>
-                      <button className="btn btn--ghost" onClick={handleCancelProfile}>Hủy thay đổi</button>
-                      <button className="btn btn--indigo" onClick={handleSaveProfile}><i className="bi bi-check-lg"></i> Lưu thay đổi</button>
                     </div>
                     <div className="flex-center" style={{ justifyContent: 'flex-end', gap: '0.8rem', marginTop: '1.8rem' }}>
                       <button className="btn btn--ghost" onClick={handleCancelProfile}>Hủy thay đổi</button>
