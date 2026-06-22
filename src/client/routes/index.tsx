@@ -11,6 +11,7 @@ import AccountPage from '../pages/AccountPage';
 import OrderSuccessPage from '../pages/OrderSuccessPage';
 import OrderTrackingPage from '../pages/OrderTrackingPage';
 import ComparisonPage from '../pages/ComparisonPage';
+import ContactPage from '../pages/ContactPage';
 
 const ClientRoutes = () => {
   return (
@@ -23,6 +24,7 @@ const ClientRoutes = () => {
         <Route path="account" element={<AccountPage />} />
         <Route path="compare" element={<ComparisonPage />} />
         <Route path="order-tracking" element={<OrderTrackingPage />} />
+        <Route path="contact" element={<ContactPage />} />
         <Route path="*" element={<div className="container" style={{ padding: '100px 20px', textAlign: 'center' }}><h2>404 - Không tìm thấy trang</h2></div>} />
       </Route>
 

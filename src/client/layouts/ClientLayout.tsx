@@ -6,9 +6,7 @@ const ClientLayout = () => {
   return (
     <>
       <Header />
-      <main>
-        <Outlet />
-      </main>
+      <Outlet />
       <Footer />
     </>
   );

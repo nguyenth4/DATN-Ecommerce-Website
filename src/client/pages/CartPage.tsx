@@ -38,39 +38,6 @@ const CartPage = () => {
 
   return (
     <>
-      <nav className="nav-bar" aria-label="Primary">
-        <div className="container">
-          <a href="/shop" className="all-cats">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="12" x2="21" y2="12" />
-              <line x1="3" y1="18" x2="21" y2="18" />
-            </svg>
-            All Categories
-          </a>
-          <div className="main-nav">
-            <Link to="/">Home</Link>
-            <Link to="/shop">Shop ▾</Link>
-            <Link to="/product">Products</Link>
-            <Link to="/cart" aria-current="page">Cart</Link>
-            <Link to="/contact">Contact</Link>
-          </div>
-          <span className="nav-cta">UP TO <strong>60% OFF</strong> ALL ITEMS</span>
-        </div>
-      </nav>
-
-      <div className="drawer" id="drawer" aria-hidden="true">
-        <div className="drawer-head">
-          <Link to="/" className="brand"><span className="brand-mark">S</span> Sprylo</Link>
-          <button className="drawer-close">Close ✕</button>
-        </div>
-        <Link to="/">Home</Link>
-        <Link to="/shop">Shop</Link>
-        <Link to="/product">Products</Link>
-        <Link to="/cart">Cart</Link>
-        <Link to="/contact">Contact</Link>
-      </div>
-
       <main id="main">
 
         <section className="page-head">
