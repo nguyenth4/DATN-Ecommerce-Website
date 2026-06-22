@@ -1,7 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { Heart } from 'lucide-react';
 
 import { toggleCompareProduct, isInCompareList } from '../utils/compare';
+import { toggleWishlistProduct, isInWishlist } from '../utils/wishlist';
 
 interface ProductCardProps {
   product: any; // Accept both raw Medusa shape and mapped shape
@@ -25,14 +27,22 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   }
 
   const [isCompared, setIsCompared] = React.useState(isInCompareList(product.id));
+  const [isWishlisted, setIsWishlisted] = React.useState(isInWishlist(product.id));
 
   React.useEffect(() => {
-    const handleUpdate = () => {
+    const handleCompareUpdate = () => {
       setIsCompared(isInCompareList(product.id));
     };
-    window.addEventListener('compare-updated', handleUpdate);
+    const handleWishlistUpdate = () => {
+      setIsWishlisted(isInWishlist(product.id));
+    };
+    
+    window.addEventListener('compare-updated', handleCompareUpdate);
+    window.addEventListener('wishlist-updated', handleWishlistUpdate);
+    
     return () => {
-      window.removeEventListener('compare-updated', handleUpdate);
+      window.removeEventListener('compare-updated', handleCompareUpdate);
+      window.removeEventListener('wishlist-updated', handleWishlistUpdate);
     };
   }, [product.id]);
 
@@ -44,6 +54,24 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           alt={name} 
         />
         {product.badge && <span className={`product-badge ${product.badge === 'Mới' ? 'badge-new' : 'badge-sale'}`}>{product.badge}</span>}
+        <button 
+          className="wishlist"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleWishlistProduct(product.id, name);
+          }}
+          style={{
+            opacity: isWishlisted ? 1 : undefined,
+            color: isWishlisted ? 'var(--rose)' : undefined,
+            border: 'none',
+            cursor: 'pointer',
+            zIndex: 2
+          }}
+          title={isWishlisted ? "Xóa khỏi yêu thích" : "Thêm vào yêu thích"}
+        >
+          <Heart size={16} fill={isWishlisted ? 'var(--rose)' : 'none'} stroke={isWishlisted ? 'var(--rose)' : 'currentColor'} />
+        </button>
         <div className="product-card-actions">
           <button 
             className="product-card-btn-add btn-add-cart" 

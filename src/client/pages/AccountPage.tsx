@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/account.css';
 import '../styles/order-tracking.css';
@@ -13,6 +13,9 @@ import {
   CheckCircle, 
   Check
 } from 'lucide-react';
+import { useProducts } from '../services/product.service';
+import { getWishlist } from '../utils/wishlist';
+import ProductCard from '../components/ProductCard';
 
 // Mock Orders Data
 const MOCK_ORDERS = [
@@ -115,6 +118,31 @@ const AccountPage = () => {
   const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'addresses' | 'wishlist' | 'password'>('profile');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   
+  const [wishlistIds, setWishlistIds] = useState<string[]>(getWishlist());
+
+  // Listen to wishlist updates to sync state
+  useEffect(() => {
+    const handleUpdate = () => {
+      setWishlistIds(getWishlist());
+    };
+    window.addEventListener('wishlist-updated', handleUpdate);
+    return () => {
+      window.removeEventListener('wishlist-updated', handleUpdate);
+    };
+  }, []);
+
+  // Fetch product data from Medusa/fallback mock data for wishlist items
+  const { data: productsData, isLoading: isWishlistLoading } = useProducts(
+    wishlistIds.length > 0 ? { id: wishlistIds, limit: 10 } : undefined
+  );
+
+  const wishlistProducts = useMemo(() => {
+    if (wishlistIds.length === 0 || !productsData?.products) return [];
+    return wishlistIds
+      .map(id => productsData.products.find((p: any) => p.id === id))
+      .filter(Boolean);
+  }, [productsData, wishlistIds]);
+
   // Profile form state
   const [firstName, setFirstName] = useState('Trần');
   const [lastName, setLastName] = useState('Ngọc');
@@ -581,31 +609,29 @@ const AccountPage = () => {
                 <div className="tab-panel active">
                   <div style={{ background: 'white', borderRadius: 'var(--r-lg)', border: '1px solid var(--rule)', padding: '1.8rem', boxShadow: 'var(--shadow-sm)' }}>
                     <div style={{ fontFamily: "var(--ff-display)", fontSize: '1.3rem', fontWeight: 700, marginBottom: '1.5rem', paddingBottom: '0.8rem', borderBottom: '1px solid var(--rule)' }}>
-                      Sản phẩm yêu thích
+                      Sản phẩm yêu thích ({wishlistIds.length})
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.2rem' }}>
-                      <div className="product-card">
-                        <div className="img-wrap">
-                          <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&q=80" alt="Sony WH-1000XM5" />
-                        </div>
-                        <div className="name">Sony WH-1000XM5</div>
-                        <div className="price">
-                          <span className="now">{formatPrice(8490000)}</span>
-                        </div>
-                        <button className="btn btn--sm btn--indigo" style={{ marginTop: '0.5rem' }}><i className="bi bi-cart-plus"></i> Thêm vào giỏ</button>
+                    
+                    {isWishlistLoading ? (
+                      <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--fg-mute)' }}>
+                        <div style={{ display: 'inline-block', width: '24px', height: '24px', border: '3px solid var(--indigo-line)', borderTopColor: 'var(--indigo)', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '0.5rem' }}></div>
+                        <p style={{ margin: 0, fontSize: '0.85rem' }}>Đang tải...</p>
                       </div>
-                      
-                      <div className="product-card">
-                        <div className="img-wrap">
-                          <img src="https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=300&q=80" alt="Keychron K8 Pro" />
+                    ) : wishlistProducts.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
+                        <div style={{ display: 'inline-flex', width: '60px', height: '60px', borderRadius: '50%', background: 'var(--rose-soft, #fff1f2)', alignItems: 'center', justifyContent: 'center', color: 'var(--rose)', marginBottom: '1rem' }}>
+                          <Heart size={28} fill="var(--rose)" />
                         </div>
-                        <div className="name">Keychron K8 Pro</div>
-                        <div className="price">
-                          <span className="now">{formatPrice(3490000)}</span>
-                        </div>
-                        <button className="btn btn--sm btn--indigo" style={{ marginTop: '0.5rem' }}><i className="bi bi-cart-plus"></i> Thêm vào giỏ</button>
+                        <p style={{ margin: '0 0 1rem 0', color: 'var(--fg-soft)', fontSize: '0.95rem' }}>Danh sách yêu thích của bạn đang trống</p>
+                        <Link to="/products" className="btn btn-sm btn--indigo" style={{ padding: '0.5rem 1.25rem', borderRadius: '20px' }}>Mua sắm ngay</Link>
                       </div>
-                    </div>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1.2rem' }}>
+                        {wishlistProducts.map(product => (
+                          <ProductCard key={product.id} product={product} />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
