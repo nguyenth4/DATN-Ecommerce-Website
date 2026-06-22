@@ -1,0 +1,12 @@
+FROM node:20
+WORKDIR /app
+COPY package*.json ./
+COPY turbo.json ./
+COPY .npmrc ./
+COPY apps/backend/package*.json apps/backend/
+# We copy everything so the monorepo has its full context.
+COPY . .
+# We use npm install without scripts first, then rebuild
+RUN npm install --ignore-scripts --no-audit --no-fund --legacy-peer-deps
+WORKDIR /app/apps/backend
+CMD ["npx", "medusa", "exec", "./src/scripts/seed-phones.ts"]
