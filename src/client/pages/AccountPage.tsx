@@ -1,6 +1,156 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import '../styles/account.css';
+import '../styles/order-tracking.css';
+
+// Mock Orders Data
+const MOCK_ORDERS = [
+  {
+    id: 'SF2025-8843',
+    date: '24/05/2025 – 09:32',
+    total: 38015000,
+    paymentStatus: 'Đã thanh toán',
+    paymentMethod: 'Thẻ tín dụng (Visa/Mastercard)',
+    shippingStatus: 'Đang giao',
+    shippingAddress: {
+      name: 'Trần Ngọc',
+      phone: '0912 345 678',
+      address: 'Số 123 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh'
+    },
+    items: [
+      {
+        name: 'Sony WH-1000XM5',
+        variant: 'Đen',
+        quantity: 1,
+        price: 8490000,
+        image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=120&q=80'
+      },
+      {
+        name: 'iPhone 15 Pro Max 256GB',
+        variant: 'Titan Tự Nhiên',
+        quantity: 1,
+        price: 29525000,
+        image: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=120&q=80'
+      }
+    ],
+    timeline: [
+      { time: '25/05/2025 – 10:45', desc: 'Đang trên đường giao hàng', sub: 'Nhân viên: Nguyễn Văn Tài – 0901 234 567', current: true },
+      { time: '25/05/2025 – 08:20', desc: 'Đã rời kho phân phối – TP.HCM', sub: 'Bưu cục: GHN Quận 1', done: true },
+      { time: '24/05/2025 – 14:30', desc: 'Đang đóng gói hàng hóa', sub: 'Nhân viên kho: Lê Văn B', done: true },
+      { time: '24/05/2025 – 10:15', desc: 'Đơn hàng đã được xác nhận', sub: 'Thanh toán trực tuyến thành công', done: true },
+      { time: '24/05/2025 – 09:32', desc: 'Đặt hàng thành công', sub: 'Mã giao dịch: #TXN-778932', done: true }
+    ],
+    statusStep: 3 // Ordered: 0, Confirmed: 1, Packing: 2, Shipping: 3, Delivered: 4
+  },
+  {
+    id: 'SF2025-4421',
+    date: '18/04/2025 – 14:15',
+    total: 3490000,
+    paymentStatus: 'Đã thanh toán',
+    paymentMethod: 'Ví MoMo',
+    shippingStatus: 'Đã nhận',
+    shippingAddress: {
+      name: 'Trần Ngọc',
+      phone: '0912 345 678',
+      address: 'Số 123 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh'
+    },
+    items: [
+      {
+        name: 'Bàn phím cơ Keychron K8 Pro',
+        variant: 'RGB Red Switch',
+        quantity: 1,
+        price: 3490000,
+        image: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=120&q=80'
+      }
+    ],
+    timeline: [
+      { time: '20/04/2025 – 15:30', desc: 'Đã giao hàng thành công', sub: 'Người nhận: Trần Ngọc', done: true },
+      { time: '20/04/2025 – 09:15', desc: 'Đang giao hàng', sub: 'Nhân viên: Nguyễn Văn Tài', done: true },
+      { time: '19/04/2025 – 11:20', desc: 'Đã rời kho phân phối', sub: 'Bưu cục: GHN Quận 1', done: true },
+      { time: '18/04/2025 – 15:40', desc: 'Đã hoàn tất đóng gói', sub: 'Nhân viên kho', done: true },
+      { time: '18/04/2025 – 14:15', desc: 'Đặt hàng thành công', sub: 'Mã giao dịch: #TXN-665243', done: true }
+    ],
+    statusStep: 4
+  },
+  {
+    id: 'SF2025-1102',
+    date: '02/03/2025 – 18:22',
+    total: 12500000,
+    paymentStatus: 'Chưa thanh toán',
+    paymentMethod: 'Thanh toán khi nhận hàng (COD)',
+    shippingStatus: 'Đã hủy',
+    shippingAddress: {
+      name: 'Trần Ngọc',
+      phone: '0912 345 678',
+      address: 'Số 123 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh'
+    },
+    items: [
+      {
+        name: 'Màn hình Dell UltraSharp U2422H 24" IPS',
+        variant: 'Đen',
+        quantity: 2,
+        price: 6250000,
+        image: 'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=120&q=80'
+      }
+    ],
+    timeline: [
+      { time: '03/03/2025 – 10:00', desc: 'Đã hủy đơn hàng', sub: 'Lý do: Khách hàng yêu cầu hủy đơn', done: true }
+    ],
+    statusStep: -1
+  }
+];
 
 const AccountPage = () => {
+  const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'addresses' | 'wishlist' | 'password'>('profile');
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  
+  // Profile form state
+  const [firstName, setFirstName] = useState('Trần');
+  const [lastName, setLastName] = useState('Ngọc');
+  const [email, setEmail] = useState('tran.ngoc@email.com');
+  const [phone, setPhone] = useState('0912 345 678');
+  const [gender, setGender] = useState('Nam');
+  const [dob, setDob] = useState('1998-05-15');
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const handleSaveProfile = () => {
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3000);
+  };
+
+  const handleCancelProfile = () => {
+    setFirstName('Trần');
+    setLastName('Ngọc');
+    setEmail('tran.ngoc@email.com');
+    setPhone('0912 345 678');
+    setGender('Nam');
+    setDob('1998-05-15');
+  };
+
+  const selectedOrder = MOCK_ORDERS.find(o => o.id === selectedOrderId);
+
+  const getShippingBadgeClass = (status: string) => {
+    switch (status) {
+      case 'Đang giao': return 'status-badge badge-shipped';
+      case 'Đã nhận': return 'status-badge badge-completed';
+      case 'Đã hủy': return 'status-badge badge-cancelled';
+      default: return 'status-badge badge-pending';
+    }
+  };
+
+  const getShippingBadgeIcon = (status: string) => {
+    switch (status) {
+      case 'Đang giao': return 'bi bi-truck';
+      case 'Đã nhận': return 'bi bi-check-circle-fill';
+      case 'Đã hủy': return 'bi bi-x-circle-fill';
+      default: return 'bi bi-clock-history';
+    }
+  };
+
+  const formatPrice = (value: number) => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
+  };
+
   return (
     <>
       <div className="page-header">
@@ -15,31 +165,49 @@ const AccountPage = () => {
       <section className="section products-section-bg">
         <div className="container">
           <div className="account-layout">
+            
             {/* SIDEBAR */}
             <div className="account-sidebar">
               <div className="account-profile-header">
                 <div className="avatar-wrap">
-                  <div className="avatar-img">TN</div>
+                  <div className="avatar-img">{firstName.charAt(0)}{lastName.charAt(0)}</div>
                   <div className="avatar-edit"><i className="bi bi-camera"></i></div>
                 </div>
-                <div className="account-name">Trần Ngọc</div>
-                <div className="account-email">tran.ngoc@email.com</div>
+                <div className="account-name">{firstName} {lastName}</div>
+                <div className="account-email">{email}</div>
               </div>
               <div style={{ padding: '0.5rem 0' }}>
-                <div className="account-nav-item active">
+                <div 
+                  className={`account-nav-item ${activeTab === 'profile' ? 'active' : ''}`}
+                  onClick={() => { setActiveTab('profile'); setSelectedOrderId(null); }}
+                >
                   <i className="bi bi-person"></i> Thông tin cá nhân
                 </div>
-                <div className="account-nav-item">
+                <div 
+                  className={`account-nav-item ${activeTab === 'orders' ? 'active' : ''}`}
+                  onClick={() => { setActiveTab('orders'); setSelectedOrderId(null); }}
+                >
                   <i className="bi bi-receipt"></i> Đơn hàng của tôi
-                  <span className="badge-count" style={{ marginLeft: 'auto', position: 'static', background: 'var(--dark)', color: 'white', padding: '1px 6px', borderRadius: '10px', fontSize: '0.68rem' }}>5</span>
+                  <span className="badge-count" style={{ marginLeft: 'auto', position: 'static', background: 'var(--indigo)', color: 'white', padding: '1px 6px', borderRadius: '10px', fontSize: '0.68rem' }}>
+                    {MOCK_ORDERS.length}
+                  </span>
                 </div>
-                <div className="account-nav-item">
+                <div 
+                  className={`account-nav-item ${activeTab === 'addresses' ? 'active' : ''}`}
+                  onClick={() => { setActiveTab('addresses'); setSelectedOrderId(null); }}
+                >
                   <i className="bi bi-geo-alt"></i> Địa chỉ giao hàng
                 </div>
-                <div className="account-nav-item">
+                <div 
+                  className={`account-nav-item ${activeTab === 'wishlist' ? 'active' : ''}`}
+                  onClick={() => { setActiveTab('wishlist'); setSelectedOrderId(null); }}
+                >
                   <i className="bi bi-heart"></i> Sản phẩm yêu thích
                 </div>
-                <div className="account-nav-item">
+                <div 
+                  className={`account-nav-item ${activeTab === 'password' ? 'active' : ''}`}
+                  onClick={() => { setActiveTab('password'); setSelectedOrderId(null); }}
+                >
                   <i className="bi bi-lock"></i> Đổi mật khẩu
                 </div>
                 <div className="account-nav-divider"></div>
@@ -51,55 +219,408 @@ const AccountPage = () => {
 
             {/* CONTENT */}
             <div>
+              
               {/* PROFILE TAB */}
-              <div id="tab-profile" className="tab-panel active">
-                <div style={{ background: 'white', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', padding: '1.8rem' }}>
-                  <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem', letterSpacing: '1px', marginBottom: '1.5rem', paddingBottom: '0.8rem', borderBottom: '1px solid var(--border)' }}>
-                    Thông tin cá nhân
-                  </div>
-                  <div className="alert alert-success" style={{ marginBottom: '1.5rem' }}>
-                    <i className="bi bi-check-circle-fill"></i> Tài khoản đã xác thực email
-                  </div>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label className="form-label">Họ *</label>
-                      <input type="text" className="form-control" defaultValue="Trần" />
+              {activeTab === 'profile' && (
+                <div className="tab-panel active">
+                  <div style={{ background: 'white', borderRadius: 'var(--r-lg)', border: '1px solid var(--rule)', padding: '1.8rem', boxShadow: 'var(--shadow-sm)' }}>
+                    <div style={{ fontFamily: "var(--ff-display)", fontSize: '1.3rem', fontWeight: 700, marginBottom: '1.5rem', paddingBottom: '0.8rem', borderBottom: '1px solid var(--rule)' }}>
+                      Thông tin cá nhân
+                    </div>
+                    
+                    {saveSuccess && (
+                      <div className="alert alert-success" style={{ marginBottom: '1.5rem' }}>
+                        <i className="bi bi-check-circle-fill"></i> Cập nhật thông tin cá nhân thành công!
+                      </div>
+                    )}
+                    
+                    <div className="alert alert-info" style={{ marginBottom: '1.5rem' }}>
+                      <i className="bi bi-info-circle-fill"></i> Tài khoản đã xác thực email
+                    </div>
+                    
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">Họ *</label>
+                        <input 
+                          type="text" 
+                          className="form-control" 
+                          value={firstName} 
+                          onChange={(e) => setFirstName(e.target.value)} 
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Tên *</label>
+                        <input 
+                          type="text" 
+                          className="form-control" 
+                          value={lastName} 
+                          onChange={(e) => setLastName(e.target.value)} 
+                        />
+                      </div>
                     </div>
                     <div className="form-group">
-                      <label className="form-label">Tên *</label>
-                      <input type="text" className="form-control" defaultValue="Ngọc" />
+                      <label className="form-label">Email *</label>
+                      <input 
+                        type="email" 
+                        className="form-control" 
+                        value={email} 
+                        onChange={(e) => setEmail(e.target.value)} 
+                      />
                     </div>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Email *</label>
-                    <input type="email" className="form-control" defaultValue="tran.ngoc@email.com" />
-                  </div>
-                  <div className="form-row">
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">Số điện thoại</label>
+                        <input 
+                          type="tel" 
+                          className="form-control" 
+                          value={phone} 
+                          onChange={(e) => setPhone(e.target.value)} 
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Giới tính</label>
+                        <select 
+                          className="form-control" 
+                          value={gender}
+                          onChange={(e) => setGender(e.target.value)}
+                        >
+                          <option value="Nam">Nam</option>
+                          <option value="Nữ">Nữ</option>
+                          <option value="Khác">Khác</option>
+                        </select>
+                      </div>
+                    </div>
                     <div className="form-group">
-                      <label className="form-label">Số điện thoại</label>
-                      <input type="tel" className="form-control" defaultValue="0912 345 678" />
+                      <label className="form-label">Ngày sinh</label>
+                      <input 
+                        type="date" 
+                        className="form-control" 
+                        value={dob} 
+                        onChange={(e) => setDob(e.target.value)} 
+                      />
                     </div>
-                    <div className="form-group">
-                      <label className="form-label">Giới tính</label>
-                      <select className="form-control">
-                        <option>Nam</option>
-                        <option>Nữ</option>
-                        <option>Không muốn tiết lộ</option>
-                      </select>
+                    <div className="flex-center" style={{ justifyContent: 'flex-end', gap: '0.8rem', marginTop: '1.8rem' }}>
+                      <button className="btn btn--ghost" onClick={handleCancelProfile}>Hủy thay đổi</button>
+                      <button className="btn btn--indigo" onClick={handleSaveProfile}><i className="bi bi-check-lg"></i> Lưu thay đổi</button>
                     </div>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Ngày sinh</label>
-                    <input type="date" className="form-control" defaultValue="1998-05-15" />
-                  </div>
-                  <div className="flex-center" style={{ justifyContent: 'flex-end' }}>
-                    <button className="btn btn-outline" style={{ color: 'var(--dark)', borderColor: 'var(--border)' }}>Hủy thay đổi</button>
-                    <button className="btn btn-primary"><i className="bi bi-check-lg"></i> Lưu thay đổi</button>
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* Other tabs can be implemented conditionally in React */}
+              {/* ORDERS TAB */}
+              {activeTab === 'orders' && (
+                <div className="tab-panel active">
+                  {!selectedOrderId ? (
+                    // Orders List View
+                    <div style={{ background: 'white', borderRadius: 'var(--r-lg)', border: '1px solid var(--rule)', padding: '1.8rem', boxShadow: 'var(--shadow-sm)' }}>
+                      <div style={{ fontFamily: "var(--ff-display)", fontSize: '1.3rem', fontWeight: 700, marginBottom: '1rem', paddingBottom: '0.8rem', borderBottom: '1px solid var(--rule)' }}>
+                        Đơn hàng của tôi
+                      </div>
+                      
+                      <div style={{ overflowX: 'auto' }}>
+                        <table className="orders-table">
+                          <thead>
+                            <tr>
+                              <th>Mã đơn hàng</th>
+                              <th>Ngày đặt</th>
+                              <th>Tổng cộng</th>
+                              <th>Thanh toán</th>
+                              <th>Vận chuyển</th>
+                              <th style={{ textAlign: 'right' }}>Hành động</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {MOCK_ORDERS.map((order) => (
+                              <tr key={order.id}>
+                                <td style={{ fontWeight: 700, color: 'var(--ink)' }}>{order.id}</td>
+                                <td>{order.date.split(' – ')[0]}</td>
+                                <td style={{ fontWeight: 700, color: 'var(--indigo)' }}>{formatPrice(order.total)}</td>
+                                <td>
+                                  <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>{order.paymentStatus}</span>
+                                </td>
+                                <td>
+                                  <span className={getShippingBadgeClass(order.shippingStatus)}>
+                                    <i className={getShippingBadgeIcon(order.shippingStatus)}></i> {order.shippingStatus}
+                                  </span>
+                                </td>
+                                <td style={{ textAlign: 'right' }}>
+                                  <button 
+                                    className="btn btn--sm btn--indigo" 
+                                    onClick={() => setSelectedOrderId(order.id)}
+                                  >
+                                    Chi tiết
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ) : (
+                    // Order Details View
+                    selectedOrder && (
+                      <div className="order-details-card">
+                        <button className="btn-back" onClick={() => setSelectedOrderId(null)}>
+                          <i className="bi bi-arrow-left"></i> Trở lại danh sách đơn hàng
+                        </button>
+                        
+                        <div className="order-details-header">
+                          <div>
+                            <h2 style={{ fontFamily: 'var(--ff-display)', fontSize: '1.5rem', fontWeight: 800 }}>
+                              Chi tiết đơn hàng {selectedOrder.id}
+                            </h2>
+                            <p className="text-xs text-muted" style={{ marginTop: '0.2rem' }}>
+                              Đặt lúc {selectedOrder.date}
+                            </p>
+                          </div>
+                          <span className={getShippingBadgeClass(selectedOrder.shippingStatus)} style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>
+                            <i className={getShippingBadgeIcon(selectedOrder.shippingStatus)}></i> {selectedOrder.shippingStatus}
+                          </span>
+                        </div>
+
+                        {/* STEPPER PROGRESS */}
+                        {selectedOrder.statusStep >= 0 && (
+                          <div style={{ background: 'var(--bg)', borderRadius: 'var(--r)', padding: '1.5rem 1rem', marginBottom: '1.5rem', border: '1px solid var(--rule)' }}>
+                            <div className="tracking-steps">
+                              <div className={`tracking-step ${selectedOrder.statusStep >= 0 ? 'done' : ''} ${selectedOrder.statusStep === 0 ? 'current' : ''}`}>
+                                <div className="step-icon">
+                                  {selectedOrder.statusStep > 0 ? <i className="bi bi-check2"></i> : <i className="bi bi-receipt"></i>}
+                                </div>
+                                <div className="step-label">Đã đặt</div>
+                              </div>
+                              <div className={`tracking-step ${selectedOrder.statusStep >= 1 ? 'done' : ''} ${selectedOrder.statusStep === 1 ? 'current' : ''}`}>
+                                <div className="step-icon">
+                                  {selectedOrder.statusStep > 1 ? <i className="bi bi-check2"></i> : <i className="bi bi-patch-check"></i>}
+                                </div>
+                                <div className="step-label">Xác nhận</div>
+                              </div>
+                              <div className={`tracking-step ${selectedOrder.statusStep >= 2 ? 'done' : ''} ${selectedOrder.statusStep === 2 ? 'current' : ''}`}>
+                                <div className="step-icon">
+                                  {selectedOrder.statusStep > 2 ? <i className="bi bi-check2"></i> : <i className="bi bi-box-seam"></i>}
+                                </div>
+                                <div className="step-label">Đóng gói</div>
+                              </div>
+                              <div className={`tracking-step ${selectedOrder.statusStep >= 3 ? 'done' : ''} ${selectedOrder.statusStep === 3 ? 'current' : ''}`}>
+                                <div className="step-icon">
+                                  {selectedOrder.statusStep > 3 ? <i className="bi bi-check2"></i> : <i className="bi bi-truck"></i>}
+                                </div>
+                                <div className="step-label">Đang giao</div>
+                              </div>
+                              <div className={`tracking-step ${selectedOrder.statusStep >= 4 ? 'done' : ''} ${selectedOrder.statusStep === 4 ? 'current' : ''}`}>
+                                <div className="step-icon">
+                                  <i className="bi bi-house-check"></i>
+                                </div>
+                                <div className="step-label">Đã nhận</div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* SHIPPING & PAYMENT INFO */}
+                        <div className="order-details-grid">
+                          <div className="info-card">
+                            <div className="info-card-title">Địa chỉ nhận hàng</div>
+                            <div className="info-card-text">
+                              <strong style={{ display: 'block', marginBottom: '0.3rem', color: 'var(--ink)' }}>
+                                {selectedOrder.shippingAddress.name}
+                              </strong>
+                              <span style={{ display: 'block', marginBottom: '0.2rem' }}>
+                                <i className="bi bi-telephone text-muted" style={{ marginRight: '0.4rem' }}></i>
+                                {selectedOrder.shippingAddress.phone}
+                              </span>
+                              <span>
+                                <i className="bi bi-geo-alt text-muted" style={{ marginRight: '0.4rem' }}></i>
+                                {selectedOrder.shippingAddress.address}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className="info-card">
+                            <div className="info-card-title">Phương thức thanh toán</div>
+                            <div className="info-card-text">
+                              <span style={{ fontWeight: 600, display: 'block', marginBottom: '0.5rem', color: 'var(--ink)' }}>
+                                {selectedOrder.paymentMethod}
+                              </span>
+                              <div className="flex-center text-xs">
+                                <span className={`status-badge ${selectedOrder.paymentStatus === 'Đã thanh toán' ? 'badge-completed' : 'badge-pending'}`} style={{ padding: '0.2rem 0.6rem' }}>
+                                  {selectedOrder.paymentStatus}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* ORDER ITEMS */}
+                        <div style={{ fontFamily: 'var(--ff-display)', fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.8rem' }}>
+                          Sản phẩm trong đơn hàng
+                        </div>
+                        <div className="order-items-list">
+                          {selectedOrder.items.map((item, idx) => (
+                            <div className="order-item-row" key={idx}>
+                              <img src={item.image} alt={item.name} className="order-item-img" />
+                              <div className="order-item-info">
+                                <div className="order-item-name">{item.name}</div>
+                                <div className="order-item-meta">Phân loại: {item.variant} &middot; Số lượng: {item.quantity}</div>
+                              </div>
+                              <div className="order-item-price">
+                                {formatPrice(item.price)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* SUMS */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', flexWrap: 'wrap', gap: '1.5rem', marginTop: '1.5rem' }}>
+                          
+                          {/* TIMELINE MINI */}
+                          <div style={{ flex: 1, minWidth: '280px' }}>
+                            <div style={{ fontFamily: 'var(--ff-display)', fontSize: '1.05rem', fontWeight: 700, marginBottom: '0.8rem' }}>
+                              Lịch sử vận chuyển
+                            </div>
+                            <div className="timeline" style={{ background: 'white', padding: '1rem', border: '1px solid var(--rule)', borderRadius: 'var(--r)' }}>
+                              {selectedOrder.timeline.map((event, idx) => (
+                                <div className="timeline-item" key={idx}>
+                                  <div className={`timeline-dot ${event.current ? 'current' : ''} ${event.done ? 'done' : ''}`}>
+                                    {event.current ? <i className="bi bi-truck"></i> : <i className="bi bi-check"></i>}
+                                  </div>
+                                  <div className="timeline-time">{event.time}</div>
+                                  <div className="timeline-desc">{event.desc}</div>
+                                  {event.sub && <div className="timeline-sub">{event.sub}</div>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* TOTALS */}
+                          <div className="order-totals-card" style={{ minWidth: '280px' }}>
+                            <div className="total-row">
+                              <span className="text-muted">Tạm tính:</span>
+                              <span style={{ fontWeight: 600 }}>{formatPrice(selectedOrder.total - 30000)}</span>
+                            </div>
+                            <div className="total-row">
+                              <span className="text-muted">Phí vận chuyển:</span>
+                              <span style={{ fontWeight: 600 }}>{formatPrice(30000)}</span>
+                            </div>
+                            <div className="total-row">
+                              <span className="text-muted">Giảm giá:</span>
+                              <span style={{ fontWeight: 600, color: 'var(--emerald)' }}>{formatPrice(0)}</span>
+                            </div>
+                            <div className="total-row grand-total">
+                              <span>Tổng cộng:</span>
+                              <span>{formatPrice(selectedOrder.total)}</span>
+                            </div>
+                          </div>
+                          
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+
+              {/* ADDRESSES TAB */}
+              {activeTab === 'addresses' && (
+                <div className="tab-panel active">
+                  <div style={{ background: 'white', borderRadius: 'var(--r-lg)', border: '1px solid var(--rule)', padding: '1.8rem', boxShadow: 'var(--shadow-sm)' }}>
+                    <div style={{ fontFamily: "var(--ff-display)", fontSize: '1.3rem', fontWeight: 700, marginBottom: '1.5rem', paddingBottom: '0.8rem', borderBottom: '1px solid var(--rule)' }}>
+                      Địa chỉ giao hàng
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.2rem' }}>
+                      <div className="address-card default">
+                        <div style={{ position: 'absolute', top: '1.2rem', right: '1.2rem' }}>
+                          <span className="status-badge badge-completed" style={{ fontSize: '0.65rem', padding: '0.15rem 0.5rem' }}>Mặc định</span>
+                        </div>
+                        <h4 style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.5rem' }}>Nhà riêng</h4>
+                        <p style={{ fontSize: '0.85rem', lineHeight: 1.6, color: 'var(--fg-soft)' }}>
+                          <strong>Trần Ngọc</strong><br />
+                          0912 345 678<br />
+                          Số 123 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh
+                        </p>
+                        <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1rem', borderTop: '1px solid var(--rule)', paddingTop: '0.8rem' }}>
+                          <button style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--indigo)' }}><i className="bi bi-pencil"></i> Chỉnh sửa</button>
+                          <button style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--fg-mute)', cursor: 'not-allowed' }} disabled><i className="bi bi-trash"></i> Xóa</button>
+                        </div>
+                      </div>
+                      
+                      <div className="address-card">
+                        <h4 style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.5rem' }}>Văn phòng</h4>
+                        <p style={{ fontSize: '0.85rem', lineHeight: 1.6, color: 'var(--fg-soft)' }}>
+                          <strong>Trần Ngọc</strong><br />
+                          0912 345 678<br />
+                          Tầng 15, Tòa nhà Bitexco Financial, 2 Hải Triều, Bến Nghé, Quận 1, TP. Hồ Chí Minh
+                        </p>
+                        <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1rem', borderTop: '1px solid var(--rule)', paddingTop: '0.8rem' }}>
+                          <button style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--indigo)' }}><i className="bi bi-pencil"></i> Chỉnh sửa</button>
+                          <button style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--rose)' }}><i className="bi bi-trash"></i> Xóa</button>
+                        </div>
+                      </div>
+                    </div>
+                    <button className="btn btn--indigo" style={{ marginTop: '1.5rem' }}><i className="bi bi-plus-lg"></i> Thêm địa chỉ mới</button>
+                  </div>
+                </div>
+              )}
+
+              {/* WISHLIST TAB */}
+              {activeTab === 'wishlist' && (
+                <div className="tab-panel active">
+                  <div style={{ background: 'white', borderRadius: 'var(--r-lg)', border: '1px solid var(--rule)', padding: '1.8rem', boxShadow: 'var(--shadow-sm)' }}>
+                    <div style={{ fontFamily: "var(--ff-display)", fontSize: '1.3rem', fontWeight: 700, marginBottom: '1.5rem', paddingBottom: '0.8rem', borderBottom: '1px solid var(--rule)' }}>
+                      Sản phẩm yêu thích
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.2rem' }}>
+                      <div className="product-card">
+                        <div className="img-wrap">
+                          <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&q=80" alt="Sony WH-1000XM5" />
+                        </div>
+                        <div className="name">Sony WH-1000XM5</div>
+                        <div className="price">
+                          <span className="now">{formatPrice(8490000)}</span>
+                        </div>
+                        <button className="btn btn--sm btn--indigo" style={{ marginTop: '0.5rem' }}><i className="bi bi-cart-plus"></i> Thêm vào giỏ</button>
+                      </div>
+                      
+                      <div className="product-card">
+                        <div className="img-wrap">
+                          <img src="https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=300&q=80" alt="Keychron K8 Pro" />
+                        </div>
+                        <div className="name">Keychron K8 Pro</div>
+                        <div className="price">
+                          <span className="now">{formatPrice(3490000)}</span>
+                        </div>
+                        <button className="btn btn--sm btn--indigo" style={{ marginTop: '0.5rem' }}><i className="bi bi-cart-plus"></i> Thêm vào giỏ</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* PASSWORD TAB */}
+              {activeTab === 'password' && (
+                <div className="tab-panel active">
+                  <div style={{ background: 'white', borderRadius: 'var(--r-lg)', border: '1px solid var(--rule)', padding: '1.8rem', boxShadow: 'var(--shadow-sm)' }}>
+                    <div style={{ fontFamily: "var(--ff-display)", fontSize: '1.3rem', fontWeight: 700, marginBottom: '1.5rem', paddingBottom: '0.8rem', borderBottom: '1px solid var(--rule)' }}>
+                      Đổi mật khẩu
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Mật khẩu hiện tại *</label>
+                      <input type="password" className="form-control" placeholder="Nhập mật khẩu hiện tại..." />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Mật khẩu mới *</label>
+                      <input type="password" className="form-control" placeholder="Nhập mật khẩu mới..." />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Xác nhận mật khẩu mới *</label>
+                      <input type="password" className="form-control" placeholder="Nhập lại mật khẩu mới..." />
+                    </div>
+                    <div className="flex-center" style={{ justifyContent: 'flex-end', marginTop: '1.8rem' }}>
+                      <button className="btn btn--indigo"><i className="bi bi-shield-lock"></i> Cập nhật mật khẩu</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
         </div>

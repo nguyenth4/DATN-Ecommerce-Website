@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const THUMBS = [
   'photo-1608043152269-423dbba4e7e1',
@@ -53,7 +53,6 @@ const ProductDetailPage = () => {
   const [color, setColor] = useState(0);
   const [config, setConfig] = useState(1);
   const [care, setCare] = useState(0);
-  const navigate = useNavigate();
 
   const colors = [
     { hex: '#FFFFFF', label: 'White' },

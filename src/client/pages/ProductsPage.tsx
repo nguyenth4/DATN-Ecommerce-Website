@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { getCompareList, toggleCompareProduct } from '../utils/compare';
 
 const PRODUCTS = [
   { id: '1', img: 'photo-1511707171634-5f897ff02aa9', name: 'Galaxy Note 20 Ultra 5G', price: '$2,780', stock: 52, stars: '★★★★★', count: 56, badge: 'New' },
@@ -15,7 +16,18 @@ const PRODUCTS = [
 
 const ProductsPage = () => {
   const [sort, setSort] = useState('');
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [compareList, setCompareList] = useState(getCompareList());
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setCompareList(getCompareList());
+    };
+    window.addEventListener('compare-updated', handleUpdate);
+    return () => {
+      window.removeEventListener('compare-updated', handleUpdate);
+    };
+  }, []);
+
 
   return (
     <>
@@ -115,7 +127,37 @@ const ProductsPage = () => {
                         {p.was && <span className="was">{p.was}</span>}
                       </div>
                       <div className="stars">{p.stars} <span className="count">({p.count})</span></div>
-                      <Link to="/cart" className="btn">Order now →</Link>
+                      <div 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                        style={{
+                          marginTop: '0.65rem',
+                          paddingTop: '0.65rem',
+                          borderTop: '1px dashed var(--rule, #eaeaea)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          fontSize: '0.8rem',
+                          color: 'var(--fg-mute, #64748b)'
+                        }}
+                      >
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', margin: 0 }}>
+                          <input 
+                            type="checkbox" 
+                            checked={compareList.includes(p.id)}
+                            onChange={() => toggleCompareProduct(p.id, p.name)}
+                            style={{ 
+                              cursor: 'pointer', 
+                              accentColor: 'var(--indigo, #4f46e5)',
+                              width: '14px',
+                              height: '14px'
+                            }}
+                          />
+                          <span style={{ fontWeight: 500 }}>So sánh</span>
+                        </label>
+                      </div>
+                      <Link to="/cart" className="btn" style={{ marginTop: '0.65rem' }}>Order now →</Link>
                     </article>
                   ))}
                 </div>

@@ -1,15 +1,28 @@
 import { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 
+import { getCompareList } from '../utils/compare';
+
 const Header = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchQ, setSearchQ] = useState('');
+  const [compareCount, setCompareCount] = useState(getCompareList().length);
   const navigate = useNavigate();
 
   useEffect(() => {
     document.body.style.overflow = drawerOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [drawerOpen]);
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setCompareCount(getCompareList().length);
+    };
+    window.addEventListener('compare-updated', handleUpdate);
+    return () => {
+      window.removeEventListener('compare-updated', handleUpdate);
+    };
+  }, []);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +77,12 @@ const Header = () => {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/>
               </svg>
+            </Link>
+            <Link to="/compare" className="icon-btn" aria-label="Compare" title="So sánh sản phẩm">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 3h5v5M21 3L14 10M8 21H3v-5M3 21l7-7"/>
+              </svg>
+              {compareCount > 0 && <span className="count">{compareCount}</span>}
             </Link>
             <Link to="#" className="icon-btn" aria-label="Wishlist">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

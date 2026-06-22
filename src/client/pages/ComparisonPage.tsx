@@ -1,43 +1,59 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useProducts } from '../services/product.service';
+import { getCompareList, toggleCompareProduct, clearCompareList } from '../utils/compare';
 
 const ComparisonPage = () => {
-  // Quản lý danh sách ID sản phẩm đang so sánh (mặc định lấy 2 cái đầu tiên để demo)
-  const [compareIds, setCompareIds] = useState<string[]>([]);
+  // Quản lý danh sách ID sản phẩm đang so sánh từ localStorage
+  const [compareIds, setCompareIds] = useState<string[]>(getCompareList());
   const [highlightDifferences, setHighlightDifferences] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Fetch dữ liệu thật từ Medusa
-  const { data: productsData, isLoading } = useProducts({
-    id: compareIds.length > 0 ? compareIds : undefined,
-    limit: 4
+  // Sync state when localstorage changes (via event)
+  useEffect(() => {
+    const handleUpdate = () => {
+      setCompareIds(getCompareList());
+    };
+    window.addEventListener('compare-updated', handleUpdate);
+    return () => {
+      window.removeEventListener('compare-updated', handleUpdate);
+    };
+  }, []);
+
+  // Fetch dữ liệu thật từ Medusa cho các sản phẩm trong danh sách
+  const { data: productsData, isLoading } = useProducts(
+    compareIds.length > 0 ? { id: compareIds, limit: 4 } : undefined
+  );
+
+  // Dùng searchResults cho modal thêm sản phẩm
+  const { data: searchResults, isLoading: isSearchingProducts } = useProducts({
+    q: searchQuery || undefined,
+    limit: 6
   });
 
-  // Nếu chưa có ID nào, lấy 3 sản phẩm đầu tiên làm mẫu
-  useEffect(() => {
-    if (!isLoading && productsData?.products && compareIds.length === 0) {
-      setCompareIds(productsData.products.slice(0, 3).map((p: any) => p.id));
-    }
-  }, [productsData, isLoading, compareIds]);
-
   const products = useMemo(() => {
-    if (!productsData?.products) return [];
-    return productsData.products.map((p: any) => {
-      const meta = p.metadata || {};
-      let specs = meta.specifications || meta.specs || {};
-      if (typeof specs === 'string' && specs.startsWith('{')) {
-        try { specs = JSON.parse(specs); } catch (e) { specs = {}; }
-      }
-      return {
-        id: p.id,
-        title: p.title,
-        thumbnail: p.thumbnail,
-        price: p.variants?.[0]?.prices?.[0]?.amount || 0,
-        specs: specs
-      };
-    });
-  }, [productsData]);
+    if (compareIds.length === 0 || !productsData?.products) return [];
+    
+    // Sắp xếp các sản phẩm đúng theo thứ tự lưu trong compareIds
+    return compareIds
+      .map(id => productsData.products.find((p: any) => p.id === id))
+      .filter(Boolean)
+      .map((p: any) => {
+        const meta = p.metadata || {};
+        let specs = meta.specifications || meta.specs || {};
+        if (typeof specs === 'string' && specs.startsWith('{')) {
+          try { specs = JSON.parse(specs); } catch (e) { specs = {}; }
+        }
+        return {
+          id: p.id,
+          title: p.title,
+          thumbnail: p.thumbnail,
+          price: p.variants?.[0]?.prices?.[0]?.amount || 0,
+          specs: specs
+        };
+      });
+  }, [productsData, compareIds]);
 
   // Nhóm các thông số kỹ thuật (Style CellphoneS)
   const specGroups = [
@@ -59,59 +75,113 @@ const ComparisonPage = () => {
     }
   ];
 
-  if (isLoading && compareIds.length === 0) {
-    return <div className="container flex-center" style={{ minHeight: '400px' }}><p>Đang tải dữ liệu so sánh...</p></div>;
+  if (isLoading && compareIds.length > 0) {
+    return (
+      <div className="container flex-center" style={{ minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p>Đang tải dữ liệu so sánh...</p>
+      </div>
+    );
+  }
+
+  if (compareIds.length === 0) {
+    return (
+      <div className="container text-center" style={{ minHeight: '450px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', padding: '4rem 0' }}>
+        <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: 'var(--indigo-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--indigo)' }}>
+          <i className="bi bi-arrow-left-right" style={{ fontSize: '2rem' }}></i>
+        </div>
+        <div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem' }}>Danh sách so sánh trống</h2>
+          <p style={{ color: 'var(--fg-mute)', maxWidth: '400px', margin: '0 auto', fontSize: '0.95rem', lineHeight: '1.6' }}>
+            Bạn chưa thêm sản phẩm nào vào danh sách so sánh. Chọn sản phẩm từ cửa hàng hoặc thêm trực tiếp tại đây.
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <Link to="/products" className="btn btn--indigo" style={{ padding: '0.75rem 1.5rem', borderRadius: '30px', fontWeight: 600 }}>
+            Xem sản phẩm
+          </Link>
+          <button 
+            onClick={() => setIsSearching(true)} 
+            className="btn" 
+            style={{ padding: '0.75rem 1.5rem', borderRadius: '30px', border: '1px solid var(--rule)', background: 'white', fontWeight: 600 }}
+          >
+            Thêm sản phẩm nhanh
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="products-section-bg" style={{ minHeight: '100vh', padding: '2rem 0' }}>
       <div className="container">
-        <div className="flex-between mb-4">
+        <div className="flex-between mb-4" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
-            <h1 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '0.5rem' }}>So sánh sản phẩm</h1>
+            <h1 style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: '0.5rem' }}>So sánh sản phẩm ({products.length})</h1>
             <nav className="breadcrumb">
-              <Link to="/">Trang chủ</Link> <span>/</span> <span>So sánh</span>
+              <Link to="/">Trang chủ</Link> <span>/</span> <span style={{ color: 'var(--indigo)' }}>So sánh</span>
             </nav>
           </div>
-          <div className="flex-center" style={{ gap: '1rem', background: '#fff', padding: '0.6rem 1.2rem', borderRadius: '30px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-            <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--gray)' }}>Hiển thị sự khác biệt</span>
-            <label className="switch">
-              <input type="checkbox" checked={highlightDifferences} onChange={e => setHighlightDifferences(e.target.checked)} />
-              <span className="slider round"></span>
-            </label>
+          <div style={{ display: 'flex', gap: '0.8rem' }}>
+            <button 
+              onClick={clearCompareList}
+              className="btn btn-sm"
+              style={{ background: '#fee2e2', color: '#ef4444', borderRadius: '30px', padding: '0.5rem 1rem', fontSize: '0.85rem', fontWeight: 600, border: 'none' }}
+            >
+              Xóa tất cả
+            </button>
+            <div className="flex-center" style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: '#fff', padding: '0.5rem 1.2rem', borderRadius: '30px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--fg-soft)' }}>Tô sáng điểm khác biệt</span>
+              <label className="switch">
+                <input type="checkbox" checked={highlightDifferences} onChange={e => setHighlightDifferences(e.target.checked)} />
+                <span className="slider round"></span>
+              </label>
+            </div>
           </div>
         </div>
 
-        <div className="comparison-card shadow-sm" style={{ background: '#fff', borderRadius: '20px', overflow: 'hidden' }}>
+        <div className="comparison-container shadow-sm" style={{ background: '#fff', borderRadius: '20px', overflow: 'hidden' }}>
           {/* Header row with images */}
-          <div style={{ position: 'sticky', top: '0', zIndex: 10, background: '#fff', borderBottom: '1px solid var(--border)' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: `250px repeat(${products.length + (products.length < 4 ? 1 : 0)}, 1fr)`, gap: '1px', background: 'var(--border)' }}>
+          <div style={{ position: 'sticky', top: '0', zIndex: 10, background: '#fff', borderBottom: '1px solid var(--rule)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: `250px repeat(${products.length + (products.length < 4 ? 1 : 0)}, 1fr)`, gap: '1px', background: 'var(--rule)' }}>
               <div style={{ background: '#fff', padding: '2rem', display: 'flex', alignItems: 'center' }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Thông số kỹ thuật</h3>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--fg)' }}>Thông số kỹ thuật</h3>
               </div>
               
               {products.map(p => (
                 <div key={p.id} style={{ background: '#fff', padding: '1.5rem', textAlign: 'center', position: 'relative' }}>
                   <button 
-                    onClick={() => setCompareIds(compareIds.filter(id => id !== p.id))}
-                    style={{ position: 'absolute', top: '10px', right: '10px', background: '#f5f5f5', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', fontSize: '12px' }}
+                    onClick={() => toggleCompareProduct(p.id, p.title)}
+                    style={{ position: 'absolute', top: '10px', right: '10px', background: 'var(--bg-soft)', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-mute)', transition: 'all 0.2s' }}
+                    title="Xóa khỏi so sánh"
                   >
-                    <i className="bi bi-x"></i>
+                    <i className="bi bi-x" style={{ fontSize: '1.1rem' }}></i>
                   </button>
-                  <div style={{ height: '100px', marginBottom: '1rem' }}>
-                    <img src={p.thumbnail} alt="" style={{ height: '100%', objectFit: 'contain' }} />
+                  <div style={{ height: '100px', marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <img src={p.thumbnail} alt="" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
                   </div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700, height: '40px', overflow: 'hidden', marginBottom: '0.5rem' }}>{p.title}</div>
-                  <div style={{ color: 'var(--accent)', fontWeight: 800 }}>{p.price.toLocaleString('vi-VN')}đ</div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, height: '40px', overflow: 'hidden', marginBottom: '0.5rem', color: 'var(--fg)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    {p.title}
+                  </div>
+                  <div style={{ color: 'var(--indigo)', fontWeight: 800, fontSize: '0.95rem' }}>
+                    {p.price > 0 ? `${p.price.toLocaleString('vi-VN')}đ` : 'Liên hệ'}
+                  </div>
                 </div>
               ))}
 
               {products.length < 4 && (
-                <div style={{ background: '#fafafa', padding: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', border: '2px dashed var(--border)', margin: '1rem', borderRadius: '12px' }}>
-                  <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
-                    <i className="bi bi-plus-lg" style={{ fontSize: '1.5rem', color: 'var(--gray)' }}></i>
+                <div style={{ background: '#fff', padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.8rem', border: '2px dashed var(--rule-strong)', borderRadius: '12px', padding: '1rem', minHeight: '180px' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-mute)' }}>
+                      <i className="bi bi-plus-lg" style={{ fontSize: '1.2rem' }}></i>
+                    </div>
+                    <button 
+                      className="btn btn-sm btn-outline" 
+                      onClick={() => setIsSearching(true)}
+                      style={{ border: '1px solid var(--rule-strong)', borderRadius: '20px', padding: '0.4rem 1rem', fontSize: '0.8rem', fontWeight: 600, background: 'white' }}
+                    >
+                      Thêm sản phẩm
+                    </button>
                   </div>
-                  <button className="btn btn-sm btn-outline" onClick={() => setIsSearching(true)}>Thêm sản phẩm</button>
                 </div>
               )}
             </div>
@@ -121,7 +191,7 @@ const ComparisonPage = () => {
           <div className="comparison-body">
             {specGroups.map((group, groupIdx) => (
               <React.Fragment key={groupIdx}>
-                <div style={{ background: '#f8f9fa', padding: '0.8rem 1.5rem', fontWeight: 800, fontSize: '0.9rem', color: 'var(--dark)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                <div style={{ background: 'var(--bg-soft)', padding: '0.8rem 1.5rem', fontWeight: 800, fontSize: '0.85rem', color: 'var(--fg)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   {group.title}
                 </div>
                 {group.keys.map((key, keyIdx) => {
@@ -135,19 +205,22 @@ const ComparisonPage = () => {
                         display: 'grid', 
                         gridTemplateColumns: `250px repeat(${products.length + (products.length < 4 ? 1 : 0)}, 1fr)`, 
                         gap: '1px', 
-                        background: 'var(--border)',
-                        backgroundColor: isDifferent ? '#fffbe6' : '#fff'
+                        background: 'var(--rule)',
+                        backgroundColor: isDifferent ? '#fffbeb' : '#fff'
                       }}
                     >
-                      <div style={{ background: isDifferent ? '#fffbe6' : '#fff', padding: '1rem 1.5rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--gray)' }}>
+                      <div style={{ background: isDifferent ? '#fffbeb' : '#fff', padding: '1rem 1.5rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--fg-mute)' }}>
                         {key}
                       </div>
-                      {products.map(p => (
-                        <div key={p.id} style={{ background: isDifferent ? '#fffbe6' : '#fff', padding: '1rem 1.5rem', fontSize: '0.85rem', color: 'var(--dark)' }}>
-                          {p.specs[key] || <span style={{ color: '#ccc' }}>N/A</span>}
-                        </div>
-                      ))}
-                      {products.length < 4 && <div style={{ background: '#fdfdfd' }}></div>}
+                      {products.map(p => {
+                        const val = p.specs[key];
+                        return (
+                          <div key={p.id} style={{ background: isDifferent ? '#fffbeb' : '#fff', padding: '1rem 1.5rem', fontSize: '0.85rem', color: 'var(--fg)' }}>
+                            {val ? val : <span style={{ color: 'var(--ink-faint)' }}>—</span>}
+                          </div>
+                        );
+                      })}
+                      {products.length < 4 && <div style={{ background: '#fff' }}></div>}
                     </div>
                   );
                 })}
@@ -156,26 +229,88 @@ const ComparisonPage = () => {
           </div>
         </div>
 
-        {/* Search Modal Simulation */}
+        {/* Search Modal */}
         {isSearching && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-            <div className="card" style={{ width: '100%', maxWidth: '500px', padding: '2rem', borderRadius: '20px' }}>
-              <div className="flex-between mb-4">
-                <h3 style={{ margin: 0 }}>Thêm máy so sánh</h3>
-                <button onClick={() => setIsSearching(false)} className="btn-icon"><i className="bi bi-x-lg"></i></button>
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.4)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+            <div className="card animate-fade-in" style={{ width: '100%', maxWidth: '520px', padding: '2rem', borderRadius: '20px', background: '#fff', boxShadow: 'var(--shadow-lg)', border: '1px solid var(--rule)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: 'var(--fg)' }}>Thêm sản phẩm so sánh</h3>
+                <button 
+                  onClick={() => { setIsSearching(false); setSearchQuery(''); }} 
+                  style={{ background: 'var(--bg-soft)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--fg-mute)' }}
+                >
+                  <i className="bi bi-x-lg" style={{ fontSize: '0.9rem' }}></i>
+                </button>
               </div>
-              <input type="text" className="form-control mb-4" placeholder="Nhập tên sản phẩm cần tìm..." autoFocus />
-              <div className="text-sm text-muted mb-4">Sản phẩm gợi ý:</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                <div className="p-2 border rounded flex-between cursor-pointer hover-bg-light" style={{ cursor: 'pointer' }} onClick={() => setIsSearching(false)}>
-                  <span>iPhone 15 Pro Max</span>
-                  <i className="bi bi-plus-circle text-accent"></i>
-                </div>
-                <div className="p-2 border rounded flex-between cursor-pointer hover-bg-light" style={{ cursor: 'pointer' }} onClick={() => setIsSearching(false)}>
-                  <span>Xiaomi 14 Ultra</span>
-                  <i className="bi bi-plus-circle text-accent"></i>
-                </div>
+              
+              <div style={{ position: 'relative', marginBottom: '1.2rem' }}>
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  placeholder="Tìm kiếm điện thoại, laptop, audio..." 
+                  autoFocus 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{ paddingRight: '2.5rem' }}
+                />
+                <i className="bi bi-search" style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-mute)' }}></i>
               </div>
+              
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--fg-mute)', marginBottom: '0.8rem' }}>
+                {searchQuery ? 'Kết quả tìm kiếm' : 'Sản phẩm gợi ý'}
+              </div>
+              
+              {isSearchingProducts ? (
+                <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--fg-mute)' }}>
+                  <div style={{ display: 'inline-block', width: '24px', height: '24px', border: '3px solid var(--indigo-line)', borderTopColor: 'var(--indigo)', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: '0.5rem' }}></div>
+                  <p style={{ margin: 0, fontSize: '0.85rem' }}>Đang tìm kiếm...</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxHeight: '320px', overflowY: 'auto', paddingRight: '4px' }}>
+                  {searchResults?.products?.map((p: any) => {
+                    const isAlreadyCompared = compareIds.includes(p.id);
+                    return (
+                      <div 
+                        key={p.id} 
+                        style={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center', 
+                          padding: '0.75rem', 
+                          border: '1px solid var(--rule)', 
+                          borderRadius: '12px', 
+                          background: isAlreadyCompared ? 'var(--bg)' : 'white',
+                          cursor: isAlreadyCompared ? 'default' : 'pointer',
+                          transition: 'all 150ms ease'
+                        }}
+                        className={isAlreadyCompared ? '' : 'hover-bg-light'}
+                        onClick={() => {
+                          if (!isAlreadyCompared) {
+                            toggleCompareProduct(p.id, p.title);
+                            setIsSearching(false);
+                            setSearchQuery('');
+                          }
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                          <img src={p.thumbnail} alt="" style={{ width: '40px', height: '40px', objectFit: 'contain', background: 'var(--bg-soft)', borderRadius: '6px' }} />
+                          <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--fg)' }}>{p.title}</span>
+                        </div>
+                        {isAlreadyCompared ? (
+                          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--emerald)', background: '#ecfdf5', padding: '2px 8px', borderRadius: '12px' }}>Đã thêm</span>
+                        ) : (
+                          <i className="bi bi-plus-circle-fill" style={{ fontSize: '1.25rem', color: 'var(--indigo)' }}></i>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {(!searchResults?.products || searchResults.products.length === 0) && (
+                    <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--fg-mute)', fontSize: '0.875rem' }}>
+                      Không tìm thấy sản phẩm nào phù hợp.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -185,13 +320,23 @@ const ComparisonPage = () => {
       <style>{`
         .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--rule-strong); transition: .4s; }
         .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 3px; background-color: white; transition: .4s; }
-        input:checked + .slider { background-color: var(--accent); }
+        input:checked + .slider { background-color: var(--indigo); }
         input:checked + .slider:before { transform: translateX(20px); }
         .slider.round { border-radius: 34px; }
         .slider.round:before { border-radius: 50%; }
-        .hover-bg-light:hover { background-color: #f8f9fa; }
+        .hover-bg-light:hover { background-color: var(--bg-soft); }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .animate-fade-in {
+          animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
       `}</style>
     </div>
   );

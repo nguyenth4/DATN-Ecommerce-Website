@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 const INIT_ITEMS = [
   { id: 1, img: 'photo-1608043152269-423dbba4e7e1', name: 'Apple HomePod 2nd Gen Speaker', variant: 'White · Stereo pair · No AppleCare', price: 280, qty: 1 },
@@ -14,13 +14,12 @@ const CartPage = () => {
   const [items, setItems] = useState(INIT_ITEMS);
   const [promo, setPromo] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
-  const navigate = useNavigate();
 
-  const updateQty = (id, delta) => {
+  const updateQty = (id: number, delta: number) => {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, qty: Math.max(1, i.qty + delta) } : i)));
   };
 
-  const removeItem = (id) => {
+  const removeItem = (id: number) => {
     setItems((prev) => prev.filter((i) => i.id !== id));
   };
 

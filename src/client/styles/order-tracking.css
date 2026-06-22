@@ -1,0 +1,133 @@
+.timeline {
+  position: relative;
+  padding-left: 2rem;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--rule);
+}
+.timeline-item {
+  position: relative;
+  padding-bottom: 1.5rem;
+}
+.timeline-item:last-child {
+  padding-bottom: 0;
+}
+.timeline-dot {
+  position: absolute;
+  left: -1.75rem;
+  top: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--rule);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+  border: 2px solid white;
+  box-shadow: 0 0 0 2px var(--rule);
+}
+.timeline-dot.done {
+  background: var(--emerald);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+.timeline-dot.current {
+  background: var(--indigo);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+  animation: pulse 1.5s ease infinite;
+}
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(79, 70, 229, 0.1);
+  }
+}
+.timeline-time {
+  font-size: 0.72rem;
+  color: var(--fg-mute);
+  margin-bottom: 0.15rem;
+}
+.timeline-desc {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.timeline-sub {
+  font-size: 0.8rem;
+  color: var(--fg-mute);
+  margin-top: 0.15rem;
+}
+
+/* ===== STEPPER TRACKING STEPS ===== */
+.tracking-steps {
+  display: flex;
+  gap: 0;
+  margin: 1.5rem 0;
+  width: 100%;
+}
+.tracking-step {
+  flex: 1;
+  text-align: center;
+  position: relative;
+}
+.tracking-step::before {
+  content: '';
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  right: -50%;
+  height: 2px;
+  background: var(--rule);
+  z-index: 0;
+}
+.tracking-step:last-child::before {
+  display: none;
+}
+.tracking-step.done::before {
+  background: var(--emerald);
+}
+.step-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--rule);
+  color: var(--fg-mute);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  margin: 0 auto 0.5rem;
+  position: relative;
+  z-index: 1;
+  border: 2px solid white;
+  box-shadow: 0 0 0 2px var(--rule);
+}
+.tracking-step.done .step-icon {
+  background: var(--emerald);
+  color: white;
+  box-shadow: 0 0 0 2px var(--emerald);
+}
+.tracking-step.current .step-icon {
+  background: var(--indigo);
+  color: white;
+  box-shadow: 0 0 0 2px var(--indigo);
+}
+.step-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--fg-mute);
+}
+.tracking-step.done .step-label {
+  color: var(--emerald);
+}
+.tracking-step.current .step-label {
+  color: var(--indigo);
+}
