@@ -1,5 +1,17 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { 
+  Star, 
+  Heart, 
+  Zap, 
+  RotateCcw, 
+  Check, 
+  ChevronRight, 
+  ChevronLeft, 
+  Minus, 
+  Plus,
+  ArrowRight
+} from 'lucide-react';
 
 const THUMBS = [
   'photo-1608043152269-423dbba4e7e1',
@@ -10,22 +22,25 @@ const THUMBS = [
 ];
 
 const RELATED = [
-  { img: 'photo-1606220945770-b5b6c2c55bf1', name: 'Beats Studio Buds Pro', price: '$280', stock: 67, stars: '★★★★☆', count: 312 },
-  { img: 'photo-1523275335684-37898b6baf30', name: 'Apple Watch Series 9', price: '$680', stock: 41, stars: '★★★★★', count: 245, badge: 'New' },
-  { img: 'photo-1590658268037-6bf12165a8df', name: 'Apple AirPods V57', price: '$680', stock: 12, stars: '★★★★★', count: 124 },
-  { img: 'photo-1565849904461-04a58ad377e0', name: 'Samsung S21 Ultra', price: '$2,580', was: '$2,780', stock: 24, stars: '★★★★★', count: 212, badge: 'Sale' },
-  { img: 'photo-1502920917128-1aa500764cbd', name: 'Canon EOS R7 DSLR', price: '$1,920', stock: 24, stars: '★★★★☆', count: 67 },
+  { img: 'photo-1606220945770-b5b6c2c55bf1', name: 'Tai nghe Beats Studio Buds Pro', price: '280.000đ', stock: 67, stars: 4, count: 312 },
+  { img: 'photo-1523275335684-37898b6baf30', name: 'Apple Watch Series 9', price: '680.000đ', stock: 41, stars: 5, count: 245, badge: 'Mới' },
+  { img: 'photo-1590658268037-6bf12165a8df', name: 'Apple AirPods V57', price: '680.000đ', stock: 12, stars: 5, count: 124 },
+  { img: 'photo-1565849904461-04a58ad377e0', name: 'Samsung S21 Ultra', price: '2.580.000đ', was: '2.780.000đ', stock: 24, stars: 5, count: 212, badge: 'Giảm giá' },
+  { img: 'photo-1502920917128-1aa500764cbd', name: 'Máy ảnh Canon EOS R7 DSLR', price: '1.920.000đ', stock: 24, stars: 4, count: 67 },
 ];
+
+
 
 const SPECS = [
   { label: 'Chip', value: 'Apple S7 SiP' },
-  { label: 'Drivers', value: '4-inch high-excursion woofer, 5 beam-forming tweeters' },
-  { label: 'Connectivity', value: 'Wi-Fi 4, Bluetooth 5.0, Thread, U1' },
-  { label: 'Spatial audio', value: 'Yes, with dynamic head tracking' },
-  { label: 'Dimensions', value: '168 × 142 mm · 2.3 kg' },
-  { label: 'In the box', value: 'HomePod, power cable (1.8 m), documentation' },
-  { label: 'Warranty', value: '2-year limited' },
+  { label: 'Loa', value: 'Loa woofer 4 inch độ lệch cao, 5 loa tweeter tạo chùm tia' },
+  { label: 'Kết nối', value: 'Wi-Fi 4, Bluetooth 5.0, Thread, U1' },
+  { label: 'Âm thanh không gian', value: 'Có, với tính năng theo dõi đầu năng động' },
+  { label: 'Kích thước', value: '168 × 142 mm · 2.3 kg' },
+  { label: 'Trong hộp gồm', value: 'HomePod, cáp nguồn (1.8 m), tài liệu hướng dẫn' },
+  { label: 'Bảo hành', value: 'Hạn chế 2 năm' },
 ];
+
 
 const RATING_BREAKDOWN = [
   { stars: 5, pct: 82 },
@@ -36,9 +51,10 @@ const RATING_BREAKDOWN = [
 ];
 
 const REVIEWS = [
-  { name: 'Mira K.', time: '2 days ago', stars: '★★★★★', text: 'Bought a stereo pair for the living room. The room-sensing makes a real difference — they adapt to where you put them. Setup was 90 seconds with the iPhone handoff.' },
-  { name: 'Devan R.', time: '1 week ago', stars: '★★★★★', text: 'Replaced my old Sonos with this. Spatial audio is genuinely impressive on Atmos tracks. Build quality is excellent. Only wish it had a 3.5 mm jack for guests.' },
+  { name: 'Mira K.', time: '2 ngày trước', stars: 5, text: 'Đã mua một cặp stereo cho phòng khách. Tính năng cảm biến phòng tạo ra sự khác biệt thực sự — chúng thích ứng với nơi bạn đặt chúng. Thiết lập chỉ mất 90 giây với iPhone handoff.' },
+  { name: 'Devan R.', time: '1 tuần trước', stars: 5, text: 'Thay thế chiếc Sonos cũ của tôi bằng cái này. Âm thanh không gian thực sự ấn tượng trên các bản nhạc Atmos. Chất lượng hoàn thiện tuyệt vời.' },
 ];
+
 
 const tdLabelStyle = {
   padding: 'var(--s4) 0', color: 'var(--fg-mute)',
@@ -55,13 +71,15 @@ const ProductDetailPage = () => {
   const [care, setCare] = useState(0);
 
   const colors = [
-    { hex: '#FFFFFF', label: 'White' },
-    { hex: '#0F172A', label: 'Midnight' },
-    { hex: '#F97316', label: 'Orange' },
-    { hex: '#4F46E5', label: 'Indigo' },
+    { hex: '#FFFFFF', label: 'Trắng' },
+    { hex: '#0F172A', label: 'Xanh Đen' },
+    { hex: '#F97316', label: 'Cam' },
+    { hex: '#4F46E5', label: 'Tím' },
   ];
-  const configs = ['Single', 'Stereo pair · save $40', '3-pack · save $120'];
-  const carePlans = ['No coverage', '2 years · $39', '3 years · $59'];
+  const configs = ['Đơn', 'Cặp Stereo · Tiết kiệm 40.000đ', 'Bộ 3 · Tiết kiệm 120.000đ'];
+  const carePlans = ['Không bảo hiểm', '2 năm · 39.000đ', '3 năm · 59.000đ'];
+
+
 
   const decreaseQty = () => setQty((q) => Math.max(1, q - 1));
   const increaseQty = () => setQty((q) => q + 1);
@@ -71,8 +89,9 @@ const ProductDetailPage = () => {
       <main id="main">
         <div className="container">
           <div className="crumbs" style={{ paddingTop: 'var(--s5)' }}>
-            <Link to="/">Home</Link> <span className="sep">›</span> <Link to="/shop">Shop</Link> <span className="sep">›</span> <span>Speakers</span>
+            <Link to="/">Trang chủ</Link> <span className="sep">›</span> <Link to="/products">Sản phẩm</Link> <span className="sep">›</span> <span>Loa</span>
           </div>
+
 
           <section className="product-detail">
 
@@ -94,27 +113,33 @@ const ProductDetailPage = () => {
             </div>
 
             <div className="pdp-info">
-              <span className="pdp-cat">⚡ Audio · Featured</span>
-              <h1>Apple HomePod 2nd Gen Speaker</h1>
+              <span className="pdp-cat" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Zap size={14} fill="currentColor" /> Âm thanh · Nổi bật
+              </span>
+              <h1>Loa Apple HomePod Thế hệ 2</h1>
               <div className="rating-row">
-                <span style={{ color: 'var(--amber)', fontSize: '16px' }}>★★★★★</span>
-                <span>4.9 / 5 · 312 reviews</span>
+                <div style={{ display: 'flex', gap: '2px', color: 'var(--amber)' }}>
+                  {[...Array(5)].map((_, i) => <Star key={i} size={16} fill="currentColor" />)}
+                </div>
+                <span>4.9 / 5 · 312 đánh giá</span>
                 <span style={{ color: 'var(--rule-strong)' }}>|</span>
                 <span style={{ color: 'var(--emerald)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ width: '6px', height: '6px', background: 'var(--emerald)', borderRadius: '999px', display: 'inline-block' }}></span>
-                  In stock · 22 items
+                  Còn hàng · 22 sản phẩm
                 </span>
               </div>
-              <p className="desc">Spatial audio, room-sensing tech, and the centrepiece of your Apple ecosystem. Built-in S7 chip, dynamic computational audio, and seamless handoff from iPhone. The new HomePod is designed to disappear into your room and fill it with sound.</p>
+              <p className="desc">Âm thanh không gian, công nghệ cảm biến phòng và là trung tâm của hệ sinh thái Apple của bạn. Tích hợp chip S7, âm thanh tính toán động và tính năng chuyển tiếp liền mạch từ iPhone.</p>
 
               <div className="price-row">
-                <span className="now">$280</span>
-                <span className="was">$320</span>
-                <span className="save">Save 12%</span>
+                <span className="now">280.000đ</span>
+                <span className="was">320.000đ</span>
+                <span className="save">Tiết kiệm 12%</span>
               </div>
 
+
+
               <div className="option-block">
-                <div className="label">Color</div>
+                <div className="label">Màu sắc</div>
                 <div className="color-swatches">
                   {colors.map((c, i) => (
                     <button
@@ -129,7 +154,8 @@ const ProductDetailPage = () => {
               </div>
 
               <div className="option-block">
-                <div className="label">Configuration</div>
+                <div className="label">Cấu hình</div>
+
                 <div className="option-pills">
                   {configs.map((c, i) => (
                     <button
@@ -144,7 +170,7 @@ const ProductDetailPage = () => {
               </div>
 
               <div className="option-block">
-                <div className="label">AppleCare+</div>
+                <div className="label">Bảo hiểm AppleCare+</div>
                 <div className="option-pills">
                   {carePlans.map((c, i) => (
                     <button
@@ -158,23 +184,26 @@ const ProductDetailPage = () => {
                 </div>
               </div>
 
+
               <div className="pdp-cta">
                 <div className="qty">
-                  <button type="button" aria-label="Decrease" onClick={decreaseQty}>−</button>
+                  <button type="button" aria-label="Decrease" onClick={decreaseQty}><Minus size={16} /></button>
                   <input type="text" value={qty} inputMode="numeric" aria-label="Quantity" readOnly />
-                  <button type="button" aria-label="Increase" onClick={increaseQty}>+</button>
+                  <button type="button" aria-label="Increase" onClick={increaseQty}><Plus size={16} /></button>
                 </div>
-                <Link to="/cart" className="btn btn--indigo" style={{ flex: 1, minWidth: '160px' }}>Add to cart →</Link>
-                <Link to="/cart" className="btn btn--ink">Buy now</Link>
-                <button className="icon-btn" aria-label="Add to wishlist" style={{ background: 'var(--bg)' }}>♡</button>
+                <Link to="/cart" className="btn btn--indigo" style={{ flex: 1, minWidth: '160px' }}>Thêm vào giỏ <ChevronRight size={18} /></Link>
+                <Link to="/cart" className="btn btn--ink">Mua ngay</Link>
+                <button className="icon-btn" aria-label="Yêu thích" style={{ background: 'var(--bg)' }}><Heart size={20} /></button>
               </div>
 
               <div className="pdp-features">
-                <div className="pf"><span className="ic">⚡</span><span>Free shipping over $50</span></div>
-                <div className="pf"><span className="ic">↺</span><span>30-day free returns</span></div>
-                <div className="pf"><span className="ic">★</span><span>2-year limited warranty</span></div>
-                <div className="pf"><span className="ic">✓</span><span>Authentic Apple product</span></div>
+                <div className="pf"><span className="ic"><Zap size={14} /></span><span>Miễn phí giao hàng trên 500.000đ</span></div>
+                <div className="pf"><span className="ic"><RotateCcw size={14} /></span><span>Đổi trả miễn phí 30 ngày</span></div>
+                <div className="pf"><span className="ic"><Star size={14} /></span><span>Bảo hành hạn chế 2 năm</span></div>
+                <div className="pf"><span className="ic"><Check size={14} /></span><span>Sản phẩm Apple chính hãng</span></div>
               </div>
+
+
             </div>
 
           </section>
@@ -184,7 +213,7 @@ const ProductDetailPage = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s8)' }}>
 
               <div>
-                <h2 style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--s5)' }}>Specifications</h2>
+                <h2 style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--s5)' }}>Thông số kỹ thuật</h2>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
                   <tbody>
                     {SPECS.map((spec, i) => (
@@ -197,14 +226,18 @@ const ProductDetailPage = () => {
                 </table>
               </div>
 
+
               <div>
-                <h2 style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--s5)' }}>Reviews</h2>
+                <h2 style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--s5)' }}>Đánh giá</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 'var(--s5)', alignItems: 'center', padding: 'var(--s5)', background: 'var(--bg)', borderRadius: 'var(--r)', marginBottom: 'var(--s5)' }}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontFamily: 'var(--ff-display)', fontSize: '48px', fontWeight: 800, color: 'var(--ink)', lineHeight: 1 }}>4.9</div>
-                    <div style={{ color: 'var(--amber)', fontSize: '18px' }}>★★★★★</div>
-                    <div style={{ fontFamily: 'var(--ff-mono)', fontSize: '11px', color: 'var(--fg-mute)', marginTop: '4px' }}>312 reviews</div>
+                    <div style={{ display: 'flex', justifyContent: 'center', gap: '2px', color: 'var(--amber)', margin: '4px 0' }}>
+                      {[...Array(5)].map((_, i) => <Star key={i} size={16} fill="currentColor" />)}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--fg-mute)', marginTop: '4px' }}>312 đánh giá</div>
                   </div>
+
                   <div style={{ display: 'grid', gap: '6px', fontFamily: 'var(--ff-mono)', fontSize: 'var(--text-xs)', color: 'var(--fg-soft)' }}>
                     {RATING_BREAKDOWN.map((r) => (
                       <div key={r.stars} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -221,16 +254,19 @@ const ProductDetailPage = () => {
                 {REVIEWS.map((review) => (
                   <article key={review.name} style={{ borderBottom: '1px solid var(--rule)', paddingBottom: 'var(--s5)', marginBottom: 'var(--s5)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <strong style={{ fontFamily: 'var(--ff-display)', fontWeight: 700 }}>{review.name}</strong>
-                      <span style={{ fontFamily: 'var(--ff-mono)', fontSize: '11px', color: 'var(--fg-mute)' }}>{review.time}</span>
+                      <strong style={{ fontWeight: 700 }}>{review.name}</strong>
+                      <span style={{ fontSize: '11px', color: 'var(--fg-mute)' }}>{review.time}</span>
                     </div>
-                    <div style={{ color: 'var(--amber)', fontSize: '14px', marginBottom: '6px' }}>{review.stars}</div>
+                    <div style={{ display: 'flex', gap: '2px', color: 'var(--amber)', marginBottom: '6px' }}>
+                      {[...Array(5)].map((_, i) => <Star key={i} size={14} fill={i < review.stars ? "currentColor" : "none"} />)}
+                    </div>
                     <p style={{ fontSize: 'var(--text-sm)', color: 'var(--fg-soft)', lineHeight: 1.6 }}>{review.text}</p>
                   </article>
                 ))}
 
-                <a href="#" className="btn btn--ghost btn--block">Read all 312 reviews →</a>
+                <button className="btn btn--ghost btn--block">Xem tất cả 312 đánh giá <ChevronRight size={16} /></button>
               </div>
+
 
             </div>
           </section>
@@ -238,28 +274,35 @@ const ProductDetailPage = () => {
           {/* Related products */}
           <section className="section">
             <div className="section-head">
-              <h2>You may also like</h2>
-              <Link to="/shop" className="view-all">All products →</Link>
+              <h2>Có thể bạn sẽ thích</h2>
+              <Link to="/shop" className="view-all">Tất cả sản phẩm <ChevronRight size={16} /></Link>
             </div>
+
             <div className="products">
               {RELATED.map((p) => (
                 <article className="product-card" key={p.name}>
                   <div className="img-wrap">
                     {p.badge && (
-                      <span className={`badge ${p.badge === 'Sale' ? 'badge--sale' : ''}`}>{p.badge}</span>
+                      <span className={`badge ${p.badge === 'Giảm giá' ? 'badge--sale' : ''}`}>{p.badge}</span>
                     )}
-                    <button className="wishlist">♡</button>
+                    <button className="wishlist"><Heart size={18} /></button>
                     <img src={`https://images.unsplash.com/${p.img}?w=500&q=80&auto=format&fit=crop`} alt={p.name} />
                   </div>
-                  <div className="stock"><span className="dot"></span>In stock · {p.stock} items</div>
+                  <div className="stock"><span className="dot"></span>Còn hàng · {p.stock} sản phẩm</div>
                   <Link to="/product" className="name">{p.name}</Link>
                   <div className="price">
                     <span className="now">{p.price}</span>
                     {p.was && <span className="was">{p.was}</span>}
                   </div>
-                  <div className="stars">{p.stars} <span className="count">({p.count})</span></div>
-                  <Link to="/cart" className="btn">Order now →</Link>
+                  <div className="stars">
+                    <div style={{ display: 'flex', gap: '2px', color: 'var(--amber)' }}>
+                      {[...Array(5)].map((_, i) => <Star key={i} size={14} fill={i < p.stars ? "currentColor" : "none"} />)}
+                    </div>
+                    <span className="count">({p.count})</span>
+                  </div>
+                  <Link to="/cart" className="btn">Đặt hàng ngay <ArrowRight size={16} /></Link>
                 </article>
+
               ))}
             </div>
           </section>

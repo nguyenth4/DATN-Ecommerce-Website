@@ -1,289 +1,480 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  ShieldCheck, 
+  MapPin, 
+  Truck, 
+  CreditCard, 
+  ChevronRight, 
+  ChevronLeft, 
+  ShoppingBag, 
+  CheckCircle2,
+  Lock,
+  Phone,
+  User,
+  Mail,
+  MessageSquare
+} from 'lucide-react';
+import './CheckoutPage.css';
+
+interface Location {
+  id: string;
+  name: string;
+}
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const [paymentMethod, setPaymentMethod] = useState('vnpay');
   const [shippingMethod, setShippingMethod] = useState('ghn');
+  
+  // Location State
+  const [provinces, setProvinces] = useState<Location[]>([]);
+  const [districts, setDistricts] = useState<Location[]>([]);
+  const [wards, setWards] = useState<Location[]>([]);
+  
+  const [selectedProvince, setSelectedProvince] = useState<string>('');
+  const [selectedDistrict, setSelectedDistrict] = useState<string>('');
+  const [selectedWard, setSelectedWard] = useState<string>('');
+  
+  // Customer & Address State
+  const [fullName, setFullName] = useState('Hỷ Huỳnh Trần Khang');
+  const [phoneNumber, setPhoneNumber] = useState('(+84) 824 421 498');
+  const [email, setEmail] = useState('');
+  const [detailAddress, setDetailAddress] = useState('');
+  const [note, setNote] = useState('');
+  
+  // Computed Merged Address
+  const provinceName = provinces.find(p => p.id === selectedProvince)?.name || '';
+  const districtName = districts.find(d => d.id === selectedDistrict)?.name || '';
+  const wardName = wards.find(w => w.id === selectedWard)?.name || '';
+  
+  const mergedAddress = [detailAddress, wardName, districtName, provinceName]
+    .filter(part => part && part.trim() !== '')
+    .join(', ');
 
-  // Logic chọn địa chỉ động
-  const [selectedCity, setSelectedCity] = useState("Hồ Chí Minh");
-  const [selectedDistrict, setSelectedDistrict] = useState("Quận 1");
 
-  const locationData: Record<string, string[]> = {
-    "Hồ Chí Minh": ["Quận 1", "Quận 3", "Quận 7", "Quận Bình Thạnh", "Quận Tân Bình", "TP. Thủ Đức"],
-    "Hà Nội": ["Quận Hoàn Kiếm", "Quận Đống Đa", "Quận Ba Đình", "Quận Hai Bà Trưng", "Quận Cầu Giấy"],
-    "Đà Nẵng": ["Quận Hải Châu", "Quận Thanh Khê", "Quận Liên Chiểu"],
-    "Cần Thơ": ["Quận Ninh Kiều", "Quận Bình Thủy", "Quận Cái Răng"]
-  };
+  // Fetch Provinces on mount
+  useEffect(() => {
+    fetch('https://esgoo.net/api-tinhthanh/1/0.htm')
+      .then(res => res.json())
+      .then(data => {
+        if (data.error === 0) setProvinces(data.data);
+      })
+      .catch(err => console.error("Error fetching provinces:", err));
+  }, []);
 
-  const wardData: Record<string, string[]> = {
-    "Quận 1": ["Phường Bến Nghé", "Phường Bến Thành", "Phường Đa Kao", "Phường Tân Định"],
-    "Quận 7": ["Phường Tân Phong", "Phường Phú Mỹ", "Phường Tân Thuận Đông"],
-    "Quận Hoàn Kiếm": ["Phường Hàng Đào", "Phường Tràng Tiền", "Phường Phan Chu Trinh"],
-    "TP. Thủ Đức": ["Phường Thảo Điền", "Phường An Phú", "Phường Bình Trưng Tây"]
-  };
+  // Fetch Districts when Province changes
+  useEffect(() => {
+    if (selectedProvince) {
+      fetch(`https://esgoo.net/api-tinhthanh/2/${selectedProvince}.htm`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.error === 0) setDistricts(data.data);
+          else setDistricts([]);
+          setWards([]);
+          setSelectedDistrict('');
+          setSelectedWard('');
+        })
+        .catch(err => console.error("Error fetching districts:", err));
+    } else {
+      setDistricts([]);
+      setWards([]);
+    }
+  }, [selectedProvince]);
 
-  const handleCityChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const city = e.target.value;
-    setSelectedCity(city);
-    // Reset district khi đổi city
-    const firstDistrict = locationData[city]?.[0] || "";
-    setSelectedDistrict(firstDistrict);
-  };
+  // Fetch Wards when District changes
+  useEffect(() => {
+    if (selectedDistrict) {
+      fetch(`https://esgoo.net/api-tinhthanh/3/${selectedDistrict}.htm`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.error === 0) setWards(data.data);
+          else setWards([]);
+          setSelectedWard('');
+        })
+        .catch(err => console.error("Error fetching wards:", err));
+    } else {
+      setWards([]);
+    }
+  }, [selectedDistrict]);
 
   const handlePlaceOrder = () => {
-    if (paymentMethod === 'vnpay' || paymentMethod === 'momo' || paymentMethod === 'zalopay') {
-      alert(`Đang chuyển hướng đến cổng thanh toán online...\nNgười thụ hưởng: Huỳnh Trần Khang Hỷ\nSố tiền: 35.515.000đ`);
+    // Show a premium success transition
+    const orderData = {
+        customer: {
+            fullName,
+            phoneNumber,
+            email,
+        },
+        paymentMethod,
+        shippingMethod,
+        address: mergedAddress,
+        addressComponents: {
+            province: provinceName,
+            district: districtName,
+            ward: wardName,
+            detail: detailAddress
+        },
+        note
+    };
+
+    console.log("Placing order...", orderData);
+    
+    // Using Alert as a placeholder for real logic
+    if (['vnpay', 'momo', 'zalopay'].includes(paymentMethod)) {
+      alert(`Đang chuyển hướng đến cổng thanh toán ${paymentMethod.toUpperCase()}...\nVui lòng không đóng trình duyệt.`);
     }
+
     setTimeout(() => {
       navigate('/order-success');
-    }, 1500);
+    }, 2000);
   };
 
+  const cartItems = [
+    { id: 1, name: "iPhone 16 Pro Max 512GB Titanium", price: 34990000, qty: 1, img: "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-16-pro-max-titan-sa-mac.png" }
+  ];
+
+  const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
+  const shippingFee = shippingMethod === 'ghn' ? 35000 : 25000;
+  const total = subtotal + shippingFee;
+
   return (
-    <>
-      <nav className="navbar">
-        <Link to="/" className="navbar-brand">Shop<span>Flow</span></Link>
-        <div className="flex-center text-sm">
-          <span className="fw-700 text-accent"><i className="bi bi-bag-check"></i> An toàn & Bảo mật</span>
-        </div>
-        <Link to="/cart" className="btn-icon"><i className="bi bi-x-lg"></i></Link>
-      </nav>
+    <div className="checkout-page">
+      <header className="checkout-header">
+        <div className="checkout-container">
+          <nav className="checkout-nav-content">
+            <Link to="/" className="checkout-logo">
+              <ShoppingBag size={28} />
+              <span>Sprylo</span>
+            </Link>
 
-      <section className="section products-section-bg">
-        <div className="container">
-          {/* STEPS */}
-          <div style={{ maxWidth: '500px', margin: '0 auto 2.5rem' }}>
-            <div className="tracking-steps">
-              <div className="tracking-step done">
-                <div className="step-icon"><i className="bi bi-bag-check"></i></div>
-                <div className="step-label">Giỏ hàng</div>
-              </div>
-              <div className="tracking-step current">
-                <div className="step-icon"><i className="bi bi-credit-card"></i></div>
-                <div className="step-label">Thanh toán</div>
-              </div>
-              <div className="tracking-step">
-                <div className="step-icon"><i className="bi bi-check2"></i></div>
-                <div className="step-label">Xác nhận</div>
-              </div>
+            <div className="checkout-steps">
+               <div className="step-item active">
+                 <span className="step-number">1</span>
+                 <span>Thông tin</span>
+                 <ChevronRight size={16} />
+               </div>
+               <div className="step-item">
+                 <span className="step-number">2</span>
+                 <span>Thanh toán</span>
+                 <ChevronRight size={16} />
+               </div>
+               <div className="step-item">
+                 <span className="step-number">3</span>
+                 <span>Hoàn tất</span>
+               </div>
             </div>
-          </div>
+            <Link to="/cart" className="checkout-text-soft">
+              <Lock size={20} />
+            </Link>
 
-          <div className="checkout-layout">
-            {/* LEFT: FORM */}
-            <div className="checkout-main">
-              {/* Thông tin giao hàng */}
-              <div className="checkout-section card">
-                <div className="checkout-section-title">
-                  <i className="bi bi-geo-alt-fill text-accent"></i> Thông tin giao hàng
-                </div>
-                <div className="form-row">
-                  <div className="form-group mb-3" style={{ flex: 1 }}>
-                    <label className="form-label">Họ và tên *</label>
-                    <input type="text" className="form-control" placeholder="Nguyễn Văn A" defaultValue="Huỳnh Trần Khang Hỷ" />
-                  </div>
-                  <div className="form-group mb-3" style={{ flex: 1 }}>
-                    <label className="form-label">Số điện thoại *</label>
-                    <input type="tel" className="form-control" placeholder="0912 345 678" />
-                  </div>
-                </div>
-                <div className="form-group mb-3">
-                  <label className="form-label">Email *</label>
-                  <input type="email" className="form-control" placeholder="email@example.com" />
-                </div>
-                <div className="form-row">
-                  <div className="form-group mb-3" style={{ flex: 1 }}>
-                    <label className="form-label">Tỉnh / Thành phố *</label>
-                    <select className="form-control" value={selectedCity} onChange={handleCityChange}>
-                      <option value="">Chọn tỉnh/thành...</option>
-                      {[
-                        "Hồ Chí Minh", "Hà Nội", "Đà Nẵng", "Hải Phòng", "Cần Thơ",
-                        "Bình Dương", "Đồng Nai", "Khánh Hòa", "Lâm Đồng", "Long An",
-                        "Quảng Ninh", "Bà Rịa - Vũng Tàu", "Thừa Thiên Huế", "Bắc Ninh",
-                        "Hải Dương", "Thanh Hóa", "Nghệ An", "Kiên Giang", "An Giang",
-                        "Tiền Giang", "Vĩnh Long", "Bến Tre", "Tây Ninh", "Bình Thuận",
-                        "Ninh Thuận", "Phú Yên", "Bình Định", "Quảng Nam", "Thái Nguyên",
-                        "Nam Định", "Thái Bình", "Hưng Yên"
-                      ].map(city => (
-                        <option key={city} value={city}>{city}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group mb-3" style={{ flex: 1 }}>
-                    <label className="form-label">Quận / Huyện *</label>
-                    <select className="form-control" value={selectedDistrict} onChange={(e) => setSelectedDistrict(e.target.value)}>
-                      <option value="">Chọn quận/huyện...</option>
-                      {(locationData[selectedCity] || []).map(dist => (
-                        <option key={dist} value={dist}>{dist}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group mb-3" style={{ flex: 1 }}>
-                    <label className="form-label">Phường / Xã *</label>
-                    <select className="form-control">
-                      <option value="">Chọn phường/xã...</option>
-                      {(wardData[selectedDistrict] || ["Phường 1", "Phường 2", "Phường 3"]).map(ward => (
-                        <option key={ward} value={ward}>{ward}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group mb-3" style={{ flex: 2 }}>
-                    <label className="form-label">Địa chỉ chi tiết *</label>
-                    <input type="text" className="form-control" placeholder="Số nhà, tên đường..." />
+          </nav>
+        </div>
+      </header>
+
+      <main className="checkout-container">
+        <div className="checkout-grid">
+          {/* LEFT: INFORMATION FORM */}
+          <div className="checkout-main">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="checkout-section"
+            >
+              <h2 className="section-title">
+                <User size={22} /> Thông tin khách hàng
+              </h2>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label className="form-label">Họ và tên *</label>
+                  <div style={{ position: 'relative' }}>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      placeholder="Nguyễn Văn A" 
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                    />
                   </div>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Ghi chú đơn hàng</label>
-                  <textarea className="form-control" rows={2} placeholder="Ghi chú thêm cho người giao hàng..."></textarea>
+                  <label className="form-label">Số điện thoại *</label>
+                  <input 
+                    type="tel" 
+                    className="form-input" 
+                    placeholder="09xx xxx xxx" 
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                  />
                 </div>
               </div>
+              <div className="form-group">
+                <label className="form-label">Email (nhận vận đơn)</label>
+                <input 
+                  type="email" 
+                  className="form-input" 
+                  placeholder="name@example.com" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
 
-              {/* Đơn vị vận chuyển */}
-              <div className="checkout-section card">
-                <div className="checkout-section-title">
-                  <i className="bi bi-truck-flatbed text-accent"></i> Đơn vị vận chuyển
+            </motion.div>
+
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="checkout-section"
+            >
+              <h2 className="section-title">
+                <MapPin size={22} /> Địa chỉ nhận hàng (Mới)
+              </h2>
+
+              <div className="form-grid">
+                <div className="form-group">
+                  <label className="form-label">Tỉnh / Thành phố *</label>
+                  <select 
+                    className="form-select" 
+                    value={selectedProvince} 
+                    onChange={(e) => setSelectedProvince(e.target.value)}
+                  >
+                    <option value="">Chọn tỉnh/thành</option>
+                    {provinces.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
                 </div>
+                <div className="form-group">
+                  <label className="form-label">Quận / Huyện *</label>
+                  <select 
+                    className="form-select" 
+                    value={selectedDistrict}
+                    onChange={(e) => setSelectedDistrict(e.target.value)}
+                    disabled={!selectedProvince}
+                  >
+                    <option value="">Chọn quận/huyện</option>
+                    {districts.map(d => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-grid">
+                <div className="form-group">
+                  <label className="form-label">Phường / Xã *</label>
+                  <select 
+                    className="form-select"
+                    value={selectedWard}
+                    onChange={(e) => setSelectedWard(e.target.value)}
+                    disabled={!selectedDistrict}
+                  >
+                    <option value="">Chọn phường/xã</option>
+                    {wards.map(w => (
+                      <option key={w.id} value={w.id}>{w.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Địa chỉ chi tiết *</label>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    placeholder="Số nhà, tên đường..." 
+                    value={detailAddress}
+                    onChange={(e) => setDetailAddress(e.target.value)}
+                  />
+                </div>
+              </div>
+              
+              {mergedAddress && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="merged-address-preview"
+                >
+                  <div className="preview-label">Địa chỉ sáp nhập:</div>
+                  <div className="preview-content">{mergedAddress}</div>
+                </motion.div>
+              )}
+
+              <div className="form-group mb-0">
+                <label className="form-label">Ghi chú (tùy chọn)</label>
+                <textarea 
+                  className="form-input" 
+                  rows={2} 
+                  placeholder="Giao giờ hành chính, gọi trước khi đến..."
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                ></textarea>
+              </div>
+
+            </motion.div>
+
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="checkout-section"
+            >
+              <h2 className="section-title">
+                <Truck size={22} /> Đơn vị vận chuyển
+              </h2>
+              <div className="option-grid">
                 <div 
-                  className={`shipping-option ${shippingMethod === 'ghn' ? 'selected' : ''}`}
+                  className={`option-card ${shippingMethod === 'ghn' ? 'selected' : ''}`}
                   onClick={() => setShippingMethod('ghn')}
-                  style={{ cursor: 'pointer', marginBottom: '0.8rem', padding: '1rem', border: shippingMethod === 'ghn' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: '12px', display: 'flex', alignItems: 'center', transition: 'all 0.2s' }}
                 >
-                  <input type="radio" name="shipping" checked={shippingMethod === 'ghn'} readOnly style={{ marginRight: '1rem' }} />
-                  <div className="shipping-option-info" style={{ flex: 1 }}>
-                    <div className="shipping-option-name fw-700">GHN – Giao Hàng Nhanh</div>
-                    <div className="shipping-option-desc text-xs text-muted">Dự kiến nhận: 1–2 ngày | Giao tận nơi</div>
+                  <div className="option-card-header">
+                    <span className="option-name">GHN Express</span>
+                    <span className="option-price">35.000đ</span>
                   </div>
-                  <div className="shipping-option-price fw-800 text-accent">35.000đ</div>
+                  <span className="option-desc">Giao nhanh 1-2 ngày</span>
+                  {shippingMethod === 'ghn' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
                 </div>
                 <div 
-                  className={`shipping-option ${shippingMethod === 'ghtk' ? 'selected' : ''}`}
+                  className={`option-card ${shippingMethod === 'ghtk' ? 'selected' : ''}`}
                   onClick={() => setShippingMethod('ghtk')}
-                  style={{ cursor: 'pointer', padding: '1rem', border: shippingMethod === 'ghtk' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: '12px', display: 'flex', alignItems: 'center', transition: 'all 0.2s' }}
                 >
-                  <input type="radio" name="shipping" checked={shippingMethod === 'ghtk'} readOnly style={{ marginRight: '1rem' }} />
-                  <div className="shipping-option-info" style={{ flex: 1 }}>
-                    <div className="shipping-option-name fw-700">GHTK – Giao Hàng Tiết Kiệm</div>
-                    <div className="shipping-option-desc text-xs text-muted">Dự kiến nhận: 2–3 ngày | Giao tận nơi</div>
+                  <div className="option-card-header">
+                    <span className="option-name">GHTK Tiết kiệm</span>
+                    <span className="option-price">25.000đ</span>
                   </div>
-                  <div className="shipping-option-price fw-800 text-accent">22.000đ</div>
+                  <span className="option-desc">Giao chậm 3-4 ngày</span>
+                  {shippingMethod === 'ghtk' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
                 </div>
               </div>
+            </motion.div>
 
-              {/* Phương thức thanh toán */}
-              <div className="checkout-section card">
-                <div className="checkout-section-title">
-                  <i className="bi bi-credit-card-2-back-fill text-accent"></i> Phương thức thanh toán
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="checkout-section"
+            >
+              <h2 className="section-title">
+                <CreditCard size={22} /> Phương thức thanh toán
+              </h2>
+              <div className="option-grid">
+                <div 
+                  className={`option-card ${paymentMethod === 'vnpay' ? 'selected' : ''}`}
+                  onClick={() => setPaymentMethod('vnpay')}
+                >
+                  <div className="option-card-header">
+                    <span className="option-name">VNPay</span>
+                  </div>
+                  <span className="option-desc">Thẻ ATM/QR Code/Visa</span>
+                  {paymentMethod === 'vnpay' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
                 </div>
-                <div className="payment-method-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                  <div 
-                    className={`payment-method ${paymentMethod === 'vnpay' ? 'selected' : ''}`}
-                    onClick={() => setPaymentMethod('vnpay')}
-                    style={{ cursor: 'pointer', padding: '1rem', border: paymentMethod === 'vnpay' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '1rem', transition: 'all 0.2s' }}
-                  >
-                    <input type="radio" name="payment" checked={paymentMethod === 'vnpay'} readOnly />
-                    <div className="payment-method-icon" style={{ fontSize: '1.5rem', color: '#005baa' }}><i className="bi bi-shield-check"></i></div>
-                    <div>
-                      <div className="payment-method-name fw-700">VNPay</div>
-                      <div className="text-xs text-muted">Thẻ ATM / QR / Tín dụng</div>
-                    </div>
+                <div 
+                  className={`option-card ${paymentMethod === 'momo' ? 'selected' : ''}`}
+                  onClick={() => setPaymentMethod('momo')}
+                >
+                  <div className="option-card-header">
+                    <span className="option-name">Ví MoMo</span>
                   </div>
-                  <div 
-                    className={`payment-method ${paymentMethod === 'momo' ? 'selected' : ''}`}
-                    onClick={() => setPaymentMethod('momo')}
-                    style={{ cursor: 'pointer', padding: '1rem', border: paymentMethod === 'momo' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '1rem', transition: 'all 0.2s' }}
-                  >
-                    <input type="radio" name="payment" checked={paymentMethod === 'momo'} readOnly />
-                    <div className="payment-method-icon" style={{ color: '#a50064', fontSize: '1.5rem' }}>🟣</div>
-                    <div>
-                      <div className="payment-method-name fw-700">Ví MoMo</div>
-                      <div className="text-xs text-muted">Siêu ứng dụng MoMo</div>
-                    </div>
+                  <span className="option-desc">Thanh toán qua ví MoMo</span>
+                  {paymentMethod === 'momo' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
+                </div>
+                <div 
+                  className={`option-card ${paymentMethod === 'zalopay' ? 'selected' : ''}`}
+                  onClick={() => setPaymentMethod('zalopay')}
+                >
+                  <div className="option-card-header">
+                    <span className="option-name">ZaloPay</span>
                   </div>
-                  <div 
-                    className={`payment-method ${paymentMethod === 'zalopay' ? 'selected' : ''}`}
-                    onClick={() => setPaymentMethod('zalopay')}
-                    style={{ cursor: 'pointer', padding: '1rem', border: paymentMethod === 'zalopay' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '1rem', transition: 'all 0.2s' }}
-                  >
-                    <input type="radio" name="payment" checked={paymentMethod === 'zalopay'} readOnly />
-                    <div className="payment-method-icon" style={{ color: '#008fe5', fontSize: '1.5rem' }}>🔵</div>
-                    <div>
-                      <div className="payment-method-name fw-700">ZaloPay</div>
-                      <div className="text-xs text-muted">Ví ZaloPay tiện lợi</div>
-                    </div>
+                  <span className="option-desc">Ví ZaloPay tiện lợi</span>
+                  {paymentMethod === 'zalopay' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
+                </div>
+                <div 
+                  className={`option-card ${paymentMethod === 'cod' ? 'selected' : ''}`}
+                  onClick={() => setPaymentMethod('cod')}
+                >
+                  <div className="option-card-header">
+                    <span className="option-name">COD</span>
                   </div>
-                  <div 
-                    className={`payment-method ${paymentMethod === 'cod' ? 'selected' : ''}`}
-                    onClick={() => setPaymentMethod('cod')}
-                    style={{ cursor: 'pointer', padding: '1rem', border: paymentMethod === 'cod' ? '2px solid var(--accent)' : '1px solid var(--border)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '1rem', transition: 'all 0.2s' }}
-                  >
-                    <input type="radio" name="payment" checked={paymentMethod === 'cod'} readOnly />
-                    <div className="payment-method-icon" style={{ fontSize: '1.5rem', color: '#28a745' }}><i className="bi bi-cash-stack"></i></div>
-                    <div>
-                      <div className="payment-method-name fw-700">COD (Tiền mặt)</div>
-                      <div className="text-xs text-muted">Nhận hàng rồi mới trả</div>
-                    </div>
-                  </div>
+                  <span className="option-desc">Thanh toán khi nhận hàng</span>
+                  {paymentMethod === 'cod' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
                 </div>
               </div>
-            </div>
+            </motion.div>
+          </div>
 
-            {/* RIGHT: ORDER SUMMARY */}
-            <div className="checkout-sidebar">
-              <div className="cart-summary sticky-summary shadow-lg" style={{ top: '20px', borderRadius: '16px', background: '#fff' }}>
-                <h3 className="section-title mb-4" style={{ borderBottom: '2px solid var(--border)', paddingBottom: '0.8rem' }}>ĐƠN HÀNG CỦA BẠN</h3>
-
-                {/* Items */}
-                <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '1.5rem' }}>
-                  <div style={{ display: 'flex', gap: '0.8rem', padding: '0.8rem 0', borderBottom: '1px solid #f8f9fa', alignItems: 'center' }}>
-                    <div className="checkout-mini-img" style={{ width: '60px', height: '60px', border: '1px solid var(--border)', borderRadius: '8px', position: 'relative', background: '#fff' }}>
-                      <img src="https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-16-pro-max-titan-sa-mac.png" alt="" style={{ maxWidth: '100%', height: 'auto', padding: '4px' }} />
-                      <span className="checkout-qty-badge" style={{ position: 'absolute', top: '-8px', right: '-8px', background: 'var(--accent)', color: '#fff', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700 }}>1</span>
+          {/* RIGHT: ORDER SUMMARY */}
+          <div className="checkout-sidebar">
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="summary-card"
+            >
+              <h3 className="summary-title">Đơn hàng của bạn</h3>
+              
+              <div className="item-list">
+                {cartItems.map(item => (
+                  <div key={item.id} className="summary-item">
+                    <img src={item.img} alt={item.name} className="item-img" />
+                    <div className="item-info">
+                      <div className="item-name">{item.name}</div>
+                      <div className="item-price">{item.qty} x {item.price.toLocaleString('vi-VN')}đ</div>
                     </div>
-                    <div className="text-sm" style={{ flex: 1, fontWeight: 600 }}>iPhone 16 Pro Max 512GB VN/A</div>
-                    <div className="fw-700 text-sm">34.990.000đ</div>
                   </div>
-                </div>
+                ))}
+              </div>
 
-                <div className="coupon-input mb-4" style={{ display: 'flex', gap: '0.5rem' }}>
-                  <input type="text" className="form-control form-control-sm" placeholder="Mã giảm giá/quà tặng..." />
-                  <button className="btn btn-primary btn-sm px-3">Áp dụng</button>
-                </div>
+              <div className="summary-divider"></div>
 
-                <div className="summary-row mb-2">
-                  <span className="text-muted">Tạm tính</span>
-                  <span className="fw-700">34.990.000đ</span>
-                </div>
-                <div className="summary-row mb-2">
-                  <span className="text-muted">Phí vận chuyển ({shippingMethod === 'ghn' ? 'GHN' : 'GHTK'})</span>
-                  <span className="fw-700">{shippingMethod === 'ghn' ? '35.000đ' : '22.000đ'}</span>
-                </div>
-                <div className="summary-row total pt-3 mt-3" style={{ borderTop: '2px dashed var(--border)' }}>
-                  <span className="fw-800 text-lg">TỔNG CỘNG</span>
-                  <span className="text-accent fw-900 text-xl" style={{ fontSize: '1.4rem' }}>{(34990000 + (shippingMethod === 'ghn' ? 35000 : 22000)).toLocaleString('vi-VN')}đ</span>
-                </div>
+              <div className="summary-row">
+                <span>Tạm tính</span>
+                <span>{subtotal.toLocaleString('vi-VN')}đ</span>
+              </div>
+              <div className="summary-row">
+                <span>Phí vận chuyển</span>
+                <span>{shippingFee.toLocaleString('vi-VN')}đ</span>
+              </div>
 
-                <button className="btn btn-accent btn-block btn-lg mt-4 w-100" style={{ padding: '1.2rem', borderRadius: '12px', fontSize: '1.1rem', fontWeight: 800 }} onClick={handlePlaceOrder}>
-                  <i className="bi bi-shield-lock-fill mr-2"></i> HOÀN TẤT ĐẶT HÀNG
-                </button>
 
-                <div style={{ textAlign: 'center', marginTop: '1.5rem', background: '#f8f9fa', padding: '1rem', borderRadius: '8px' }}>
-                  <p className="text-xs text-muted mb-2">
-                    <i className="bi bi-shield-check"></i> Đảm bảo thanh toán an toàn 100%
-                  </p>
-                  <p className="text-xs text-muted">
-                    Sản phẩm: Mới 100%, Chính hãng VN/A
-                  </p>
+              <div className="summary-row">
+                <span>Giảm giá</span>
+                <span>-0đ</span>
+              </div>
+
+              <div className="summary-total">
+                <span>Tổng cộng</span>
+                <span>{total.toLocaleString('vi-VN')}đ</span>
+              </div>
+
+              <button className="btn-checkout" onClick={handlePlaceOrder}>
+                HOÀN THÀNH ĐẶT HÀNG
+                <ChevronRight size={20} />
+              </button>
+
+
+              <div className="trust-badges">
+                <div className="trust-badge">
+                  <ShieldCheck size={20} />
+                  <span>Bảo mật</span>
+                </div>
+                <div className="trust-badge">
+                  <Truck size={20} />
+                  <span>Giao nhanh</span>
+                </div>
+                <div className="trust-badge">
+                  <CheckCircle2 size={20} />
+                  <span>Chính hãng</span>
                 </div>
               </div>
+            </motion.div>
+            
+            <div className="mt-4" style={{ textAlign: 'center' }}>
+              <Link to="/cart" className="checkout-text-soft" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem' }}>
+                <ChevronLeft size={16} /> Quay lại giỏ hàng
+              </Link>
             </div>
           </div>
         </div>
-      </section>
-    </>
+      </main>
+    </div>
   );
 };
 

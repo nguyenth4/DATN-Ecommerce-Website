@@ -2,6 +2,18 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/account.css';
 import '../styles/order-tracking.css';
+import { 
+  Camera, 
+  User, 
+  Receipt, 
+  MapPin, 
+  Heart, 
+  Lock, 
+  LogOut, 
+  CheckCircle, 
+  Check, 
+  ChevronRight 
+} from 'lucide-react';
 
 // Mock Orders Data
 const MOCK_ORDERS = [
@@ -171,7 +183,7 @@ const AccountPage = () => {
               <div className="account-profile-header">
                 <div className="avatar-wrap">
                   <div className="avatar-img">{firstName.charAt(0)}{lastName.charAt(0)}</div>
-                  <div className="avatar-edit"><i className="bi bi-camera"></i></div>
+                  <div className="avatar-edit"><Camera size={14} /></div>
                 </div>
                 <div className="account-name">{firstName} {lastName}</div>
                 <div className="account-email">{email}</div>
@@ -181,13 +193,13 @@ const AccountPage = () => {
                   className={`account-nav-item ${activeTab === 'profile' ? 'active' : ''}`}
                   onClick={() => { setActiveTab('profile'); setSelectedOrderId(null); }}
                 >
-                  <i className="bi bi-person"></i> Thông tin cá nhân
+                  <User size={18} style={{marginRight: '12px'}}/> Thông tin cá nhân
                 </div>
                 <div 
                   className={`account-nav-item ${activeTab === 'orders' ? 'active' : ''}`}
                   onClick={() => { setActiveTab('orders'); setSelectedOrderId(null); }}
                 >
-                  <i className="bi bi-receipt"></i> Đơn hàng của tôi
+                  <Receipt size={18} style={{marginRight: '12px'}}/> Đơn hàng của tôi
                   <span className="badge-count" style={{ marginLeft: 'auto', position: 'static', background: 'var(--indigo)', color: 'white', padding: '1px 6px', borderRadius: '10px', fontSize: '0.68rem' }}>
                     {MOCK_ORDERS.length}
                   </span>
@@ -196,26 +208,27 @@ const AccountPage = () => {
                   className={`account-nav-item ${activeTab === 'addresses' ? 'active' : ''}`}
                   onClick={() => { setActiveTab('addresses'); setSelectedOrderId(null); }}
                 >
-                  <i className="bi bi-geo-alt"></i> Địa chỉ giao hàng
+                  <MapPin size={18} style={{marginRight: '12px'}}/> Địa chỉ giao hàng
                 </div>
                 <div 
                   className={`account-nav-item ${activeTab === 'wishlist' ? 'active' : ''}`}
                   onClick={() => { setActiveTab('wishlist'); setSelectedOrderId(null); }}
                 >
-                  <i className="bi bi-heart"></i> Sản phẩm yêu thích
+                  <Heart size={18} style={{marginRight: '12px'}}/> Sản phẩm yêu thích
                 </div>
                 <div 
                   className={`account-nav-item ${activeTab === 'password' ? 'active' : ''}`}
                   onClick={() => { setActiveTab('password'); setSelectedOrderId(null); }}
                 >
-                  <i className="bi bi-lock"></i> Đổi mật khẩu
+                  <Lock size={18} style={{marginRight: '12px'}}/> Đổi mật khẩu
                 </div>
                 <div className="account-nav-divider"></div>
                 <Link to="/login" className="account-nav-item text-danger">
-                  <i className="bi bi-box-arrow-right"></i> Đăng xuất
+                  <LogOut size={18} style={{marginRight: '12px'}}/> Đăng xuất
                 </Link>
               </div>
             </div>
+
 
             {/* CONTENT */}
             <div>
@@ -230,12 +243,12 @@ const AccountPage = () => {
                     
                     {saveSuccess && (
                       <div className="alert alert-success" style={{ marginBottom: '1.5rem' }}>
-                        <i className="bi bi-check-circle-fill"></i> Cập nhật thông tin cá nhân thành công!
+                        <CheckCircle size={16} /> Cập nhật thông tin cá nhân thành công!
                       </div>
                     )}
                     
-                    <div className="alert alert-info" style={{ marginBottom: '1.5rem' }}>
-                      <i className="bi bi-info-circle-fill"></i> Tài khoản đã xác thực email
+                    <div className="alert alert-info" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <CheckCircle size={16} /> Tài khoản đã xác thực email
                     </div>
                     
                     <div className="form-row">
@@ -247,16 +260,6 @@ const AccountPage = () => {
                           value={firstName} 
                           onChange={(e) => setFirstName(e.target.value)} 
                         />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Tên *</label>
-                        <input 
-                          type="text" 
-                          className="form-control" 
-                          value={lastName} 
-                          onChange={(e) => setLastName(e.target.value)} 
-                        />
-                      </div>
                     </div>
                     <div className="form-group">
                       <label className="form-label">Email *</label>
@@ -303,7 +306,14 @@ const AccountPage = () => {
                       <button className="btn btn--ghost" onClick={handleCancelProfile}>Hủy thay đổi</button>
                       <button className="btn btn--indigo" onClick={handleSaveProfile}><i className="bi bi-check-lg"></i> Lưu thay đổi</button>
                     </div>
+                    <div className="flex-center" style={{ justifyContent: 'flex-end', gap: '0.8rem', marginTop: '1.8rem' }}>
+                      <button className="btn btn--ghost" onClick={handleCancelProfile}>Hủy thay đổi</button>
+                      <button className="btn btn--indigo" onClick={handleSaveProfile} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Check size={18} /> Lưu thay đổi
+                      </button>
+                    </div>
                   </div>
+
                 </div>
               )}
 

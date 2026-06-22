@@ -2,6 +2,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useProducts } from '../services/product.service';
 import { getCompareList, toggleCompareProduct, clearCompareList } from '../utils/compare';
+import { 
+  X, 
+  Plus, 
+  PlusCircle, 
+  ChevronRight, 
+  Search 
+} from 'lucide-react';
 
 const ComparisonPage = () => {
   // Quản lý danh sách ID sản phẩm đang so sánh từ localStorage
@@ -154,7 +161,7 @@ const ComparisonPage = () => {
                     style={{ position: 'absolute', top: '10px', right: '10px', background: 'var(--bg-soft)', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-mute)', transition: 'all 0.2s' }}
                     title="Xóa khỏi so sánh"
                   >
-                    <i className="bi bi-x" style={{ fontSize: '1.1rem' }}></i>
+                    <X size={16} />
                   </button>
                   <div style={{ height: '100px', marginBottom: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <img src={p.thumbnail} alt="" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }} />
@@ -172,7 +179,7 @@ const ComparisonPage = () => {
                 <div style={{ background: '#fff', padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.8rem', border: '2px dashed var(--rule-strong)', borderRadius: '12px', padding: '1rem', minHeight: '180px' }}>
                     <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-mute)' }}>
-                      <i className="bi bi-plus-lg" style={{ fontSize: '1.2rem' }}></i>
+                      <Plus size={20} />
                     </div>
                     <button 
                       className="btn btn-sm btn-outline" 
@@ -184,6 +191,7 @@ const ComparisonPage = () => {
                   </div>
                 </div>
               )}
+
             </div>
           </div>
 
@@ -239,7 +247,7 @@ const ComparisonPage = () => {
                   onClick={() => { setIsSearching(false); setSearchQuery(''); }} 
                   style={{ background: 'var(--bg-soft)', border: 'none', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--fg-mute)' }}
                 >
-                  <i className="bi bi-x-lg" style={{ fontSize: '0.9rem' }}></i>
+                  <X size={16} />
                 </button>
               </div>
               
@@ -253,7 +261,7 @@ const ComparisonPage = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   style={{ paddingRight: '2.5rem' }}
                 />
-                <i className="bi bi-search" style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-mute)' }}></i>
+                <Search size={16} style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-mute)' }} />
               </div>
               
               <div style={{ fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--fg-mute)', marginBottom: '0.8rem' }}>
@@ -299,7 +307,7 @@ const ComparisonPage = () => {
                         {isAlreadyCompared ? (
                           <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--emerald)', background: '#ecfdf5', padding: '2px 8px', borderRadius: '12px' }}>Đã thêm</span>
                         ) : (
-                          <i className="bi bi-plus-circle-fill" style={{ fontSize: '1.25rem', color: 'var(--indigo)' }}></i>
+                          <PlusCircle size={20} style={{ color: 'var(--indigo)' }} />
                         )}
                       </div>
                     );

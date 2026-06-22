@@ -1,5 +1,15 @@
 import { Link } from 'react-router-dom';
 import '../styles/order-tracking.css';
+import { 
+  Search, 
+  Check, 
+  CheckCircle, 
+  Truck, 
+  Home, 
+  ChevronRight, 
+  Package,
+  Clock
+} from 'lucide-react';
 
 const OrderTrackingPage = () => {
   return (
@@ -23,9 +33,12 @@ const OrderTrackingPage = () => {
             <div className="fw-700 text-sm" style={{ textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.8rem' }}>Tra cứu đơn hàng</div>
             <div style={{ display: 'flex', gap: '0.6rem' }}>
               <input type="text" className="form-control" defaultValue="#SF2025-8843" placeholder="Nhập mã đơn hàng..." style={{ flex: 1 }} />
-              <button className="btn btn-primary"><i className="bi bi-search"></i> Tra cứu</button>
+              <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Search size={18} /> Tra cứu
+              </button>
             </div>
           </div>
+
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '2rem', alignItems: 'start' }}>
 
@@ -35,65 +48,70 @@ const OrderTrackingPage = () => {
               <div style={{ background: 'white', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', padding: '1.5rem', marginBottom: '1.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.2rem' }}>
                   <div>
-                    <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem', letterSpacing: '1px', marginBottom: '0.2rem' }}>Đơn hàng #SF2025-8843</div>
+                    <div style={{ fontSize: '1.3rem', fontWeight: 800, letterSpacing: '0.5px', marginBottom: '0.2rem' }}>Đơn hàng #SF2025-8843</div>
                     <div className="text-xs text-muted">Đặt lúc 09:32 – 24/05/2025</div>
                   </div>
                   <span className="status-badge badge-shipped text-xs" style={{ padding: '0.35rem 0.9rem' }}>Đang vận chuyển</span>
                 </div>
 
+
                 {/* TRACKING STEPS */}
                 <div className="tracking-steps">
                   <div className="tracking-step done">
-                    <div className="step-icon"><i className="bi bi-check2"></i></div>
+                    <div className="step-icon"><CheckCircle size={16} /></div>
                     <div className="step-label">Đã đặt</div>
                   </div>
                   <div className="tracking-step done">
-                    <div className="step-icon"><i className="bi bi-check2"></i></div>
+                    <div className="step-icon"><CheckCircle size={16} /></div>
                     <div className="step-label">Xác nhận</div>
                   </div>
                   <div className="tracking-step done">
-                    <div className="step-icon"><i className="bi bi-check2"></i></div>
+                    <div className="step-icon"><Package size={16} /></div>
                     <div className="step-label">Đóng gói</div>
                   </div>
                   <div className="tracking-step current">
-                    <div className="step-icon"><i className="bi bi-truck"></i></div>
+                    <div className="step-icon"><Truck size={16} /></div>
                     <div className="step-label">Đang giao</div>
                   </div>
                   <div className="tracking-step">
-                    <div className="step-icon"><i className="bi bi-house-check"></i></div>
+                    <div className="step-icon"><Home size={16} /></div>
                     <div className="step-label">Đã nhận</div>
                   </div>
                 </div>
               </div>
 
+
               {/* TIMELINE */}
               <div style={{ background: 'white', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', padding: '1.5rem' }}>
-                <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '1px', marginBottom: '1.5rem', paddingBottom: '0.8rem', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, letterSpacing: '0.5px', marginBottom: '1.5rem', paddingBottom: '0.8rem', borderBottom: '1px solid var(--border)' }}>
                   Lịch sử vận chuyển
                 </div>
+
                 <div className="timeline">
                   <div className="timeline-item">
-                    <div className="timeline-dot current"><i className="bi bi-truck"></i></div>
+                    <div className="timeline-dot current"><Truck size={14} /></div>
                     <div className="timeline-time">25/05/2025 – 10:45</div>
                     <div className="timeline-desc">Đang trên đường giao hàng</div>
                     <div className="timeline-sub">Nhân viên: Nguyễn Văn Tài – 0901 234 567</div>
                   </div>
                   <div className="timeline-item">
-                    <div className="timeline-dot done"><i className="bi bi-check"></i></div>
+                    <div className="timeline-dot done"><Check size={14} /></div>
                     <div className="timeline-time">25/05/2025 – 08:20</div>
                     <div className="timeline-desc">Đã rời kho phân phối – TP.HCM</div>
                     <div className="timeline-sub">Bưu cục: GHN Quận 1</div>
                   </div>
                 </div>
+
               </div>
             </div>
 
             {/* SIDEBAR: ORDER ITEMS */}
             <div>
               <div style={{ background: 'white', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', padding: '1.3rem', position: 'sticky', top: '80px' }}>
-                <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.1rem', letterSpacing: '1px', marginBottom: '1rem', paddingBottom: '0.7rem', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, letterSpacing: '0.5px', marginBottom: '1rem', paddingBottom: '0.7rem', borderBottom: '1px solid var(--border)' }}>
                   Sản phẩm trong đơn
                 </div>
+
 
                 <div style={{ display: 'flex', gap: '0.8rem', alignItems: 'center', padding: '0.8rem 0', borderBottom: '1px solid var(--border)' }}>
                   <img src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=120&q=80" alt="" style={{ width: '56px', height: '56px', borderRadius: '6px', objectFit: 'cover', background: 'var(--bg)', flexShrink: 0 }} />
