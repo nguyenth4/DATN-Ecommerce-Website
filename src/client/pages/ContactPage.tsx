@@ -1,4 +1,13 @@
 import { Link } from 'react-router-dom';
+import { 
+  Mail, 
+  Phone, 
+  MessageSquare, 
+  MapPin, 
+  Clock, 
+  ArrowRight, 
+  ChevronRight 
+} from 'lucide-react';
 
 const ContactPage = () => {
   return (
@@ -6,69 +15,70 @@ const ContactPage = () => {
       <section className="page-head">
         <div className="container">
           <div className="crumbs">
-            <Link to="/">Home</Link> <span className="sep">›</span> <span>Contact &amp; support</span>
+            <Link to="/">Trang chủ</Link> <span className="sep">/</span> <span>Liên hệ & Hỗ trợ</span>
           </div>
-          <h1>Talk to us — we ship gear, but we answer messages too.</h1>
+          <h1>Trò chuyện với chúng tôi — chúng tôi giao hàng, nhưng cũng lắng nghe tin nhắn của bạn.</h1>
           <p>
-            Three ways to reach our team: live chat (fastest), email, or this contact form for anything that needs an
-            attachment. We typically reply within 4 working hours and cover support in EN, ES, FR, and DE.
+            Ba cách để tiếp cận đội ngũ của chúng tôi: trò chuyện trực tiếp (nhanh nhất), email, hoặc biểu mẫu liên hệ này cho bất kỳ vấn đề nào cần đính kèm tệp. Chúng tôi thường phản hồi trong vòng 4 giờ làm việc.
           </p>
         </div>
       </section>
+
 
       <section>
         <div className="container">
           <div className="contact-grid">
             <div className="contact-info">
               <div className="info-block">
-                <div className="ic">✉</div>
+                <div className="ic"><Mail size={20} /></div>
                 <div>
-                  <div className="label">EMAIL US</div>
+                  <div className="label">GỬI EMAIL</div>
                   <div className="value">
                     <a href="mailto:support@sprylo.example">support@sprylo.example</a>
                   </div>
                 </div>
               </div>
               <div className="info-block">
-                <div className="ic">☏</div>
+                <div className="ic"><Phone size={20} /></div>
                 <div>
-                  <div className="label">CALL US · 24/7</div>
+                  <div className="label">GỌI CHO CHÚNG TÔI · 24/7</div>
                   <div className="value">
                     <a href="tel:+18005551234">+1 (800) 555-1234</a>
                   </div>
                 </div>
               </div>
               <div className="info-block">
-                <div className="ic">💬</div>
+                <div className="ic"><MessageSquare size={20} /></div>
                 <div>
-                  <div className="label">LIVE CHAT</div>
+                  <div className="label">TRÒ CHUYỆN TRỰC TIẾP</div>
                   <div className="value">
-                    <Link to="#">Open chat — 4 agents online</Link>
+                    <Link to="#">Mở chat — 4 nhân viên đang online</Link>
                   </div>
                 </div>
               </div>
               <div className="info-block">
-                <div className="ic">⌖</div>
+                <div className="ic"><MapPin size={20} /></div>
                 <div>
-                  <div className="label">VISIT OUR FLAGSHIP</div>
+                  <div className="label">GHÉ THĂM CỬA HÀNG</div>
                   <div className="value">
-                    214 Market Street
+                    214 Đường Market
                     <br />
                     San Francisco, CA 94103
                   </div>
                 </div>
               </div>
               <div className="info-block">
-                <div className="ic">⏱</div>
+                <div className="ic"><Clock size={20} /></div>
                 <div>
-                  <div className="label">SUPPORT HOURS</div>
+                  <div className="label">GIỜ HỖ TRỢ</div>
                   <div className="value">
-                    Mon — Fri · 06:00 — 22:00 PT
+                    Thứ 2 — Thứ 6 · 06:00 — 22:00 PT
                     <br />
-                    Sat — Sun · 08:00 — 18:00 PT
+                    Thứ 7 — CN · 08:00 — 18:00 PT
                   </div>
                 </div>
               </div>
+
 
               <div
                 style={{
@@ -116,59 +126,59 @@ const ContactPage = () => {
               onSubmit={(e) => {
                 e.preventDefault();
                 const btn = e.currentTarget.querySelector('button[type=submit]');
-                if (btn) btn.textContent = 'Sent ✓ — we will reply within 4 hours';
+                if (btn) btn.textContent = 'Đã gửi ✓ — chúng tôi sẽ phản hồi trong 4 giờ';
               }}
             >
-              <h2 style={{ fontSize: 'var(--text-xl)', marginBottom: 'var(--s2)' }}>Send us a message</h2>
+              <h2 style={{ fontSize: 'var(--text-xl)', marginBottom: 'var(--s2)' }}>Gửi tin nhắn cho chúng tôi</h2>
               <p style={{ color: 'var(--fg-soft)', fontSize: 'var(--text-sm)', marginBottom: 'var(--s5)' }}>
-                No bots, no templated replies — a real person at our SF or Berlin desks will pick this up.
+                Không phải bot, không phải phản hồi mẫu — một nhân viên thực thụ tại văn phòng SF hoặc Berlin của chúng tôi sẽ tiếp nhận vấn đề này.
               </p>
 
               <div className="field-row">
                 <div className="field">
-                  <label htmlFor="c-first">First name</label>
-                  <input id="c-first" type="text" required placeholder="Mira" />
+                  <label htmlFor="c-first">Tên</label>
+                  <input id="c-first" type="text" required placeholder="Nguyễn" />
                 </div>
                 <div className="field">
-                  <label htmlFor="c-last">Last name</label>
-                  <input id="c-last" type="text" required placeholder="Kapoor" />
+                  <label htmlFor="c-last">Họ</label>
+                  <input id="c-last" type="text" required placeholder="Văn A" />
                 </div>
               </div>
 
               <div className="field-row">
                 <div className="field">
                   <label htmlFor="c-email">Email</label>
-                  <input id="c-email" type="email" required placeholder="you@example.com" />
+                  <input id="c-email" type="email" required placeholder="ban@vi-du.com" />
                 </div>
                 <div className="field">
-                  <label htmlFor="c-phone">Phone (optional)</label>
-                  <input id="c-phone" type="tel" placeholder="+1 (415) 555 0123" />
+                  <label htmlFor="c-phone">Số điện thoại (tùy chọn)</label>
+                  <input id="c-phone" type="tel" placeholder="09xx xxx xxx" />
                 </div>
               </div>
 
               <div className="field">
-                <label htmlFor="c-topic">What is this about?</label>
+                <label htmlFor="c-topic">Chủ đề là gì?</label>
                 <select id="c-topic">
-                  <option>Order — tracking, change, or cancellation</option>
-                  <option>Returns or refunds</option>
-                  <option>Warranty claim or product issue</option>
-                  <option>Trade / wholesale inquiry</option>
-                  <option>Press, partnership, or affiliate</option>
-                  <option>Something else</option>
+                  <option>Đơn hàng — theo dõi, thay đổi hoặc hủy</option>
+                  <option>Đổi trả hoặc hoàn tiền</option>
+                  <option>Khiếu nại bảo hành hoặc vấn đề sản phẩm</option>
+                  <option>Yêu cầu thương mại / bán buôn</option>
+                  <option>Báo chí, đối tác hoặc liên kết</option>
+                  <option>Vấn đề khác</option>
                 </select>
               </div>
 
               <div className="field">
-                <label htmlFor="c-order">Order number (if applicable)</label>
-                <input id="c-order" type="text" placeholder="e.g. SPR-204418" />
+                <label htmlFor="c-order">Mã đơn hàng (nếu có)</label>
+                <input id="c-order" type="text" placeholder="vd: SPR-204418" />
               </div>
 
               <div className="field">
-                <label htmlFor="c-msg">Your message</label>
+                <label htmlFor="c-msg">Tin nhắn của bạn</label>
                 <textarea
                   id="c-msg"
                   required
-                  placeholder="Tell us what's going on. Screenshots welcome — drag and drop after sending."
+                  placeholder="Hãy cho chúng tôi biết vấn đề của bạn. Ảnh chụp màn hình luôn được hoan nghênh."
                 ></textarea>
               </div>
 
@@ -177,8 +187,9 @@ const ContactPage = () => {
                 type="submit"
                 style={{ padding: '16px', fontSize: 'var(--text-base)', marginTop: 'var(--s2)' }}
               >
-                Send message →
+                Gửi tin nhắn <ArrowRight size={18} style={{marginLeft: '8px'}}/>
               </button>
+
 
               <p
                 style={{

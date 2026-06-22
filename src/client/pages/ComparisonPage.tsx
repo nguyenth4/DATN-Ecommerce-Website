@@ -1,6 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useProducts } from '../services/product.service';
+import { 
+  X, 
+  Plus, 
+  PlusCircle, 
+  ChevronRight, 
+  Search 
+} from 'lucide-react';
 
 const ComparisonPage = () => {
   // Quản lý danh sách ID sản phẩm đang so sánh (mặc định lấy 2 cái đầu tiên để demo)
@@ -94,10 +101,12 @@ const ComparisonPage = () => {
                 <div key={p.id} style={{ background: '#fff', padding: '1.5rem', textAlign: 'center', position: 'relative' }}>
                   <button 
                     onClick={() => setCompareIds(compareIds.filter(id => id !== p.id))}
-                    style={{ position: 'absolute', top: '10px', right: '10px', background: '#f5f5f5', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', fontSize: '12px' }}
+                    style={{ position: 'absolute', top: '10px', right: '10px', background: '#f5f5f5', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                    aria-label="Xóa khỏi so sánh"
                   >
-                    <i className="bi bi-x"></i>
+                    <X size={14} />
                   </button>
+
                   <div style={{ height: '100px', marginBottom: '1rem' }}>
                     <img src={p.thumbnail} alt="" style={{ height: '100%', objectFit: 'contain' }} />
                   </div>
@@ -109,11 +118,12 @@ const ComparisonPage = () => {
               {products.length < 4 && (
                 <div style={{ background: '#fafafa', padding: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', border: '2px dashed var(--border)', margin: '1rem', borderRadius: '12px' }}>
                   <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 5px rgba(0,0,0,0.1)' }}>
-                    <i className="bi bi-plus-lg" style={{ fontSize: '1.5rem', color: 'var(--gray)' }}></i>
+                    <Plus size={24} style={{ color: 'var(--gray)' }} />
                   </div>
                   <button className="btn btn-sm btn-outline" onClick={() => setIsSearching(true)}>Thêm sản phẩm</button>
                 </div>
               )}
+
             </div>
           </div>
 
@@ -162,20 +172,24 @@ const ComparisonPage = () => {
             <div className="card" style={{ width: '100%', maxWidth: '500px', padding: '2rem', borderRadius: '20px' }}>
               <div className="flex-between mb-4">
                 <h3 style={{ margin: 0 }}>Thêm máy so sánh</h3>
-                <button onClick={() => setIsSearching(false)} className="btn-icon"><i className="bi bi-x-lg"></i></button>
+                <button onClick={() => setIsSearching(false)} className="btn-icon"><X size={24} /></button>
               </div>
-              <input type="text" className="form-control mb-4" placeholder="Nhập tên sản phẩm cần tìm..." autoFocus />
+              <div style={{ position: 'relative', marginBottom: '1.5rem' }}>
+                <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#999' }} />
+                <input type="text" className="form-control" style={{ paddingLeft: '40px' }} placeholder="Nhập tên sản phẩm cần tìm..." autoFocus />
+              </div>
               <div className="text-sm text-muted mb-4">Sản phẩm gợi ý:</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                 <div className="p-2 border rounded flex-between cursor-pointer hover-bg-light" style={{ cursor: 'pointer' }} onClick={() => setIsSearching(false)}>
-                  <span>iPhone 15 Pro Max</span>
-                  <i className="bi bi-plus-circle text-accent"></i>
+                  <span style={{ fontWeight: 500 }}>iPhone 15 Pro Max</span>
+                  <PlusCircle size={20} style={{ color: 'var(--accent)' }} />
                 </div>
                 <div className="p-2 border rounded flex-between cursor-pointer hover-bg-light" style={{ cursor: 'pointer' }} onClick={() => setIsSearching(false)}>
-                  <span>Xiaomi 14 Ultra</span>
-                  <i className="bi bi-plus-circle text-accent"></i>
+                  <span style={{ fontWeight: 500 }}>Xiaomi 14 Ultra</span>
+                  <PlusCircle size={20} style={{ color: 'var(--accent)' }} />
                 </div>
               </div>
+
             </div>
           </div>
         )}

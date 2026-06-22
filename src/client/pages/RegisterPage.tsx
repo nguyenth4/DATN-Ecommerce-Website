@@ -1,4 +1,14 @@
 import { Link } from 'react-router-dom';
+import { 
+  CheckCircle, 
+  User, 
+  Mail, 
+  Phone, 
+  Lock, 
+  Eye, 
+  XCircle, 
+  UserPlus 
+} from 'lucide-react';
 
 const RegisterPage = () => {
   return (
@@ -10,30 +20,32 @@ const RegisterPage = () => {
           <div className="auth-visual-overlay"></div>
         </div>
         <div className="auth-visual-content">
-          <Link to="/" className="auth-visual-brand">Shop<span>Flow</span></Link>
+          <Link to="/" className="auth-visual-brand">Sprylo</Link>
         </div>
+
         <div className="auth-visual-content">
-          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2.8rem', color: 'white', lineHeight: 1, letterSpacing: '2px' }}>
-            GIA NHẬP<br/>CỘNG ĐỒNG <span style={{ color: 'var(--accent)' }}>SHOPFLOW</span>
+          <div style={{ fontSize: '2.8rem', fontWeight: 800, color: 'white', lineHeight: 1, letterSpacing: '0.5px' }}>
+            GIA NHẬP<br/>CỘNG ĐỒNG <span style={{ color: 'var(--accent)' }}>SPRYLO</span>
           </div>
           <p className="text-sm" style={{ color: 'rgba(255,255,255,0.6)', marginTop: '0.8rem' }}>
             Đăng ký miễn phí và nhận ngay voucher 100K cho đơn hàng đầu tiên.
           </p>
           <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
             <div className="flex-center text-sm" style={{ gap: '0.8rem', color: 'rgba(255,255,255,0.7)' }}>
-              <i className="bi bi-check-circle-fill text-success"></i> Miễn phí đăng ký, không phí ẩn
+              <CheckCircle size={14} className="text-success" /> Miễn phí đăng ký, không phí ẩn
             </div>
             <div className="flex-center text-sm" style={{ gap: '0.8rem', color: 'rgba(255,255,255,0.7)' }}>
-              <i className="bi bi-check-circle-fill text-success"></i> Voucher 100K cho đơn đầu tiên
+              <CheckCircle size={14} className="text-success" /> Voucher 100K cho đơn đầu tiên
             </div>
             <div className="flex-center text-sm" style={{ gap: '0.8rem', color: 'rgba(255,255,255,0.7)' }}>
-              <i className="bi bi-check-circle-fill text-success"></i> Theo dõi đơn hàng realtime
+              <CheckCircle size={14} className="text-success" /> Theo dõi đơn hàng realtime
             </div>
             <div className="flex-center text-sm" style={{ gap: '0.8rem', color: 'rgba(255,255,255,0.7)' }}>
-              <i className="bi bi-check-circle-fill text-success"></i> Lịch sử mua hàng đầy đủ
+              <CheckCircle size={14} className="text-success" /> Lịch sử mua hàng đầy đủ
             </div>
           </div>
         </div>
+
       </div>
 
       {/* FORM SIDE */}
@@ -46,26 +58,28 @@ const RegisterPage = () => {
           </div>
 
           <div style={{ marginBottom: '1.8rem' }}>
-            <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', letterSpacing: '1px', marginBottom: '0.2rem' }}>Tạo tài khoản</h1>
+            <h1 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '0.5px', marginBottom: '0.2rem' }}>Tạo tài khoản</h1>
             <p className="text-muted text-sm">Điền đầy đủ thông tin để hoàn tất đăng ký.</p>
           </div>
 
-          <div id="alertBox" className="alert alert-success" style={{ display: 'none' }}>
-            <i className="bi bi-check-circle-fill"></i> <span id="alertMsg"></span>
+
+          <div id="alertBox" className="alert alert-success" style={{ display: 'none', alignItems: 'center', gap: '8px' }}>
+            <CheckCircle size={16} /> <span id="alertMsg"></span>
           </div>
+
 
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">Họ *</label>
               <div className="input-icon-wrap">
-                <i className="bi bi-person icon-left"></i>
+                <User size={18} className="bi icon-left" />
                 <input type="text" className="form-control" id="lastName" placeholder="Nguyễn" />
               </div>
             </div>
             <div className="form-group">
               <label className="form-label">Tên *</label>
               <div className="input-icon-wrap">
-                <i className="bi bi-person icon-left"></i>
+                <User size={18} className="bi icon-left" />
                 <input type="text" className="form-control" id="firstName" placeholder="Văn A" />
               </div>
             </div>
@@ -74,16 +88,17 @@ const RegisterPage = () => {
           <div className="form-group">
             <label className="form-label">Email *</label>
             <div className="input-icon-wrap">
-              <i className="bi bi-envelope icon-left"></i>
+              <Mail size={18} className="bi icon-left" />
               <input type="email" className="form-control" id="regEmail" placeholder="email@example.com" />
             </div>
-            <div className="form-error" id="emailErr" style={{ display: 'none' }}><i className="bi bi-x-circle"></i> Email không hợp lệ</div>
+            <div className="form-error" id="emailErr" style={{ display: 'none', alignItems: 'center', gap: '4px' }}><XCircle size={14} /> Email không hợp lệ</div>
           </div>
+
 
           <div className="form-group">
             <label className="form-label">Số điện thoại *</label>
             <div className="input-icon-wrap">
-              <i className="bi bi-phone icon-left"></i>
+              <Phone size={18} className="bi icon-left" />
               <input type="tel" className="form-control" id="regPhone" placeholder="0912 345 678" />
             </div>
           </div>
@@ -91,9 +106,9 @@ const RegisterPage = () => {
           <div className="form-group">
             <label className="form-label">Mật khẩu *</label>
             <div className="input-icon-wrap">
-              <i className="bi bi-lock icon-left"></i>
+              <Lock size={18} className="bi icon-left" />
               <input type="password" className="form-control" id="regPw" placeholder="Tối thiểu 8 ký tự" />
-              <button className="toggle-pw"><i className="bi bi-eye"></i></button>
+              <button className="toggle-pw"><Eye size={18} /></button>
             </div>
             <div className="strength-bar">
               <div className="strength-fill" id="strengthFill"></div>
@@ -104,23 +119,26 @@ const RegisterPage = () => {
           <div className="form-group">
             <label className="form-label">Xác nhận mật khẩu *</label>
             <div className="input-icon-wrap">
-              <i className="bi bi-lock-fill icon-left"></i>
+              <Lock size={18} className="bi icon-left" />
               <input type="password" className="form-control" id="regPwConfirm" placeholder="Nhập lại mật khẩu" />
-              <button className="toggle-pw"><i className="bi bi-eye"></i></button>
+              <button className="toggle-pw"><Eye size={18} /></button>
             </div>
-            <div className="form-error" id="pwMatchErr" style={{ display: 'none' }}><i className="bi bi-x-circle"></i> Mật khẩu không khớp</div>
+            <div className="form-error" id="pwMatchErr" style={{ display: 'none', alignItems: 'center', gap: '4px' }}><XCircle size={14} /> Mật khẩu không khớp</div>
           </div>
+
 
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '1.5rem' }}>
             <input type="checkbox" id="agree" style={{ accentColor: 'var(--dark)', width: '15px', height: '15px', marginTop: '2px', flexShrink: 0 }} />
             <label htmlFor="agree" className="text-sm text-muted" style={{ cursor: 'pointer' }}>
-              Tôi đồng ý với <Link to="#" className="form-link">Điều khoản sử dụng</Link> và <Link to="#" className="form-link">Chính sách bảo mật</Link> của ShopFlow
+              Tôi đồng ý với <Link to="#" className="form-link">Điều khoản sử dụng</Link> và <Link to="#" className="form-link">Chính sách bảo mật</Link> của Sprylo
             </label>
           </div>
 
-          <button className="btn btn-primary btn-block btn-lg" onClick={(e) => e.preventDefault()}>
-            <i className="bi bi-person-plus"></i> TẠO TÀI KHOẢN
+
+          <button className="btn btn-primary btn-block btn-lg" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} onClick={(e) => e.preventDefault()}>
+            <UserPlus size={20} /> TẠO TÀI KHOẢN
           </button>
+
 
           <div className="divider">hoặc</div>
 

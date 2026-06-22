@@ -1,4 +1,16 @@
 import { Link } from 'react-router-dom';
+import { 
+  Camera, 
+  User, 
+  Receipt, 
+  MapPin, 
+  Heart, 
+  Lock, 
+  LogOut, 
+  CheckCircle, 
+  Check, 
+  ChevronRight 
+} from 'lucide-react';
 
 const AccountPage = () => {
   return (
@@ -20,46 +32,48 @@ const AccountPage = () => {
               <div className="account-profile-header">
                 <div className="avatar-wrap">
                   <div className="avatar-img">TN</div>
-                  <div className="avatar-edit"><i className="bi bi-camera"></i></div>
+                  <div className="avatar-edit"><Camera size={14} /></div>
                 </div>
                 <div className="account-name">Trần Ngọc</div>
                 <div className="account-email">tran.ngoc@email.com</div>
               </div>
               <div style={{ padding: '0.5rem 0' }}>
                 <div className="account-nav-item active">
-                  <i className="bi bi-person"></i> Thông tin cá nhân
+                  <User size={18} style={{marginRight: '12px'}}/> Thông tin cá nhân
                 </div>
                 <div className="account-nav-item">
-                  <i className="bi bi-receipt"></i> Đơn hàng của tôi
+                  <Receipt size={18} style={{marginRight: '12px'}}/> Đơn hàng của tôi
                   <span className="badge-count" style={{ marginLeft: 'auto', position: 'static', background: 'var(--dark)', color: 'white', padding: '1px 6px', borderRadius: '10px', fontSize: '0.68rem' }}>5</span>
                 </div>
                 <div className="account-nav-item">
-                  <i className="bi bi-geo-alt"></i> Địa chỉ giao hàng
+                  <MapPin size={18} style={{marginRight: '12px'}}/> Địa chỉ giao hàng
                 </div>
                 <div className="account-nav-item">
-                  <i className="bi bi-heart"></i> Sản phẩm yêu thích
+                  <Heart size={18} style={{marginRight: '12px'}}/> Sản phẩm yêu thích
                 </div>
                 <div className="account-nav-item">
-                  <i className="bi bi-lock"></i> Đổi mật khẩu
+                  <Lock size={18} style={{marginRight: '12px'}}/> Đổi mật khẩu
                 </div>
                 <div className="account-nav-divider"></div>
                 <Link to="/login" className="account-nav-item text-danger">
-                  <i className="bi bi-box-arrow-right"></i> Đăng xuất
+                  <LogOut size={18} style={{marginRight: '12px'}}/> Đăng xuất
                 </Link>
               </div>
             </div>
+
 
             {/* CONTENT */}
             <div>
               {/* PROFILE TAB */}
               <div id="tab-profile" className="tab-panel active">
                 <div style={{ background: 'white', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', padding: '1.8rem' }}>
-                  <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.3rem', letterSpacing: '1px', marginBottom: '1.5rem', paddingBottom: '0.8rem', borderBottom: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: '1.3rem', fontWeight: 800, letterSpacing: '0.5px', marginBottom: '1.5rem', paddingBottom: '0.8rem', borderBottom: '1px solid var(--border)' }}>
                     Thông tin cá nhân
                   </div>
-                  <div className="alert alert-success" style={{ marginBottom: '1.5rem' }}>
-                    <i className="bi bi-check-circle-fill"></i> Tài khoản đã xác thực email
+                  <div className="alert alert-success" style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <CheckCircle size={16} /> Tài khoản đã xác thực email
                   </div>
+
                   <div className="form-row">
                     <div className="form-group">
                       <label className="form-label">Họ *</label>
@@ -92,10 +106,13 @@ const AccountPage = () => {
                     <label className="form-label">Ngày sinh</label>
                     <input type="date" className="form-control" defaultValue="1998-05-15" />
                   </div>
-                  <div className="flex-center" style={{ justifyContent: 'flex-end' }}>
+                  <div className="flex-center" style={{ justifyContent: 'flex-end', gap: '1rem' }}>
                     <button className="btn btn-outline" style={{ color: 'var(--dark)', borderColor: 'var(--border)' }}>Hủy thay đổi</button>
-                    <button className="btn btn-primary"><i className="bi bi-check-lg"></i> Lưu thay đổi</button>
+                    <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Check size={18} /> Lưu thay đổi
+                    </button>
                   </div>
+
                 </div>
               </div>
 

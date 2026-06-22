@@ -1,14 +1,27 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { 
+  Trash2, 
+  Plus, 
+  Minus, 
+  X, 
+  ChevronRight, 
+  ArrowLeft,
+  Zap,
+  RotateCcw,
+  Star,
+  ShieldCheck
+} from 'lucide-react';
 
 const INIT_ITEMS = [
-  { id: 1, img: 'photo-1608043152269-423dbba4e7e1', name: 'Apple HomePod 2nd Gen Speaker', variant: 'White · Stereo pair · No AppleCare', price: 280, qty: 1 },
-  { id: 2, img: 'photo-1523275335684-37898b6baf30', name: 'Apple Watch Series 9', variant: '41mm · Midnight aluminum · Sport band M/L', price: 680, qty: 1 },
-  { id: 3, img: 'photo-1606220945770-b5b6c2c55bf1', name: 'Beats Studio Buds Pro', variant: 'Black · Active noise cancelling', price: 280, qty: 2 },
+  { id: 1, img: 'photo-1608043152269-423dbba4e7e1', name: 'Loa Apple HomePod Thế hệ 2', variant: 'Trắng · Cặp loa Stereo · Không bảo hiểm', price: 280000, qty: 1 },
+  { id: 2, img: 'photo-1523275335684-37898b6baf30', name: 'Apple Watch Series 9', variant: '41mm · Nhôm Midnight · Dây Sport M/L', price: 680000, qty: 1 },
+  { id: 3, img: 'photo-1606220945770-b5b6c2c55bf1', name: 'Tai nghe Beats Studio Buds Pro', variant: 'Đen · Chống ồn chủ động', price: 280000, qty: 2 },
 ];
 
 const PROMO_CODE = 'WELCOME20';
-const PROMO_DISCOUNT = 56;
+const PROMO_DISCOUNT = 56000;
+
 
 const CartPage = () => {
   const [items, setItems] = useState(INIT_ITEMS);
@@ -32,9 +45,10 @@ const CartPage = () => {
 
   const itemCount = items.reduce((sum, i) => sum + i.qty, 0);
   const subtotal = items.reduce((sum, i) => sum + i.price * i.qty, 0);
-  const tax = +(subtotal * 0.08).toFixed(2);
+  const tax = Math.round(subtotal * 0.08);
   const discount = promoApplied ? PROMO_DISCOUNT : 0;
-  const total = +(subtotal + tax - discount).toFixed(2);
+  const total = subtotal + tax - discount;
+
 
   return (
     <>
@@ -42,9 +56,9 @@ const CartPage = () => {
 
         <section className="page-head">
           <div className="container">
-            <div className="crumbs"><Link to="/">Home</Link> <span className="sep">›</span> <span>Shopping cart</span></div>
-            <h1>Your cart</h1>
-            <p>{itemCount} {itemCount === 1 ? 'item' : 'items'} · ready to ship. Free delivery on this order. Estimated arrival 21 – 23 May.</p>
+            <div className="crumbs"><Link to="/">Trang chủ</Link> <span className="sep">/</span> <span>Giỏ hàng</span></div>
+            <h1>Giỏ hàng của bạn</h1>
+            <p>{itemCount} {itemCount === 1 ? 'sản phẩm' : 'sản phẩm'} · sẵn sàng giao. Miễn phí vận chuyển cho đơn hàng này. Dự kiến giao hàng 21 – 23 Tháng 5.</p>
           </div>
         </section>
 
@@ -65,99 +79,107 @@ const CartPage = () => {
                           <div className="variant">{item.variant}</div>
                         </div>
                         <div className="qty">
-                          <button aria-label="Decrease" onClick={() => updateQty(item.id, -1)}>−</button>
+                          <button aria-label="Decrease" onClick={() => updateQty(item.id, -1)}><Minus size={16} /></button>
                           <input type="text" value={item.qty} inputMode="numeric" aria-label="Quantity" readOnly />
-                          <button aria-label="Increase" onClick={() => updateQty(item.id, 1)}>+</button>
+                          <button aria-label="Increase" onClick={() => updateQty(item.id, 1)}><Plus size={16} /></button>
                         </div>
-                        <span className="subtotal">${(item.price * item.qty).toFixed(2)}</span>
-                        <button className="remove" aria-label="Remove" onClick={() => removeItem(item.id)}>✕</button>
+                        <span className="subtotal">{(item.price * item.qty).toLocaleString('vi-VN')}đ</span>
+                        <button className="remove" aria-label="Remove" onClick={() => removeItem(item.id)}><X size={18} /></button>
+
                       </article>
                     ))}
                   </div>
                 ) : (
-                  <p>Your cart is empty. <Link to="/shop">Continue shopping →</Link></p>
+                  <p>Giỏ hàng của bạn đang trống. <Link to="/shop">Tiếp tục mua sắm →</Link></p>
                 )}
 
                 <div style={{ marginTop: 'var(--s5)', display: 'flex', gap: 'var(--s3)', flexWrap: 'wrap' }}>
-                  <Link to="/shop" className="btn btn--ghost">← Continue shopping</Link>
-                  <button className="btn btn--ghost">Update cart</button>
+                  <Link to="/products" className="btn btn--ghost"><ArrowLeft size={16} style={{marginRight: '8px'}}/> Tiếp tục mua sắm</Link>
+                  <button className="btn btn--ghost">Cập nhật giỏ hàng</button>
                 </div>
 
                 {/* Trust strip */}
                 <div style={{ marginTop: 'var(--s7)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--s4)', padding: 'var(--s5)', background: 'var(--bg)', borderRadius: 'var(--r)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s3)' }}>
-                    <div style={{ width: '40px', height: '40px', background: 'var(--indigo-soft)', color: 'var(--indigo)', borderRadius: '999px', display: 'grid', placeItems: 'center', fontSize: '18px' }}>⚡</div>
+                    <div style={{ width: '40px', height: '40px', background: 'var(--indigo-soft)', color: 'var(--indigo)', borderRadius: '999px', display: 'grid', placeItems: 'center' }}>
+                      <Zap size={20} />
+                    </div>
                     <div>
-                      <div style={{ fontFamily: 'var(--ff-display)', fontWeight: 700, fontSize: 'var(--text-sm)' }}>Free fast shipping</div>
-                      <div style={{ fontFamily: 'var(--ff-mono)', fontSize: '11px', color: 'var(--fg-mute)' }}>2 — 3 business days</div>
+                      <div style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>Giao hàng nhanh miễn phí</div>
+                      <div style={{ fontSize: '11px', color: 'var(--fg-mute)' }}>2 — 3 ngày làm việc</div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s3)' }}>
-                    <div style={{ width: '40px', height: '40px', background: 'var(--indigo-soft)', color: 'var(--indigo)', borderRadius: '999px', display: 'grid', placeItems: 'center', fontSize: '18px' }}>↺</div>
+                    <div style={{ width: '40px', height: '40px', background: 'var(--indigo-soft)', color: 'var(--indigo)', borderRadius: '999px', display: 'grid', placeItems: 'center' }}>
+                      <RotateCcw size={20} />
+                    </div>
                     <div>
-                      <div style={{ fontFamily: 'var(--ff-display)', fontWeight: 700, fontSize: 'var(--text-sm)' }}>30-day free returns</div>
-                      <div style={{ fontFamily: 'var(--ff-mono)', fontSize: '11px', color: 'var(--fg-mute)' }}>No questions asked</div>
+                      <div style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>30 ngày đổi trả miễn phí</div>
+                      <div style={{ fontSize: '11px', color: 'var(--fg-mute)' }}>Không cần lý do</div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s3)' }}>
-                    <div style={{ width: '40px', height: '40px', background: 'var(--indigo-soft)', color: 'var(--indigo)', borderRadius: '999px', display: 'grid', placeItems: 'center', fontSize: '18px' }}>★</div>
+                    <div style={{ width: '40px', height: '40px', background: 'var(--indigo-soft)', color: 'var(--indigo)', borderRadius: '999px', display: 'grid', placeItems: 'center' }}>
+                      <Star size={20} />
+                    </div>
                     <div>
-                      <div style={{ fontFamily: 'var(--ff-display)', fontWeight: 700, fontSize: 'var(--text-sm)' }}>2-year warranty</div>
-                      <div style={{ fontFamily: 'var(--ff-mono)', fontSize: '11px', color: 'var(--fg-mute)' }}>On every Sprylo order</div>
+                      <div style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>Bảo hành 2 năm</div>
+                      <div style={{ fontSize: '11px', color: 'var(--fg-mute)' }}>Cho mọi đơn hàng Sprylo</div>
                     </div>
                   </div>
                 </div>
               </div>
 
               <aside className="cart-summary">
-                <h3>Order summary</h3>
+                <h3>Tóm tắt đơn hàng</h3>
 
                 <div className="promo-input">
                   <input
                     type="text"
-                    placeholder="Promo code"
+                    placeholder="Mã giảm giá"
                     value={promo}
                     onChange={(e) => setPromo(e.target.value)}
                   />
-                  <button onClick={applyPromo}>Apply</button>
+                  <button onClick={applyPromo}>Áp dụng</button>
                 </div>
 
                 <div className="cart-line">
-                  <span>Subtotal · {itemCount} {itemCount === 1 ? 'item' : 'items'}</span>
-                  <span style={{ fontFamily: 'var(--ff-display)', fontWeight: 600, color: 'var(--ink)' }}>${subtotal.toFixed(2)}</span>
+                  <span>Tạm tính · {itemCount} sản phẩm</span>
+                  <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{subtotal.toLocaleString('vi-VN')}đ</span>
                 </div>
                 <div className="cart-line">
-                  <span>Shipping</span>
-                  <span style={{ color: 'var(--emerald)', fontWeight: 600 }}>Free</span>
+                  <span>Phí vận chuyển</span>
+                  <span style={{ color: 'var(--emerald)', fontWeight: 600 }}>Miễn phí</span>
                 </div>
                 <div className="cart-line">
-                  <span>Estimated tax</span>
-                  <span style={{ fontFamily: 'var(--ff-display)', fontWeight: 600, color: 'var(--ink)' }}>${tax.toFixed(2)}</span>
+                  <span>Thuế ước tính (8%)</span>
+                  <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{tax.toLocaleString('vi-VN')}đ</span>
                 </div>
                 {promoApplied && (
                   <div className="cart-line">
-                    <span>Promo · {PROMO_CODE}</span>
-                    <span style={{ color: 'var(--rose)', fontFamily: 'var(--ff-display)', fontWeight: 600 }}>−${discount.toFixed(2)}</span>
+                    <span>Khuyến mãi · {PROMO_CODE}</span>
+                    <span style={{ color: 'var(--rose)', fontWeight: 600 }}>−{discount.toLocaleString('vi-VN')}đ</span>
                   </div>
                 )}
 
-                <div className="cart-line is-total"><span>Total</span><span>${total.toFixed(2)}</span></div>
+                <div className="cart-line is-total"><span>Tổng cộng</span><span>{total.toLocaleString('vi-VN')}đ</span></div>
 
-                <Link to="/checkout" className="btn btn--indigo btn--block">Tiến hành thanh toán →</Link>
+
+                <Link to="/checkout" className="btn btn--indigo btn--block">Tiến hành thanh toán <ChevronRight size={18} style={{marginLeft: '4px'}}/></Link>
 
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--s3)', marginTop: 'var(--s5)', flexWrap: 'wrap' }}>
                   {['VISA', 'MASTERCARD', 'AMEX', 'PAYPAL', 'APPLE PAY'].map((method) => (
                     <span
                       key={method}
-                      style={{ fontFamily: 'var(--ff-mono)', fontSize: '11px', color: 'var(--fg-mute)', padding: '6px 10px', background: 'var(--paper)', borderRadius: '4px' }}
+                      style={{ fontSize: '11px', color: 'var(--fg-mute)', padding: '6px 10px', background: 'var(--paper)', borderRadius: '4px' }}
                     >
                       {method}
                     </span>
                   ))}
                 </div>
 
-                <p style={{ marginTop: 'var(--s5)', fontSize: '11px', fontFamily: 'var(--ff-mono)', color: 'var(--fg-mute)', textAlign: 'center', lineHeight: 1.6 }}>
-                  Giao dịch <Link to="/checkout" style={{ color: 'inherit', textDecoration: 'underline' }}>thanh toán</Link> được mã hoá · Bảo mật SSL. Thông tin thanh toán không bao giờ được lưu trữ trên máy chủ của chúng tôi.
+                <p style={{ marginTop: 'var(--s5)', fontSize: '11px', color: 'var(--fg-mute)', textAlign: 'center', lineHeight: 1.6 }}>
+                   <ShieldCheck size={12} style={{display: 'inline', verticalAlign: 'middle', marginRight: '4px'}}/> Giao dịch <Link to="/checkout" style={{ color: 'inherit', textDecoration: 'underline' }}>thanh toán</Link> được mã hoá · Bảo mật SSL. Thông tin thanh toán không bao giờ được lưu trữ trên máy chủ của chúng tôi.
                 </p>
               </aside>
 

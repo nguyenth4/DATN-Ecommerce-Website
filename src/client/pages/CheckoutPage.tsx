@@ -146,8 +146,9 @@ const CheckoutPage = () => {
           <nav className="checkout-nav-content">
             <Link to="/" className="checkout-logo">
               <ShoppingBag size={28} />
-              <span>ShopFlow</span>
+              <span>Sprylo</span>
             </Link>
+
             <div className="checkout-steps">
                <div className="step-item active">
                  <span className="step-number">1</span>
@@ -167,6 +168,7 @@ const CheckoutPage = () => {
             <Link to="/cart" className="checkout-text-soft">
               <Lock size={20} />
             </Link>
+
           </nav>
         </div>
       </header>
@@ -430,6 +432,8 @@ const CheckoutPage = () => {
                 <span>Phí vận chuyển</span>
                 <span>{shippingFee.toLocaleString('vi-VN')}đ</span>
               </div>
+
+
               <div className="summary-row">
                 <span>Giảm giá</span>
                 <span>-0đ</span>

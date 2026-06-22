@@ -1,4 +1,11 @@
 import { Link } from 'react-router-dom';
+import { 
+  Mail, 
+  Lock, 
+  Eye, 
+  LogIn, 
+  AlertCircle 
+} from 'lucide-react';
 
 const LoginPage = () => {
   return (
@@ -10,44 +17,48 @@ const LoginPage = () => {
           <div className="auth-visual-overlay"></div>
         </div>
         <div className="auth-visual-content">
-          <Link to="/" className="auth-visual-brand">Shop<span>Flow</span></Link>
+          <Link to="/" className="auth-visual-brand">Sprylo</Link>
         </div>
+
         <div className="auth-visual-content">
           <div className="auth-visual-quote">TRẢI NGHIỆM<br/>MUA SẮM <em>ĐỈNH CAO</em></div>
           <p className="auth-visual-sub">Hàng ngàn sản phẩm chính hãng, giao hàng nhanh toàn quốc.</p>
           <div className="flex-center" style={{ gap: '2rem', marginTop: '2rem' }}>
             <div>
-              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.8rem', color: 'white' }}>50K+</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white' }}>50K+</div>
               <div className="text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>Khách hàng</div>
             </div>
             <div>
-              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.8rem', color: 'white' }}>1.2M+</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white' }}>1.2M+</div>
               <div className="text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>Đơn hàng</div>
             </div>
             <div>
-              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '1.8rem', color: 'white' }}>99%</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white' }}>99%</div>
               <div className="text-xs" style={{ color: 'rgba(255,255,255,0.5)' }}>Hài lòng</div>
             </div>
           </div>
         </div>
+
       </div>
 
       {/* FORM SIDE */}
       <div className="auth-form-side">
         <div className="auth-form-wrap">
           <div style={{ marginBottom: '2rem' }}>
-            <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '2rem', letterSpacing: '1px', marginBottom: '0.2rem' }}>Đăng nhập</h1>
+            <h1 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '0.5px', marginBottom: '0.2rem' }}>Đăng nhập</h1>
             <p className="text-muted text-sm">Chào mừng bạn trở lại! Vui lòng đăng nhập.</p>
           </div>
 
-          <div id="alertBox" style={{ display: 'none' }} className="alert alert-danger">
-            <i className="bi bi-exclamation-circle-fill"></i> <span id="alertMsg">Thông tin đăng nhập không chính xác</span>
+
+          <div id="alertBox" style={{ display: 'none', alignItems: 'center', gap: '8px' }} className="alert alert-danger">
+            <AlertCircle size={16} /> <span id="alertMsg">Thông tin đăng nhập không chính xác</span>
           </div>
+
 
           <div className="form-group">
             <label className="form-label">Email *</label>
             <div className="input-icon-wrap">
-              <i className="bi bi-envelope"></i>
+              <Mail size={18} className="bi" />
               <input type="email" className="form-control" id="loginEmail" placeholder="email@example.com" />
             </div>
           </div>
@@ -58,9 +69,9 @@ const LoginPage = () => {
               <Link to="#" className="form-link text-sm" style={{ fontWeight: 500 }}>Quên mật khẩu?</Link>
             </label>
             <div className="input-icon-wrap">
-              <i className="bi bi-lock"></i>
+              <Lock size={18} className="bi" />
               <input type="password" className="form-control" id="loginPw" placeholder="Nhập mật khẩu..." />
-              <button className="toggle-pw"><i className="bi bi-eye"></i></button>
+              <button className="toggle-pw"><Eye size={18} /></button>
             </div>
           </div>
 
@@ -69,9 +80,10 @@ const LoginPage = () => {
             <label htmlFor="remember" className="text-sm" style={{ cursor: 'pointer', marginLeft: '0.5rem' }}>Nhớ đăng nhập</label>
           </div>
 
-          <button className="btn btn-primary btn-block btn-lg" onClick={(e) => e.preventDefault()}>
-            <i className="bi bi-box-arrow-in-right"></i> ĐĂNG NHẬP
+          <button className="btn btn-primary btn-block btn-lg" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} onClick={(e) => e.preventDefault()}>
+            <LogIn size={20} /> ĐĂNG NHẬP
           </button>
+
 
           <div className="divider">hoặc tiếp tục với</div>
 
@@ -80,9 +92,11 @@ const LoginPage = () => {
             Đăng nhập với Google
           </button>
           <button className="social-btn">
-            <i className="bi bi-facebook" style={{ color: '#1877F2', fontSize: '1.1rem' }}></i>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
             Đăng nhập với Facebook
           </button>
+
+
 
           <p className="text-sm text-muted" style={{ textAlign: 'center', marginTop: '1.5rem' }}>
             Chưa có tài khoản? <Link to="/register" className="form-link">Đăng ký ngay</Link>
