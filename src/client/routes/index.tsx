@@ -20,6 +20,8 @@ const ClientRoutes = () => {
         <Route index element={<HomePage />} />
         <Route path="products" element={<ProductsPage />} />
         <Route path="products/:id" element={<ProductDetailPage />} />
+        <Route path="product/:id" element={<ProductDetailPage />} />
+        <Route path="productdetail" element={<ProductDetailPage />} />
         <Route path="cart" element={<CartPage />} />
         <Route path="account" element={<AccountPage />} />
         <Route path="compare" element={<ComparisonPage />} />
