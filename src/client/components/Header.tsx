@@ -3,11 +3,13 @@ import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { Menu, X, ShoppingCart, User, Heart, Search, ChevronRight } from 'lucide-react';
 
 import { getCompareList } from '../utils/compare';
+import { getWishlist } from '../utils/wishlist';
 
 const Header = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchQ, setSearchQ] = useState('');
   const [compareCount, setCompareCount] = useState(getCompareList().length);
+  const [wishlistCount, setWishlistCount] = useState(getWishlist().length);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -16,12 +18,19 @@ const Header = () => {
   }, [drawerOpen]);
 
   useEffect(() => {
-    const handleUpdate = () => {
+    const handleCompareUpdate = () => {
       setCompareCount(getCompareList().length);
     };
-    window.addEventListener('compare-updated', handleUpdate);
+    const handleWishlistUpdate = () => {
+      setWishlistCount(getWishlist().length);
+    };
+    
+    window.addEventListener('compare-updated', handleCompareUpdate);
+    window.addEventListener('wishlist-updated', handleWishlistUpdate);
+    
     return () => {
-      window.removeEventListener('compare-updated', handleUpdate);
+      window.removeEventListener('compare-updated', handleCompareUpdate);
+      window.removeEventListener('wishlist-updated', handleWishlistUpdate);
     };
   }, []);
 
@@ -83,9 +92,9 @@ const Header = () => {
               </svg>
               {compareCount > 0 && <span className="count">{compareCount}</span>}
             </Link>
-            <Link to="#" className="icon-btn" aria-label="Yêu thích">
+            <Link to="/wishlist" className="icon-btn" aria-label="Yêu thích" title="Sản phẩm yêu thích">
               <Heart size={20} />
-              <span className="count">3</span>
+              {wishlistCount > 0 && <span className="count">{wishlistCount}</span>}
             </Link>
             <Link to="/cart" className="icon-btn icon-btn--cart" aria-label="Giỏ hàng">
               <ShoppingCart size={20} />
