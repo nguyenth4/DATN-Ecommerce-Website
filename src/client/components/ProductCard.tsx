@@ -1,6 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
+import { toggleCompareProduct, isInCompareList } from '../utils/compare';
+
 interface ProductCardProps {
   product: any; // Accept both raw Medusa shape and mapped shape
 }
@@ -22,6 +24,18 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
          || 0;
   }
 
+  const [isCompared, setIsCompared] = React.useState(isInCompareList(product.id));
+
+  React.useEffect(() => {
+    const handleUpdate = () => {
+      setIsCompared(isInCompareList(product.id));
+    };
+    window.addEventListener('compare-updated', handleUpdate);
+    return () => {
+      window.removeEventListener('compare-updated', handleUpdate);
+    };
+  }, [product.id]);
+
   return (
     <Link to={`/products/${product.id}`} className="product-card">
       <div className="product-card-img">
@@ -31,17 +45,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         />
         {product.badge && <span className={`product-badge ${product.badge === 'Mới' ? 'badge-new' : 'badge-sale'}`}>{product.badge}</span>}
         <div className="product-card-actions">
-          <button 
-            className="product-card-btn-action" 
-            title="So sánh"
-            onClick={(e) => {
-              e.preventDefault();
-              alert(`Đã thêm ${name} vào danh sách so sánh!`);
-              // Logic to add ID to localStorage would go here
-            }}
-          >
-            <i className="bi bi-arrow-left-right"></i>
-          </button>
           <button 
             className="product-card-btn-add btn-add-cart" 
             title="Thêm vào giỏ"
@@ -60,6 +63,37 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <div className="product-price-row">
           <span className="product-price">{price.toLocaleString('vi-VN')}đ</span>
           {product.originalPrice && <span className="product-price-old">{product.originalPrice.toLocaleString('vi-VN')}đ</span>}
+        </div>
+        <div 
+          className="product-card-compare-wrapper"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          style={{
+            marginTop: '0.65rem',
+            paddingTop: '0.65rem',
+            borderTop: '1px dashed var(--rule, #eaeaea)',
+            display: 'flex',
+            alignItems: 'center',
+            fontSize: '0.8rem',
+            color: 'var(--fg-mute, #64748b)'
+          }}
+        >
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', margin: 0 }}>
+            <input 
+              type="checkbox" 
+              checked={isCompared}
+              onChange={() => toggleCompareProduct(product.id, name)}
+              style={{ 
+                cursor: 'pointer', 
+                accentColor: 'var(--indigo, #4f46e5)',
+                width: '14px',
+                height: '14px'
+              }}
+            />
+            <span style={{ fontWeight: 500 }}>So sánh</span>
+          </label>
         </div>
       </div>
     </Link>

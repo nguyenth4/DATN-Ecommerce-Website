@@ -1,8 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { getCompareList, toggleCompareProduct } from '../utils/compare';
 
 const HomePage = () => {
   const [activeTab, setActiveTab] = useState(0);
+  const [compareList, setCompareList] = useState(getCompareList());
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setCompareList(getCompareList());
+    };
+    window.addEventListener('compare-updated', handleUpdate);
+    return () => {
+      window.removeEventListener('compare-updated', handleUpdate);
+    };
+  }, []);
 
   return (
     <main id="main">
@@ -108,11 +120,11 @@ const HomePage = () => {
 
           <div className="products">
             {[
-              { img: 'photo-1511707171634-5f897ff02aa9', name: 'Galaxy Note 20 Ultra 5G', price: '$2,780', stock: 52, stars: '★★★★★', count: 56, badge: 'New' },
-              { img: 'photo-1561154464-82e9adf32764', name: 'iPad 10th Generation', price: '$1,780', was: '$1,980', stock: 32, stars: '★★★★★', count: 124, badge: 'Sale' },
-              { img: 'photo-1592899677977-9c10ca588bbd', name: 'Galaxy Note 20 Ultra 5G', price: '$2,780', stock: 41, stars: '★★★★☆', count: 89 },
-              { img: 'photo-1565849904461-04a58ad377e0', name: 'Samsung S21 Ultra', price: '$2,780', stock: 24, stars: '★★★★★', count: 212, badge: 'New' },
-              { img: 'photo-1592750475338-74b7b21085ab', name: 'Samsung Galaxy Note 20', price: '$2,780', stock: 67, stars: '★★★★★', count: 98 },
+              { id: '1', img: 'photo-1511707171634-5f897ff02aa9', name: 'Galaxy Note 20 Ultra 5G', price: '$2,780', stock: 52, stars: '★★★★★', count: 56, badge: 'New' },
+              { id: '2', img: 'photo-1561154464-82e9adf32764', name: 'iPad 10th Generation', price: '$1,780', was: '$1,980', stock: 32, stars: '★★★★★', count: 124, badge: 'Sale' },
+              { id: '9', img: 'photo-1592899677977-9c10ca588bbd', name: 'Galaxy S24 Ultra Mint', price: '$1,420', stock: 41, stars: '★★★★☆', count: 89 },
+              { id: '3', img: 'photo-1496181133206-80ce9b88a853', name: 'Apple MacBook Pro M3', price: '$2,480', stock: 24, stars: '★★★★★', count: 212, badge: 'New' },
+              { id: '5', img: 'photo-1523275335684-37898b6baf30', name: 'Apple Watch Series 9', price: '$680', stock: 67, stars: '★★★★★', count: 98 },
             ].map((p, i) => (
               <article key={i} className="product-card">
                 <div className="img-wrap">
@@ -127,7 +139,37 @@ const HomePage = () => {
                   {p.was && <span className="was">{p.was}</span>}
                 </div>
                 <div className="stars">{p.stars} <span className="count">({p.count})</span></div>
-                <Link to="/cart" className="btn">Order now →</Link>
+                <div 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  style={{
+                    marginTop: '0.65rem',
+                    paddingTop: '0.65rem',
+                    borderTop: '1px dashed var(--rule, #eaeaea)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    fontSize: '0.8rem',
+                    color: 'var(--fg-mute, #64748b)'
+                  }}
+                >
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', margin: 0 }}>
+                    <input 
+                      type="checkbox" 
+                      checked={compareList.includes(p.id)}
+                      onChange={() => toggleCompareProduct(p.id, p.name)}
+                      style={{ 
+                        cursor: 'pointer', 
+                        accentColor: 'var(--indigo, #4f46e5)',
+                        width: '14px',
+                        height: '14px'
+                      }}
+                    />
+                    <span style={{ fontWeight: 500 }}>So sánh</span>
+                  </label>
+                </div>
+                <Link to="/cart" className="btn" style={{ marginTop: '0.65rem' }}>Order now →</Link>
               </article>
             ))}
           </div>
