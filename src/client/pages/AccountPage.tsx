@@ -11,8 +11,7 @@ import {
   Lock, 
   LogOut, 
   CheckCircle, 
-  Check, 
-  ChevronRight 
+  Check
 } from 'lucide-react';
 
 // Mock Orders Data

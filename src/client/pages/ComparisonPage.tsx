@@ -6,7 +6,6 @@ import {
   X, 
   Plus, 
   PlusCircle, 
-  ChevronRight, 
   Search 
 } from 'lucide-react';
 
