@@ -141,8 +141,25 @@ const CheckoutPage = () => {
   };
 
   const cartItems = [
-    { id: 1, name: "iPhone 16 Pro Max 512GB Titanium", price: 34990000, qty: 1, img: "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-16-pro-max-titan-sa-mac.png" }
+    { 
+      id: 1, 
+      name: "iPhone 16 Pro Max 512GB Titanium", 
+      price: 34990000, 
+      qty: 1, 
+      img: "https://cdn2.cellphones.com.vn/insecure/rs:fill:358:358/q:90/plain/https://cellphones.com.vn/media/catalog/product/i/p/iphone-16-pro-max-titan-sa-mac.png",
+      weight: 250, // grams
+      height: 5,   // cm
+      length: 16,  // cm
+      width: 8     // cm
+    }
   ];
+
+  // Calculate dynamic package properties based on cart items
+  const totalWeight = cartItems.reduce((acc, item) => acc + (item.weight * item.qty), 0);
+  const totalHeight = cartItems.reduce((acc, item) => acc + (item.height * item.qty), 0);
+  const maxLength = Math.max(...cartItems.map(item => item.length), 10);
+  const maxWidth = Math.max(...cartItems.map(item => item.width), 10);
+  const insuranceValue = cartItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
   const [shippingFee, setShippingFee] = useState(35000);
@@ -160,11 +177,11 @@ const CheckoutPage = () => {
           service_type_id: null,
           to_district_id: parseInt(selectedDistrict) || 1442,
           to_ward_code: selectedWard || "21211",
-          height: 50,
-          length: 20,
-          weight: 200,
-          width: 20,
-          insurance_value: 10000,
+          height: totalHeight || 10,
+          length: maxLength || 10,
+          weight: totalWeight || 200,
+          width: maxWidth || 10,
+          insurance_value: insuranceValue > 5000000 ? 5000000 : insuranceValue, // GHN insurance limit 
           cod_failed_amount: 2000,
           coupon: null
         })
