@@ -34,24 +34,28 @@ export default async function orderPlacedHandler({
       console.log(`[Order Placed] Syncing with GHN for order ${orderId}`);
       // Assuming soc/route.ts logic here or similar
       // fetch to GHN API to create shipping order
+      const items = order.items?.map(item => ({
+        name: item.title,
+        quantity: item.quantity,
+        weight: 250 // assuming each item is 250g if not specified
+      })) || [];
+
+      const totalWeight = items.reduce((acc, item) => acc + (item.weight * item.quantity), 0) || 200;
+
       const ghnBody = {
         to_name: order.shipping_address?.first_name || "Customer",
         to_phone: order.shipping_address?.phone || "0987654321",
         to_address: order.shipping_address?.address_1 || "Address",
         to_ward_code: order.shipping_address?.province || "20308", // mock
         to_district_id: 1442, // mock
-        weight: 200,
-        length: 10,
+        weight: totalWeight,
+        length: 15, // dynamic calculation can be added if item metadata contains dimensions
         width: 10,
         height: 10,
         service_type_id: 2,
         payment_type_id: 1,
         required_note: "CHOXEMHANGKHONGTHU",
-        items: order.items?.map(item => ({
-          name: item.title,
-          quantity: item.quantity,
-          weight: 100
-        })) || []
+        items: items
       };
 
       const ghnRes = await fetch("https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/create", {
