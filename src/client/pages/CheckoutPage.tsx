@@ -167,14 +167,16 @@ const CheckoutPage = () => {
   useEffect(() => {
     // Call Shipping Fee API when district/ward changes
     if (selectedDistrict && selectedWard) {
+      // 2: Nhanh (Express), 5: Tiết kiệm (Economy - using GHN API as proxy for economy rates)
+      const serviceTypeId = shippingMethod === 'ghn' ? 2 : 5;
+
       fetch('http://localhost:9000/store/ghn/fee', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           from_district_id: 1442,
           from_ward_code: "21211",
-          service_id: 53320,
-          service_type_id: null,
+          service_type_id: serviceTypeId,
           to_district_id: parseInt(selectedDistrict) || 1442,
           to_ward_code: selectedWard || "21211",
           height: totalHeight || 10,
@@ -190,11 +192,20 @@ const CheckoutPage = () => {
       .then(data => {
         if (data.data?.total) {
           setShippingFee(data.data.total);
+        } else {
+          // Fallback if the specific route does not support Economy (5) or API fails
+          setShippingFee(shippingMethod === 'ghtk' ? 25000 : 35000);
         }
       })
-      .catch(console.error);
+      .catch(error => {
+        console.error("Fee API error:", error);
+        setShippingFee(shippingMethod === 'ghtk' ? 25000 : 35000);
+      });
+    } else {
+      // Default initial prices before location is selected
+      setShippingFee(shippingMethod === 'ghtk' ? 25000 : 35000);
     }
-  }, [selectedDistrict, selectedWard, shippingMethod]);
+  }, [selectedDistrict, selectedWard, shippingMethod, totalHeight, maxLength, totalWeight, maxWidth, insuranceValue]);
 
   const total = subtotal + shippingFee;
 
@@ -386,10 +397,10 @@ const CheckoutPage = () => {
                   onClick={() => setShippingMethod('ghn')}
                 >
                   <div className="option-card-header">
-                    <span className="option-name">GHN Express</span>
-                    <span className="option-price">35.000đ</span>
+                    <span className="option-name">Giao hàng Nhanh</span>
+                    <span className="option-price">{shippingMethod === 'ghn' ? `${shippingFee.toLocaleString('vi-VN')}đ` : 'Từ 35.000đ'}</span>
                   </div>
-                  <span className="option-desc">Giao nhanh 1-2 ngày</span>
+                  <span className="option-desc">Giao tốc hành 1-2 ngày</span>
                   {shippingMethod === 'ghn' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
                 </div>
                 <div 
@@ -397,10 +408,10 @@ const CheckoutPage = () => {
                   onClick={() => setShippingMethod('ghtk')}
                 >
                   <div className="option-card-header">
-                    <span className="option-name">GHTK Tiết kiệm</span>
-                    <span className="option-price">25.000đ</span>
+                    <span className="option-name">Giao hàng Tiết kiệm</span>
+                    <span className="option-price">{shippingMethod === 'ghtk' ? `${shippingFee.toLocaleString('vi-VN')}đ` : 'Từ 25.000đ'}</span>
                   </div>
-                  <span className="option-desc">Giao chậm 3-4 ngày</span>
+                  <span className="option-desc">Giao tiêu chuẩn 3-4 ngày</span>
                   {shippingMethod === 'ghtk' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
                 </div>
               </div>
