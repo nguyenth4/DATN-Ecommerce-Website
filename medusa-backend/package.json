@@ -35,5 +35,8 @@
   ],
   "overrides": {
     "ajv": "^8.0.0"
+  },
+  "dependencies": {
+    "date-fns": "^3.6.0"
   }
 }

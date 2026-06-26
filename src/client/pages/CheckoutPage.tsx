@@ -96,7 +96,7 @@ const CheckoutPage = () => {
     }
   }, [selectedDistrict]);
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     // Show a premium success transition
     const orderData = {
         customer: {
@@ -113,14 +113,26 @@ const CheckoutPage = () => {
             ward: wardName,
             detail: detailAddress
         },
-        note
+        note,
+        items: cartItems,
     };
 
     console.log("Placing order...", orderData);
     
-    // Using Alert as a placeholder for real logic
-    if (['vnpay', 'momo', 'zalopay'].includes(paymentMethod)) {
-      alert(`Đang chuyển hướng đến cổng thanh toán ${paymentMethod.toUpperCase()}...\nVui lòng không đóng trình duyệt.`);
+    try {
+      const response = await fetch('http://localhost:9000/store/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData)
+      });
+      const data = await response.json();
+      
+      if (data.paymentUrl) {
+        window.location.href = data.paymentUrl;
+        return;
+      }
+    } catch (error) {
+      console.error("Checkout failed:", error);
     }
 
     setTimeout(() => {
@@ -133,7 +145,40 @@ const CheckoutPage = () => {
   ];
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
-  const shippingFee = shippingMethod === 'ghn' ? 35000 : 25000;
+  const [shippingFee, setShippingFee] = useState(35000);
+  
+  useEffect(() => {
+    // Call Shipping Fee API when district/ward changes
+    if (selectedDistrict && selectedWard) {
+      fetch('http://localhost:9000/store/ghn/fee', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from_district_id: 1442,
+          from_ward_code: "21211",
+          service_id: 53320,
+          service_type_id: null,
+          to_district_id: parseInt(selectedDistrict) || 1442,
+          to_ward_code: selectedWard || "21211",
+          height: 50,
+          length: 20,
+          weight: 200,
+          width: 20,
+          insurance_value: 10000,
+          cod_failed_amount: 2000,
+          coupon: null
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.data?.total) {
+          setShippingFee(data.data.total);
+        }
+      })
+      .catch(console.error);
+    }
+  }, [selectedDistrict, selectedWard, shippingMethod]);
+
   const total = subtotal + shippingFee;
 
   return (
