@@ -9,35 +9,34 @@ Hoàn thiện luồng Checkout (Thanh toán), bao gồm:
 
 ## 2. Chi tiết các thay đổi đã thực hiện
 
-### 2.1. Phía Frontend (`src/client/pages/CheckoutPage.tsx`)
-- **Quản lý dữ liệu giỏ hàng động**: Bổ sung các trường `weight`, `height`, `length`, `width` cho các sản phẩm trong giỏ hàng. Dùng hàm `reduce` để tính `totalWeight`, `totalHeight`, `maxLength`, `maxWidth` và `insuranceValue` thay vì hard-code.
-- **Tính phí vận chuyển**: Tự động gọi API `POST http://localhost:9000/store/ghn/fee` mỗi khi người dùng thay đổi Quận/Huyện, Phường/Xã. 
-- **Lựa chọn dịch vụ vận chuyển**: 
-  - Thêm xử lý để khi người dùng chọn "Giao hàng Nhanh", hệ thống gửi `service_type_id: 2`.
-  - Khi chọn "Giao hàng Tiết kiệm", hệ thống gửi `service_type_id: 5` để lấy 2 mức giá khác nhau. 
-  - Có cơ chế fallback: Nếu API báo lỗi hoặc khu vực không hỗ trợ mức giá Tiết kiệm, hệ thống sẽ set mặc định về 25,000đ hoặc 35,000đ.
-- **Tích hợp API Checkout**: Cập nhật hàm `handlePlaceOrder` để bắn payload về API `POST /store/checkout`. Xử lý chuyển hướng đến trang thanh toán VNPay nếu nhận được URL `paymentUrl` từ Backend trả về.
+### 2.1. Phía Frontend (`src/client/pages/CheckoutPage.tsx` & `CartPage.tsx`)
+- **Quản lý dữ liệu giỏ hàng động**: Bổ sung các trường `weight`, `height`, `length`, `width` cho các sản phẩm trong giỏ hàng. Dùng hàm `reduce` để tính tổng kích thước và khối lượng thay vì hard-code.
+- **Tính phí vận chuyển trên Giỏ hàng (Mới)**: Thêm 3 ô chọn địa chỉ (Tỉnh/Huyện/Xã) vào trang Giỏ hàng (`CartPage.tsx`) để khách hàng tự "Tính phí vận chuyển" dự kiến qua API GHN trước khi sang trang Thanh toán.
+- **Tính phí vận chuyển trên Checkout**: Tự động gọi API `POST http://localhost:9000/store/ghn/fee` mỗi khi người dùng thay đổi Quận/Huyện, Phường/Xã. 
+- **Gỡ bỏ Fallback Giá Cứng**: Cả trang Cart và Checkout đều đã gỡ bỏ hoàn toàn việc fallback về mức giá cứng 25.000đ hay 35.000đ. Hệ thống chỉ hiển thị phí nếu gọi API thành công theo khoảng cách thực tế, ngược lại hiển thị "Chưa tính".
+- **Lựa chọn dịch vụ vận chuyển**: Phân biệt Giao hàng Nhanh (`service_type_id: 2`) và Giao hàng Tiết kiệm (`service_type_id: 5`).
+- **Tích hợp API Checkout**: Cập nhật hàm `handlePlaceOrder` bắn payload về API `POST /store/checkout`. Xử lý chuyển hướng đến trang thanh toán VNPay nếu nhận được URL `paymentUrl`.
 
-### 2.2. Phía Backend (Medusa Framework)
-- **API `/store/checkout`**: Được khởi tạo tại `medusa-backend/apps/backend/src/api/store/checkout/route.ts` nhằm đóng vai trò nhận request từ Frontend, validation giỏ hàng và mock trả về link payment.
-- **Subscriber `order.placed`**: Được tạo tại `medusa-backend/apps/backend/src/subscribers/order-placed.ts`. Luồng xử lý nền:
-  1. Ghi log xử lý Inventory.
-  2. Ghi log xử lý Payment.
-  3. Quét các item trong order để tính lại khối lượng (`totalWeight`).
-  4. POST lên cổng `https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/create` (GHN SOC API) để tạo vận đơn tự động.
+### 2.2. Phía Backend (Medusa Framework & Docker)
+- **API `/store/checkout`**: Được khởi tạo tại `medusa-backend/apps/backend/src/api/store/checkout/route.ts` nhằm nhận request từ Frontend, validation giỏ hàng và trả về link payment.
+- **Subscriber `order.placed`**: Được tạo tại `medusa-backend/apps/backend/src/subscribers/order-placed.ts` để xử lý Inventory, Payment và gọi API GHN SOC tạo vận đơn tự động.
+- **Fix lỗi Admin Path (Medusa v2)**: Đổi `admin.path` từ `/admin` sang `/app` trong `medusa-config.ts` do v2 cấm sử dụng `/admin`.
+- **Fix lỗi Vite trên Docker**: Ép Vite chạy Admin ở cổng cố định `0.0.0.0:7001`, expose port `7001` trong `docker-compose.yml`, và xử lý triệt để lỗi xung đột bộ nhớ đệm (cache `.medusa`) khi chuyển ổ đĩa bằng cách đổi tên thư mục `src/admin/i18n` thành `i18n_bak`.
 
 ## 3. Trạng thái hiện tại
 - Nhánh làm việc: `feature/checkout`
 - Toàn bộ thay đổi đã được add và commit đầy đủ trên nhánh cục bộ của bạn.
 - Cả Frontend React và Backend Medusa đều có code đồng bộ và hoạt động khớp với nhau về flow dữ liệu.
 
-## 4. Hướng dẫn Test/Chạy thử
-1. Mở 2 terminal.
+## 4. Hướng dẫn Test/Chạy thử (Fix Node v25 bug)
+1. Do bạn đang sử dụng Node v25, lệnh `turbo` sẽ gây lỗi `os error 193`. Vì vậy BẮT BUỘC dùng Docker cho Backend. Mở 2 terminal.
 2. Terminal 1 (Backend): 
    ```bash
-   cd medusa-backend/apps/backend
-   npm run dev 
+   cd medusa-backend
+   docker compose up --build
    ```
+   - Chờ hệ thống khởi động và chạy xong `Server is ready on port: 9000`.
+   - Truy cập Admin: `http://localhost:9000/app` (admin@techstore.com / TechStore@2026).
 3. Terminal 2 (Frontend):
    ```bash
    npm run dev # Chạy vite React (tại thư mục gốc)
