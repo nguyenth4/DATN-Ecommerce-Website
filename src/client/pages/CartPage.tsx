@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Plus, 
@@ -27,6 +27,103 @@ const CartPage = () => {
   const [promo, setPromo] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
 
+  // Shipping Fee State
+  const [provinces, setProvinces] = useState<any[]>([]);
+  const [districts, setDistricts] = useState<any[]>([]);
+  const [wards, setWards] = useState<any[]>([]);
+  
+  const [selectedProvince, setSelectedProvince] = useState('');
+  const [selectedDistrict, setSelectedDistrict] = useState('');
+  const [selectedWard, setSelectedWard] = useState('');
+  
+  const [shippingFee, setShippingFee] = useState<number>(0);
+
+  // Fetch Provinces
+  useEffect(() => {
+    fetch('https://esgoo.net/api-tinhthanh/1/0.htm')
+      .then(res => res.json())
+      .then(data => {
+        if (data.error === 0) setProvinces(data.data);
+      })
+      .catch(console.error);
+  }, []);
+
+  // Fetch Districts
+  useEffect(() => {
+    if (selectedProvince) {
+      fetch(`https://esgoo.net/api-tinhthanh/2/${selectedProvince}.htm`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.error === 0) setDistricts(data.data);
+          else setDistricts([]);
+          setWards([]);
+          setSelectedDistrict('');
+          setSelectedWard('');
+        })
+        .catch(console.error);
+    } else {
+      setDistricts([]);
+      setWards([]);
+    }
+  }, [selectedProvince]);
+
+  // Fetch Wards
+  useEffect(() => {
+    if (selectedDistrict) {
+      fetch(`https://esgoo.net/api-tinhthanh/3/${selectedDistrict}.htm`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.error === 0) setWards(data.data);
+          else setWards([]);
+          setSelectedWard('');
+        })
+        .catch(console.error);
+    } else {
+      setWards([]);
+    }
+  }, [selectedDistrict]);
+
+  // Fetch Shipping Fee
+  useEffect(() => {
+    if (selectedDistrict && selectedWard) {
+      const totalWeight = items.reduce((acc, item) => acc + 250 * item.qty, 0);
+      const insuranceValue = items.reduce((acc, item) => acc + item.price * item.qty, 0);
+
+      fetch('http://localhost:9000/store/ghn/fee', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from_district_id: 1442,
+          from_ward_code: "21211",
+          service_type_id: 2, // GHN Express
+          to_district_id: parseInt(selectedDistrict) || 1442,
+          to_ward_code: selectedWard,
+          height: 10,
+          length: 15,
+          weight: totalWeight || 250,
+          width: 10,
+          insurance_value: insuranceValue > 5000000 ? 5000000 : insuranceValue,
+          cod_failed_amount: 2000,
+          coupon: null
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.data?.total) {
+          setShippingFee(data.data.total);
+        } else {
+          setShippingFee(0);
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        setShippingFee(0);
+      });
+    } else {
+      setShippingFee(0);
+    }
+  }, [selectedDistrict, selectedWard, items]);
+
   const updateQty = (id: number, delta: number) => {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, qty: Math.max(1, i.qty + delta) } : i)));
   };
@@ -45,7 +142,7 @@ const CartPage = () => {
   const subtotal = items.reduce((sum, i) => sum + i.price * i.qty, 0);
   const tax = Math.round(subtotal * 0.08);
   const discount = promoApplied ? PROMO_DISCOUNT : 0;
-  const total = subtotal + tax - discount;
+  const total = subtotal + tax + shippingFee - discount;
 
 
   return (
@@ -141,13 +238,44 @@ const CartPage = () => {
                   <button onClick={applyPromo}>Áp dụng</button>
                 </div>
 
+                <div style={{ marginBottom: 'var(--s4)' }}>
+                  <p style={{ fontSize: '12px', fontWeight: 600, marginBottom: '8px', color: 'var(--fg-mute)' }}>TÍNH PHÍ VẬN CHUYỂN (GHN)</p>
+                  <select 
+                    style={{ width: '100%', padding: '10px', marginBottom: '8px', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '14px', background: 'var(--bg)' }}
+                    value={selectedProvince} onChange={e => setSelectedProvince(e.target.value)}
+                  >
+                    <option value="">Chọn Tỉnh/Thành phố</option>
+                    {provinces.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                  <select 
+                    style={{ width: '100%', padding: '10px', marginBottom: '8px', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '14px', background: 'var(--bg)' }}
+                    value={selectedDistrict} onChange={e => setSelectedDistrict(e.target.value)}
+                    disabled={!selectedProvince}
+                  >
+                    <option value="">Chọn Quận/Huyện</option>
+                    {districts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                  </select>
+                  <select 
+                    style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '14px', background: 'var(--bg)' }}
+                    value={selectedWard} onChange={e => setSelectedWard(e.target.value)}
+                    disabled={!selectedDistrict}
+                  >
+                    <option value="">Chọn Phường/Xã</option>
+                    {wards.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                  </select>
+                </div>
+
                 <div className="cart-line">
                   <span>Tạm tính · {itemCount} sản phẩm</span>
                   <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{subtotal.toLocaleString('vi-VN')}đ</span>
                 </div>
                 <div className="cart-line">
                   <span>Phí vận chuyển</span>
-                  <span style={{ color: 'var(--emerald)', fontWeight: 600 }}>Miễn phí</span>
+                  {shippingFee > 0 ? (
+                    <span style={{ color: 'var(--ink)', fontWeight: 600 }}>{shippingFee.toLocaleString('vi-VN')}đ</span>
+                  ) : (
+                    <span style={{ color: 'var(--emerald)', fontWeight: 600 }}>Chưa tính</span>
+                  )}
                 </div>
                 <div className="cart-line">
                   <span>Thuế ước tính (8%)</span>

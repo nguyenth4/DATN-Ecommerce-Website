@@ -193,17 +193,16 @@ const CheckoutPage = () => {
         if (data.data?.total) {
           setShippingFee(data.data.total);
         } else {
-          // Fallback if the specific route does not support Economy (5) or API fails
-          setShippingFee(shippingMethod === 'ghtk' ? 25000 : 35000);
+          setShippingFee(0);
         }
       })
       .catch(error => {
         console.error("Fee API error:", error);
-        setShippingFee(shippingMethod === 'ghtk' ? 25000 : 35000);
+        setShippingFee(0);
       });
     } else {
       // Default initial prices before location is selected
-      setShippingFee(shippingMethod === 'ghtk' ? 25000 : 35000);
+      setShippingFee(0);
     }
   }, [selectedDistrict, selectedWard, shippingMethod, totalHeight, maxLength, totalWeight, maxWidth, insuranceValue]);
 
@@ -398,7 +397,7 @@ const CheckoutPage = () => {
                 >
                   <div className="option-card-header">
                     <span className="option-name">Giao hàng Nhanh</span>
-                    <span className="option-price">{shippingMethod === 'ghn' ? `${shippingFee.toLocaleString('vi-VN')}đ` : 'Từ 35.000đ'}</span>
+                    <span className="option-price">{shippingMethod === 'ghn' && shippingFee > 0 ? `${shippingFee.toLocaleString('vi-VN')}đ` : 'Chưa tính'}</span>
                   </div>
                   <span className="option-desc">Giao tốc hành 1-2 ngày</span>
                   {shippingMethod === 'ghn' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
@@ -409,7 +408,7 @@ const CheckoutPage = () => {
                 >
                   <div className="option-card-header">
                     <span className="option-name">Giao hàng Tiết kiệm</span>
-                    <span className="option-price">{shippingMethod === 'ghtk' ? `${shippingFee.toLocaleString('vi-VN')}đ` : 'Từ 25.000đ'}</span>
+                    <span className="option-price">{shippingMethod === 'ghtk' && shippingFee > 0 ? `${shippingFee.toLocaleString('vi-VN')}đ` : 'Chưa tính'}</span>
                   </div>
                   <span className="option-desc">Giao tiêu chuẩn 3-4 ngày</span>
                   {shippingMethod === 'ghtk' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
@@ -500,7 +499,11 @@ const CheckoutPage = () => {
               </div>
               <div className="summary-row">
                 <span>Phí vận chuyển</span>
-                <span>{shippingFee.toLocaleString('vi-VN')}đ</span>
+                {shippingFee > 0 ? (
+                  <span>{shippingFee.toLocaleString('vi-VN')}đ</span>
+                ) : (
+                  <span style={{ color: 'var(--emerald)', fontWeight: 600 }}>Chưa tính</span>
+                )}
               </div>
 
 
