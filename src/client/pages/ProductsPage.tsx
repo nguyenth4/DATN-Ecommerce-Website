@@ -7,23 +7,16 @@ import {
   ChevronRight, 
   ChevronLeft 
 } from 'lucide-react';
-
-const PRODUCTS = [
-  { id: '1', img: 'photo-1511707171634-5f897ff02aa9', name: 'Galaxy Note 20 Ultra 5G', price: '2.780.000đ', stock: 52, stars: '★★★★★', count: 56, badge: 'New' },
-  { id: '2', img: 'photo-1561154464-82e9adf32764', name: 'iPad 10th Generation', price: '1.780.000đ', was: '1.980.000đ', stock: 32, stars: '★★★★★', count: 124, badge: 'Sale' },
-  { id: '3', img: 'photo-1496181133206-80ce9b88a853', name: 'Apple MacBook Pro M3', price: '2.480.000đ', stock: 18, stars: '★★★★★', count: 89 },
-  { id: '4', img: 'photo-1502920917128-1aa500764cbd', name: 'Canon EOS R7 DSLR', price: '1.920.000đ', stock: 24, stars: '★★★★☆', count: 67 },
-  { id: '5', img: 'photo-1523275335684-37898b6baf30', name: 'Apple Watch Series 9', price: '680.000đ', stock: 41, stars: '★★★★★', count: 245, badge: 'New' },
-  { id: '6', img: 'photo-1606220945770-b5b6c2c55bf1', name: 'Beats Studio Buds Pro', price: '280.000đ', stock: 67, stars: '★★★★☆', count: 312 },
-  { id: '7', img: 'photo-1608043152269-423dbba4e7e1', name: 'Apple HomePod 2nd Gen', price: '280.000đ', was: '320.000đ', stock: 22, stars: '★★★★★', count: 98, badge: 'Sale' },
-  { id: '8', img: 'photo-1592840496694-26d035b52b48', name: 'Power Wired Controller', price: '190.000đ', stock: 34, stars: '★★★★★', count: 78 },
-  { id: '9', img: 'photo-1592899677977-9c10ca588bbd', name: 'Galaxy S24 Ultra Mint', price: '1.420.000đ', stock: 19, stars: '★★★★☆', count: 56 },
-];
-
+import { useProducts } from '../services/product.service';
 
 const ProductsPage = () => {
   const [sort, setSort] = useState('');
   const [compareList, setCompareList] = useState(getCompareList());
+
+  // Fetch products dynamically from the database
+  const { data, isLoading } = useProducts();
+  const products = data?.products || [];
+  const totalCount = data?.count || 0;
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -35,7 +28,6 @@ const ProductsPage = () => {
     };
   }, []);
 
-
   return (
     <>
       <main id="main">
@@ -45,10 +37,9 @@ const ProductsPage = () => {
               <Link to="/">Trang chủ</Link> <span className="sep">/</span> <span>Cửa hàng · Tất cả sản phẩm</span>
             </div>
             <h1>Tất cả sản phẩm</h1>
-            <p>314 sản phẩm bao gồm điện thoại thông minh, máy tính xách tay, âm thanh, máy ảnh, thiết bị đeo và chơi game. Sử dụng bộ lọc bên trái để tìm kiếm theo thương hiệu, giá cả, đánh giá hoặc tình trạng hàng.</p>
+            <p>{totalCount} sản phẩm bao gồm điện thoại thông minh, máy tính xách tay, âm thanh, máy ảnh, thiết bị đeo và chơi game. Sử dụng bộ lọc bên trái để tìm kiếm theo thương hiệu, giá cả, đánh giá hoặc tình trạng hàng.</p>
           </div>
         </section>
-
 
         <section className="section">
           <div className="container">
@@ -101,10 +92,9 @@ const ProductsPage = () => {
                 <a href="#" className="btn btn--indigo btn--block">Áp dụng bộ lọc</a>
               </aside>
 
-
               <div>
                 <div className="shop-toolbar">
-                  <span className="count">Hiển thị 1 – {PRODUCTS.length} của 314 sản phẩm</span>
+                  <span className="count">Hiển thị 1 – {products.length} của {totalCount} sản phẩm</span>
                   <div style={{ display: 'flex', gap: 'var(--s3)', alignItems: 'center' }}>
                     <span style={{ fontSize: 'var(--text-xs)', color: 'var(--fg-mute)' }}>SẮP XẾP</span>
                     <select value={sort} onChange={(e) => setSort(e.target.value)}>
@@ -118,65 +108,89 @@ const ProductsPage = () => {
                 </div>
 
                 <div className="shop-grid">
-                  {PRODUCTS.map((p) => (
-                    <article className="product-card" key={p.id}>
-                      <div className="img-wrap">
-                        {p.badge && (
-                          <span className={`badge ${p.badge === 'Sale' ? 'badge--sale' : ''}`}>{p.badge === 'Sale' ? 'Giảm giá' : 'Mới'}</span>
-                        )}
-                        <button className="wishlist"><Heart size={18} /></button>
-                        <img
-                          src={`https://images.unsplash.com/${p.img}?w=500&q=80&auto=format&fit=crop`}
-                          alt={p.name}
-                        />
-                      </div>
-                      <div className="stock"><span className="dot"></span>Còn hàng · {p.stock} sản phẩm</div>
-                      <Link to={`/product/${p.id}`} className="name">{p.name}</Link>
-                      <div className="price">
-                        <span className="now">{p.price}</span>
-                        {p.was && <span className="was">{p.was}</span>}
-                      </div>
-                      <div className="stars">
-                         <div style={{ display: 'flex', gap: '2px', color: '#fbbf24' }}>
-                           {[...Array(5)].map((_, idx) => (
-                             <Star key={idx} size={14} fill={idx < 4 ? "#fbbf24" : "none"} />
-                           ))}
-                         </div>
-                         <span className="count">({p.count})</span>
-                      </div>
-                      <div 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                        }}
-                        style={{
-                          marginTop: '0.65rem',
-                          paddingTop: '0.65rem',
-                          borderTop: '1px dashed var(--rule, #eaeaea)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          fontSize: '0.8rem',
-                          color: 'var(--fg-mute, #64748b)'
-                        }}
-                      >
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', margin: 0 }}>
-                          <input 
-                            type="checkbox" 
-                            checked={compareList.includes(p.id)}
-                            onChange={() => toggleCompareProduct(p.id, p.name)}
-                            style={{ 
-                              cursor: 'pointer', 
-                              accentColor: 'var(--indigo, #4f46e5)',
-                              width: '14px',
-                              height: '14px'
+                  {isLoading ? (
+                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '5rem 0', color: 'var(--fg-mute, #64748b)' }}>
+                      <div className="spinner" style={{ margin: '0 auto 1rem', width: '40px', height: '40px', border: '3px solid #e2e8f0', borderTopColor: 'var(--indigo)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                      Đang tải danh sách sản phẩm...
+                    </div>
+                  ) : products.length === 0 ? (
+                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '5rem 0', color: 'var(--fg-mute, #64748b)' }}>
+                      Không tìm thấy sản phẩm nào trong cơ sở dữ liệu.
+                    </div>
+                  ) : (
+                    products.map((p: any) => {
+                      const pPrice = p.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount 
+                        || p.variants?.[0]?.prices?.[0]?.amount 
+                        || p.variants?.[0]?.price 
+                        || p.price 
+                        || 0;
+
+                      const displayPrice = typeof pPrice === 'number' && pPrice > 0 ? pPrice.toLocaleString('vi-VN') + 'đ' : 'Liên hệ';
+                      const oldPrice = p.variants?.[0]?.oldPrice;
+                      const displayOldPrice = oldPrice ? oldPrice.toLocaleString('vi-VN') + 'đ' : null;
+
+                      const stock = p.variants?.[0]?.stock !== undefined ? p.variants[0].stock : 10;
+                      const imgUrl = p.thumbnail || 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=500&q=80&auto=format&fit=crop';
+                      const rating = Number(p.metadata?.rating || 5);
+                      const ratingCount = p.metadata?.review_count || 10;
+
+                      return (
+                        <article className="product-card" key={p.id}>
+                          <div className="img-wrap">
+                            {oldPrice && <span className="badge badge--sale">Giảm giá</span>}
+                            <button className="wishlist"><Heart size={18} /></button>
+                            <img src={imgUrl} alt={p.title} style={{ objectFit: 'contain' }} />
+                          </div>
+                          <div className="stock"><span className="dot"></span>Còn hàng · {stock} sản phẩm</div>
+                          <Link to={`/product/${p.id}`} className="name">{p.title}</Link>
+                          <div className="price">
+                            <span className="now">{displayPrice}</span>
+                            {displayOldPrice && <span className="was">{displayOldPrice}</span>}
+                          </div>
+                          <div className="stars">
+                            <div style={{ display: 'flex', gap: '2px', color: '#fbbf24' }}>
+                              {[...Array(5)].map((_, idx) => (
+                                <Star key={idx} size={14} fill={idx < Math.round(rating) ? "#fbbf24" : "none"} />
+                              ))}
+                            </div>
+                            <span className="count">({ratingCount})</span>
+                          </div>
+                          <div 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
                             }}
-                          />
-                          <span style={{ fontWeight: 500 }}>So sánh</span>
-                        </label>
-                      </div>
-                      <Link to="/cart" className="btn" style={{ marginTop: '0.65rem' }}>Đặt ngay <ChevronRight size={16} /></Link>
-                    </article>
-                  ))}
+                            style={{
+                              marginTop: '0.65rem',
+                              paddingTop: '0.65rem',
+                              borderTop: '1px dashed var(--rule, #eaeaea)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              fontSize: '0.8rem',
+                              color: 'var(--fg-mute, #64748b)'
+                            }}
+                          >
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', margin: 0 }}>
+                              <input 
+                                type="checkbox" 
+                                checked={compareList.includes(p.id)}
+                                onChange={() => toggleCompareProduct(p.id, p.title)}
+                                style={{ 
+                                  cursor: 'pointer', 
+                                  accentColor: 'var(--indigo, #4f46e5)',
+                                  width: '14px',
+                                  height: '14px'
+                                }}
+                              />
+                              <span style={{ fontWeight: 500 }}>So sánh</span>
+                            </label>
+                          </div>
+                          <Link to="/cart" className="btn" style={{ marginTop: '0.65rem' }}>Đặt ngay <ChevronRight size={16} /></Link>
+                        </article>
+                      );
+                    })
+                  )}
                 </div>
 
                 <div className="pagination">

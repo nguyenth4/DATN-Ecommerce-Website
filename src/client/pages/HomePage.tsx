@@ -8,10 +8,15 @@ import {
   Heart, 
   Star
 } from 'lucide-react';
+import { useProducts } from '../services/product.service';
 
 const HomePage = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [compareList, setCompareList] = useState(getCompareList());
+
+  // Fetch trending products from Medusa & Supabase
+  const { data, isLoading } = useProducts({ limit: 12 });
+  const products = data?.products || [];
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -22,6 +27,24 @@ const HomePage = () => {
       window.removeEventListener('compare-updated', handleUpdate);
     };
   }, []);
+
+  // Filter products by active tab categories if they are mapped
+  // Since categories are fetched dynamically, let's map tab index to category names
+  const categoryTabs = ['Điện thoại', 'Đồng hồ', 'Máy ảnh', 'Phụ kiện', 'Loa'];
+  const filteredProducts = products.filter(p => {
+    if (activeTab === 0) return true; // Show all by default
+    const targetCat = categoryTabs[activeTab].toLowerCase();
+    return p.categories?.some((cat: any) => 
+      cat.name.toLowerCase().includes(targetCat) || 
+      (targetCat === 'đồng hồ' && cat.name.toLowerCase().includes('watch')) ||
+      (targetCat === 'máy ảnh' && cat.name.toLowerCase().includes('camera')) ||
+      (targetCat === 'loa' && cat.name.toLowerCase().includes('speaker')) ||
+      (targetCat === 'phụ kiện' && cat.name.toLowerCase().includes('accessory'))
+    );
+  }).slice(0, 5);
+
+  const trendingProducts = filteredProducts.length > 0 ? filteredProducts : products.slice(0, 5);
+  const forYouProducts = products.slice(5, 9);
 
   return (
     <main id="main">
@@ -47,7 +70,6 @@ const HomePage = () => {
               <img className="product" src="https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=900&q=80&auto=format&fit=crop" alt="HomePod speaker" />
             </article>
 
-
             <article className="bento-card bento-card--purple">
               <div className="sparkle"></div>
               <span className="eyebrow">Thiết bị đeo</span>
@@ -67,7 +89,6 @@ const HomePage = () => {
               </Link>
               <img className="product" src="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600&q=80&auto=format&fit=crop" alt="Samsung Galaxy phone" />
             </article>
-
 
             <div className="bento-row">
               <article className="bento-card bento-card--orange">
@@ -99,7 +120,6 @@ const HomePage = () => {
                 </Link>
                 <img className="product" src="https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=500&q=80&auto=format&fit=crop" alt="DSLR camera" />
               </article>
-
             </div>
 
           </div>
@@ -117,7 +137,7 @@ const HomePage = () => {
           </div>
 
           <div className="tabs" role="tablist">
-            {['Điện thoại', 'Đồng hồ', 'Máy ảnh', 'Phụ kiện', 'Loa'].map((tab, i) => (
+            {categoryTabs.map((tab, i) => (
               <button
                 key={tab}
                 className={`tab${activeTab === i ? ' is-active' : ''}`}
@@ -131,68 +151,86 @@ const HomePage = () => {
           </div>
 
           <div className="products">
-            {[
-              { id: '1', img: 'photo-1511707171634-5f897ff02aa9', name: 'Galaxy Note 20 Ultra 5G', price: '2.780.000đ', stock: 52, stars: '★★★★★', count: 56, badge: 'New' },
-              { id: '2', img: 'photo-1561154464-82e9adf32764', name: 'iPad 10th Generation', price: '1.780.000đ', was: '1.980.000đ', stock: 32, stars: '★★★★★', count: 124, badge: 'Sale' },
-              { id: '9', img: 'photo-1592899677977-9c10ca588bbd', name: 'Galaxy S24 Ultra Mint', price: '1.420.000đ', stock: 41, stars: '★★★★☆', count: 89 },
-              { id: '3', img: 'photo-1496181133206-80ce9b88a853', name: 'Apple MacBook Pro M3', price: '2.480.000đ', stock: 24, stars: '★★★★★', count: 212, badge: 'New' },
-              { id: '5', img: 'photo-1523275335684-37898b6baf30', name: 'Apple Watch Series 9', price: '680.000đ', stock: 67, stars: '★★★★★', count: 98 },
-            ].map((p, i) => (
+            {isLoading ? (
+              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem 0', color: 'var(--fg-mute)' }}>
+                Đang tải sản phẩm...
+              </div>
+            ) : trendingProducts.length === 0 ? (
+              <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem 0', color: 'var(--fg-mute)' }}>
+                Chưa có sản phẩm nào.
+              </div>
+            ) : (
+              trendingProducts.map((p: any) => {
+                const pPrice = p.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount 
+                  || p.variants?.[0]?.prices?.[0]?.amount 
+                  || p.variants?.[0]?.price 
+                  || p.price 
+                  || 0;
+                
+                const displayPrice = typeof pPrice === 'number' && pPrice > 0 ? pPrice.toLocaleString('vi-VN') + 'đ' : 'Liên hệ';
+                const oldPrice = p.variants?.[0]?.oldPrice;
+                const displayOldPrice = oldPrice ? oldPrice.toLocaleString('vi-VN') + 'đ' : null;
+                const stock = p.variants?.[0]?.stock !== undefined ? p.variants[0].stock : 10;
+                const imgUrl = p.thumbnail || 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=500&q=80&auto=format&fit=crop';
+                const rating = Number(p.metadata?.rating || 5);
+                const ratingCount = p.metadata?.review_count || 10;
 
-              <article key={i} className="product-card">
-                <div className="img-wrap">
-                  {p.badge && <span className={`badge${p.badge === 'Sale' ? ' badge--sale' : ''}`}>{p.badge === 'Sale' ? 'Giảm giá' : 'Mới'}</span>}
-                  <button className="wishlist" aria-label="Wishlist"><Heart size={18} /></button>
-                  <img src={`https://images.unsplash.com/${p.img}?w=500&q=80&auto=format&fit=crop`} alt={p.name} />
-                </div>
-                <div className="stock"><span className="dot"></span>Còn hàng · {p.stock} sản phẩm</div>
-                <Link to="/products/1" className="name">{p.name}</Link>
-                <div className="price">
-                  <span className="now">{p.price}</span>
-                  {p.was && <span className="was">{p.was}</span>}
-                </div>
-                <div className="stars">
-                  <div style={{ display: 'flex', gap: '2px', color: '#fbbf24' }}>
-                    {[...Array(5)].map((_, idx) => (
-                      <Star key={idx} size={14} fill={idx < 4 ? "#fbbf24" : "none"} />
-                    ))}
-                  </div>
-                  <span className="count">({p.count})</span>
-                </div>
-                <div 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
-                  style={{
-                    marginTop: '0.65rem',
-                    paddingTop: '0.65rem',
-                    borderTop: '1px dashed var(--rule, #eaeaea)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    fontSize: '0.8rem',
-                    color: 'var(--fg-mute, #64748b)'
-                  }}
-                >
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', margin: 0 }}>
-                    <input 
-                      type="checkbox" 
-                      checked={compareList.includes(p.id)}
-                      onChange={() => toggleCompareProduct(p.id, p.name)}
-                      style={{ 
-                        cursor: 'pointer', 
-                        accentColor: 'var(--indigo, #4f46e5)',
-                        width: '14px',
-                        height: '14px'
+                return (
+                  <article key={p.id} className="product-card">
+                    <div className="img-wrap">
+                      {oldPrice && <span className="badge badge--sale">Giảm giá</span>}
+                      <button className="wishlist" aria-label="Wishlist"><Heart size={18} /></button>
+                      <img src={imgUrl} alt={p.title} style={{ objectFit: 'contain' }} />
+                    </div>
+                    <div className="stock"><span className="dot"></span>Còn hàng · {stock} sản phẩm</div>
+                    <Link to={`/product/${p.id}`} className="name">{p.title}</Link>
+                    <div className="price">
+                      <span className="now">{displayPrice}</span>
+                      {displayOldPrice && <span className="was">{displayOldPrice}</span>}
+                    </div>
+                    <div className="stars">
+                      <div style={{ display: 'flex', gap: '2px', color: '#fbbf24' }}>
+                        {[...Array(5)].map((_, idx) => (
+                          <Star key={idx} size={14} fill={idx < Math.round(rating) ? "#fbbf24" : "none"} />
+                        ))}
+                      </div>
+                      <span className="count">({ratingCount})</span>
+                    </div>
+                    <div 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
                       }}
-                    />
-                    <span style={{ fontWeight: 500 }}>So sánh</span>
-                  </label>
-                </div>
-                <Link to="/cart" className="btn" style={{ marginTop: '0.65rem' }}>Đặt ngay <ChevronRight size={16} /></Link>
-              </article>
-
-            ))}
+                      style={{
+                        marginTop: '0.65rem',
+                        paddingTop: '0.65rem',
+                        borderTop: '1px dashed var(--rule, #eaeaea)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        fontSize: '0.8rem',
+                        color: 'var(--fg-mute, #64748b)'
+                      }}
+                    >
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', margin: 0 }}>
+                        <input 
+                          type="checkbox" 
+                          checked={compareList.includes(p.id)}
+                          onChange={() => toggleCompareProduct(p.id, p.title)}
+                          style={{ 
+                            cursor: 'pointer', 
+                            accentColor: 'var(--indigo, #4f46e5)',
+                            width: '14px',
+                            height: '14px'
+                          }}
+                        />
+                        <span style={{ fontWeight: 500 }}>So sánh</span>
+                      </label>
+                    </div>
+                    <Link to="/cart" className="btn" style={{ marginTop: '0.65rem' }}>Đặt ngay <ChevronRight size={16} /></Link>
+                  </article>
+                );
+              })
+            )}
           </div>
         </div>
       </section>
@@ -218,7 +256,6 @@ const HomePage = () => {
               <img className="product" src="https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=500&q=80&auto=format&fit=crop" alt="Earbuds" />
             </article>
           </div>
-
         </div>
       </section>
 
@@ -246,7 +283,6 @@ const HomePage = () => {
               </Link>
             ))}
           </div>
-
         </div>
       </section>
 
@@ -260,24 +296,40 @@ const HomePage = () => {
             </Link>
           </div>
           <div className="compact-row">
-            {[
-              { img: 'photo-1590658268037-6bf12165a8df', name: 'Apple Airpods V57', price: '680.000đ', stock: 12 },
-              { img: 'photo-1496181133206-80ce9b88a853', name: 'Apple MacBook Pro', price: '27.780.000đ', stock: 8 },
-              { img: 'photo-1592840496694-26d035b52b48', name: 'Power Wired Controller', price: '190.000đ', stock: 24 },
-              { img: 'photo-1527814050087-3793815479db', name: 'Gaming Mouse Pro', price: '190.000đ', stock: 36 },
-            ].map((p, i) => (
-              <article key={i} className="compact-card">
-                <div className="pic"><img src={`https://images.unsplash.com/${p.img}?w=300&q=80&auto=format&fit=crop`} alt="" /></div>
-                <div>
-                  <div className="stock">CÒN HÀNG · {p.stock}</div>
-                  <div className="name">{p.name}</div>
-                  <div className="price">{p.price}</div>
-                  <Link to="/cart" className="btn">Đặt Ngay</Link>
-                </div>
-              </article>
-            ))}
-          </div>
+            {isLoading ? (
+              <div style={{ textAlign: 'center', width: '100%', padding: '2rem 0', color: 'var(--fg-mute)' }}>
+                Đang tải...
+              </div>
+            ) : forYouProducts.length === 0 ? (
+              <div style={{ textAlign: 'center', width: '100%', padding: '2rem 0', color: 'var(--fg-mute)' }}>
+                Chưa có sản phẩm gợi ý.
+              </div>
+            ) : (
+              forYouProducts.map((p: any) => {
+                const pPrice = p.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount 
+                  || p.variants?.[0]?.prices?.[0]?.amount 
+                  || p.variants?.[0]?.price 
+                  || p.price 
+                  || 0;
+                
+                const displayPrice = typeof pPrice === 'number' && pPrice > 0 ? pPrice.toLocaleString('vi-VN') + 'đ' : 'Liên hệ';
+                const stock = p.variants?.[0]?.stock !== undefined ? p.variants[0].stock : 10;
+                const imgUrl = p.thumbnail || 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=300&q=80&auto=format&fit=crop';
 
+                return (
+                  <article key={p.id} className="compact-card">
+                    <div className="pic"><img src={imgUrl} alt={p.title} style={{ objectFit: 'contain' }} /></div>
+                    <div>
+                      <div className="stock">CÒN HÀNG · {stock}</div>
+                      <div className="name">{p.title}</div>
+                      <div className="price">{displayPrice}</div>
+                      <Link to={`/product/${p.id}`} className="btn">Đặt Ngay</Link>
+                    </div>
+                  </article>
+                );
+              })
+            )}
+          </div>
         </div>
       </section>
 
@@ -315,7 +367,6 @@ const HomePage = () => {
           </div>
         </div>
       </section>
-
 
     </main>
   );

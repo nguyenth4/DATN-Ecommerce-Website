@@ -1,310 +1,483 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import { 
   Star, 
   Heart, 
-  Zap, 
-  RotateCcw, 
   Check, 
   ChevronRight, 
-  Minus, 
-  Plus,
   ArrowRight
 } from 'lucide-react';
-
-const THUMBS = [
-  'photo-1608043152269-423dbba4e7e1',
-  'photo-1545454675-3531b543be5d',
-  'photo-1589003077984-894e133dabab',
-  'photo-1518770660439-4636190af475',
-  'photo-1574920162043-b872873f19c8',
-];
-
-const RELATED = [
-  { img: 'photo-1606220945770-b5b6c2c55bf1', name: 'Tai nghe Beats Studio Buds Pro', price: '280.000đ', stock: 67, stars: 4, count: 312 },
-  { img: 'photo-1523275335684-37898b6baf30', name: 'Apple Watch Series 9', price: '680.000đ', stock: 41, stars: 5, count: 245, badge: 'Mới' },
-  { img: 'photo-1590658268037-6bf12165a8df', name: 'Apple AirPods V57', price: '680.000đ', stock: 12, stars: 5, count: 124 },
-  { img: 'photo-1565849904461-04a58ad377e0', name: 'Samsung S21 Ultra', price: '2.580.000đ', was: '2.780.000đ', stock: 24, stars: 5, count: 212, badge: 'Giảm giá' },
-  { img: 'photo-1502920917128-1aa500764cbd', name: 'Máy ảnh Canon EOS R7 DSLR', price: '1.920.000đ', stock: 24, stars: 4, count: 67 },
-];
+import { useProduct, useProducts } from '../services/product.service';
+import ProductGallery from '../components/ProductDetail/ProductGallery';
+import ProductInfo from '../components/ProductDetail/ProductInfo';
+import ProductSpecsTable from '../components/ProductDetail/ProductSpecsTable';
+import ProductReviewsTab from '../components/ProductDetail/ProductReviewsTab';
 
 
 
-const SPECS = [
-  { label: 'Chip', value: 'Apple S7 SiP' },
-  { label: 'Loa', value: 'Loa woofer 4 inch độ lệch cao, 5 loa tweeter tạo chùm tia' },
-  { label: 'Kết nối', value: 'Wi-Fi 4, Bluetooth 5.0, Thread, U1' },
-  { label: 'Âm thanh không gian', value: 'Có, với tính năng theo dõi đầu năng động' },
-  { label: 'Kích thước', value: '168 × 142 mm · 2.3 kg' },
-  { label: 'Trong hộp gồm', value: 'HomePod, cáp nguồn (1.8 m), tài liệu hướng dẫn' },
-  { label: 'Bảo hành', value: 'Hạn chế 2 năm' },
-];
-
-
-const RATING_BREAKDOWN = [
-  { stars: 5, pct: 82 },
-  { stars: 4, pct: 14 },
-  { stars: 3, pct: 3 },
-  { stars: 2, pct: 1 },
-  { stars: 1, pct: 0 },
-];
-
-const REVIEWS = [
-  { name: 'Mira K.', time: '2 ngày trước', stars: 5, text: 'Đã mua một cặp stereo cho phòng khách. Tính năng cảm biến phòng tạo ra sự khác biệt thực sự — chúng thích ứng với nơi bạn đặt chúng. Thiết lập chỉ mất 90 giây với iPhone handoff.' },
-  { name: 'Devan R.', time: '1 tuần trước', stars: 5, text: 'Thay thế chiếc Sonos cũ của tôi bằng cái này. Âm thanh không gian thực sự ấn tượng trên các bản nhạc Atmos. Chất lượng hoàn thiện tuyệt vời.' },
-];
-
-
-const tdLabelStyle = {
-  padding: 'var(--s4) 0', color: 'var(--fg-mute)',
-  fontFamily: 'var(--ff-mono)', fontSize: 'var(--text-xs)',
-  letterSpacing: '0.06em', textTransform: 'uppercase', width: '40%',
-};
-const tdValStyle = { padding: 'var(--s4) 0', fontWeight: 600 };
+// Loading Skeleton Component
+const SkeletonLoader = () => (
+  <div className="container" style={{ paddingTop: 'var(--s5)' }}>
+    <style>{`
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: .5; }
+      }
+    `}</style>
+    <div style={{ height: '24px', width: '200px', background: '#e2e8f0', borderRadius: '4px', marginBottom: '2rem', animation: 'pulse 1.5s infinite' }}></div>
+    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '3rem', marginBottom: '3rem' }}>
+      <div>
+        <div style={{ height: '400px', background: '#e2e8f0', borderRadius: '12px', marginBottom: '1rem', animation: 'pulse 1.5s infinite' }}></div>
+        <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'center' }}>
+          {[...Array(4)].map((_, i) => (
+            <div key={i} style={{ width: '70px', height: '70px', background: '#e2e8f0', borderRadius: '8px', animation: 'pulse 1.5s infinite' }}></div>
+          ))}
+        </div>
+      </div>
+      <div>
+        <div style={{ height: '14px', width: '80px', background: '#e2e8f0', borderRadius: '4px', marginBottom: '0.5rem', animation: 'pulse 1.5s infinite' }}></div>
+        <div style={{ height: '36px', width: '80%', background: '#e2e8f0', borderRadius: '6px', marginBottom: '1rem', animation: 'pulse 1.5s infinite' }}></div>
+        <div style={{ height: '20px', width: '60%', background: '#e2e8f0', borderRadius: '4px', marginBottom: '1.5rem', animation: 'pulse 1.5s infinite' }}></div>
+        <div style={{ height: '60px', background: '#e2e8f0', borderRadius: '8px', marginBottom: '1.5rem', animation: 'pulse 1.5s infinite' }}></div>
+        <div style={{ height: '40px', background: '#e2e8f0', borderRadius: '8px', marginBottom: '1rem', animation: 'pulse 1.5s infinite' }}></div>
+        <div style={{ height: '50px', background: '#e2e8f0', borderRadius: '8px', animation: 'pulse 1.5s infinite' }}></div>
+      </div>
+    </div>
+  </div>
+);
 
 const ProductDetailPage = () => {
-  const [activeThumb, setActiveThumb] = useState(0);
+  const { id } = useParams<{ id: string }>();
+
+  // Fetch product dynamically using the hook
+  const { data: fetchedProduct, isLoading } = useProduct(id || "");
+
+  // Fetch related products dynamically by category (placed here to follow React Rules of Hooks)
+  const categoryId = fetchedProduct?.categories?.[0]?.id;
+  const { data: relatedData } = useProducts(categoryId ? { category_id: [categoryId] } : undefined);
+  const { data: allProductsData } = useProducts();
+
+  // Local States
+  const [selectedColor, setSelectedColor] = useState("");
+  const [selectedStorage, setSelectedStorage] = useState("");
   const [qty, setQty] = useState(1);
-  const [color, setColor] = useState(0);
-  const [config, setConfig] = useState(1);
-  const [care, setCare] = useState(0);
+  const [activeImage, setActiveImage] = useState("");
+  const [isDescExpanded, setIsDescExpanded] = useState(false);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [newReviewName, setNewReviewName] = useState("");
+  const [newReviewRating, setNewReviewRating] = useState(5);
+  const [newReviewComment, setNewReviewComment] = useState("");
 
-  const colors = [
-    { hex: '#FFFFFF', label: 'Trắng' },
-    { hex: '#0F172A', label: 'Xanh Đen' },
-    { hex: '#F97316', label: 'Cam' },
-    { hex: '#4F46E5', label: 'Tím' },
-  ];
-  const configs = ['Đơn', 'Cặp Stereo · Tiết kiệm 40.000đ', 'Bộ 3 · Tiết kiệm 120.000đ'];
-  const carePlans = ['Không bảo hiểm', '2 năm · 39.000đ', '3 năm · 59.000đ'];
+  // Sync reviews and initial selection when product data is loaded
+  useEffect(() => {
+    if (fetchedProduct) {
+      const colorOption = fetchedProduct.options?.find((o: any) => o.title === 'Màu sắc' || o.title === 'Color');
+      const storageOption = fetchedProduct.options?.find((o: any) => o.title === 'Dung lượng' || o.title === 'Storage');
+      const colorNames = colorOption?.values?.map((v: any) => typeof v === 'string' ? v : v.value) || [];
+      const storages = storageOption?.values?.map((v: any) => typeof v === 'string' ? v : v.value) || [];
 
+      if (colorNames.length > 0) {
+        setSelectedColor(colorNames[0]);
+      }
+      if (storages.length > 0) {
+        setSelectedStorage(storages[0]);
+      }
+      setActiveImage(fetchedProduct.thumbnail || "");
 
+      if (fetchedProduct.metadata?.reviewsList) {
+        setReviews(fetchedProduct.metadata.reviewsList);
+      } else {
+        setReviews([]);
+      }
+    }
+  }, [fetchedProduct]);
 
-  const decreaseQty = () => setQty((q) => Math.max(1, q - 1));
-  const increaseQty = () => setQty((q) => q + 1);
+  if (isLoading) {
+    return <SkeletonLoader />;
+  }
+
+  if (!fetchedProduct) {
+    return (
+      <div className="container" style={{ padding: '8rem 0', textAlign: 'center' }}>
+        <h2 style={{ fontSize: '2rem', marginBottom: '1rem', fontWeight: 800 }}>Không tìm thấy sản phẩm</h2>
+        <p style={{ color: 'var(--fg-mute)', marginBottom: '2rem' }}>Sản phẩm bạn đang tìm kiếm không tồn tại hoặc đã bị xóa.</p>
+        <Link to="/products" className="btn btn--indigo">Quay lại cửa hàng</Link>
+      </div>
+    );
+  }
+
+  const productData = fetchedProduct;
+
+  // Extract Options
+  const colorOption = productData.options?.find((o: any) => o.title === 'Màu sắc' || o.title === 'Color');
+  const storageOption = productData.options?.find((o: any) => o.title === 'Dung lượng' || o.title === 'Storage');
+
+  const storages = storageOption?.values?.map((v: any) => typeof v === 'string' ? v : v.value) || [];
+  const colorNames = colorOption?.values?.map((v: any) => typeof v === 'string' ? v : v.value) || [];
+
+  // Fallback mappings for colors if not defined in metadata
+  const colorFallbacks: Record<string, { hex: string, img: string }> = {
+    "Titan Tự Nhiên": { hex: "#8E8E8A", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-titan-tu-nhien.png" },
+    "Titan Sa Mạc": { hex: "#D1C0B0", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-titan-sa-mac.png" },
+    "Titan Đen": { hex: "#2C2C2C", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-titan-den.png" },
+    "Titan Trắng": { hex: "#F5F5F0", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-titan-trang.png" },
+    "Đen": { hex: "#0F172A", img: productData.thumbnail || "" },
+    "Trắng": { hex: "#FFFFFF", img: productData.thumbnail || "" },
+    "Cam": { hex: "#F97316", img: productData.thumbnail || "" },
+    "Tím": { hex: "#4F46E5", img: productData.thumbnail || "" }
+  };
+
+  const colors = colorNames.map((name: string) => {
+    const fallback = colorFallbacks[name] || { hex: "#cccccc", img: productData.thumbnail || "" };
+    const optionVal = colorOption?.values?.find((v: any) => v.name === name);
+    return {
+      name,
+      hex: optionVal?.hex || fallback.hex,
+      img: optionVal?.img || fallback.img
+    };
+  });
+
+  // Find active variant by matching options
+  const activeVariant = productData.variants?.find((v: any) => {
+    if (v.options && !Array.isArray(v.options)) {
+      const vColor = v.options["Màu sắc"] || v.options["Color"];
+      const vStorage = v.options["Dung lượng"] || v.options["Storage"];
+      return (!selectedColor || vColor === selectedColor) && (!selectedStorage || vStorage === selectedStorage);
+    }
+    if (Array.isArray(v.options)) {
+      const matchColor = !selectedColor || v.options.some((o: any) => o.value === selectedColor);
+      const matchStorage = !selectedStorage || v.options.some((o: any) => o.value === selectedStorage);
+      return matchColor && matchStorage;
+    }
+    return false;
+  }) || productData.variants?.[0] || { price: 0, oldPrice: 0, stock: 0, sku: "SPRYLO-PROD" };
+
+  const price = activeVariant.prices?.find((p: any) => p.currency_code === 'vnd')?.amount 
+    || activeVariant.prices?.[0]?.amount 
+    || activeVariant.price 
+    || productData.basePrice 
+    || 0;
+
+  const oldPrice = activeVariant.oldPrice || (price * 1.15);
+
+  // Specifications
+  const specifications = productData.metadata?.specifications || {};
+
+  // Video embed url
+  const videoUrl = productData.metadata?.video_url || "";
+
+  // Seller Reputation Data
+  const seller = productData.metadata?.seller;
+
+  const handleAddReview = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newReviewName.trim() || !newReviewComment.trim()) return;
+    const newRev = {
+      name: newReviewName,
+      rating: newReviewRating,
+      date: 'Vừa xong',
+      comment: newReviewComment
+    };
+    setReviews([newRev, ...reviews]);
+    setNewReviewName("");
+    setNewReviewComment("");
+  };
+
+  // Gallery Images
+  const galleryImages = (productData.images && productData.images.length > 0)
+    ? productData.images.map((img: any) => img.url)
+    : [productData.thumbnail || ""];
+
+  const relatedProducts = (relatedData?.products || allProductsData?.products || [])
+    ?.filter((p: any) => p.id !== productData.id)
+    ?.slice(0, 5) || [];
 
   return (
     <>
       <main id="main">
         <div className="container">
           <div className="crumbs" style={{ paddingTop: 'var(--s5)' }}>
-            <Link to="/">Trang chủ</Link> <span className="sep">›</span> <Link to="/products">Sản phẩm</Link> <span className="sep">›</span> <span>Loa</span>
+            <Link to="/">Trang chủ</Link> <span className="sep">›</span> <Link to="/products">Sản phẩm</Link> <span className="sep">›</span> <span>{productData.title}</span>
           </div>
 
+          <section className="product-detail" style={{ 
+            display: 'grid', 
+            gridTemplateColumns: '1.2fr 1fr', 
+            gap: '3rem', 
+            marginBottom: '1rem',
+            paddingBottom: '0'
+          }}>
+            
+            {/* LEFT COLUMN: Gallery, Trust Badges & Seller Card */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <ProductGallery
+                activeImage={activeImage || productData.thumbnail || galleryImages[0] || ""}
+                images={galleryImages}
+                onImageClick={(img) => setActiveImage(img)}
+                productTitle={productData.title}
+                videoUrl={videoUrl}
+              />
 
-          <section className="product-detail">
-
-            <div className="gallery">
-              <div className="gallery-thumbs">
-                {THUMBS.map((thumb, i) => (
-                  <button
-                    key={thumb}
-                    className={activeThumb === i ? 'is-active' : ''}
-                    onClick={() => setActiveThumb(i)}
-                  >
-                    <img src={`https://images.unsplash.com/${thumb}?w=200&q=80&auto=format&fit=crop`} alt="" />
-                  </button>
-                ))}
-              </div>
-              <figure className="gallery-main">
-                <img src={`https://images.unsplash.com/${THUMBS[activeThumb]}?w=900&q=80&auto=format&fit=crop`} alt="HomePod 2nd Gen speaker" />
-              </figure>
-            </div>
-
-            <div className="pdp-info">
-              <span className="pdp-cat" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Zap size={14} fill="currentColor" /> Âm thanh · Nổi bật
-              </span>
-              <h1>Loa Apple HomePod Thế hệ 2</h1>
-              <div className="rating-row">
-                <div style={{ display: 'flex', gap: '2px', color: 'var(--amber)' }}>
-                  {[...Array(5)].map((_, i) => <Star key={i} size={16} fill="currentColor" />)}
+              {/* TRUST BADGES */}
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: '1fr 1fr', 
+                gap: '0.75rem', 
+                padding: '1rem', 
+                background: 'var(--bg, #f8fafc)', 
+                borderRadius: '12px',
+                border: '1px solid var(--border, #e2e8f0)' 
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--fg-soft, #475569)' }}>
+                  <i className="bi bi-shield-check" style={{ fontSize: '1.2rem', color: 'var(--success, #10b981)' }}></i>
+                  <span>Bảo hành 12 tháng</span>
                 </div>
-                <span>4.9 / 5 · 312 đánh giá</span>
-                <span style={{ color: 'var(--rule-strong)' }}>|</span>
-                <span style={{ color: 'var(--emerald)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ width: '6px', height: '6px', background: 'var(--emerald)', borderRadius: '999px', display: 'inline-block' }}></span>
-                  Còn hàng · 22 sản phẩm
-                </span>
-              </div>
-              <p className="desc">Âm thanh không gian, công nghệ cảm biến phòng và là trung tâm của hệ sinh thái Apple của bạn. Tích hợp chip S7, âm thanh tính toán động và tính năng chuyển tiếp liền mạch từ iPhone.</p>
-
-              <div className="price-row">
-                <span className="now">280.000đ</span>
-                <span className="was">320.000đ</span>
-                <span className="save">Tiết kiệm 12%</span>
-              </div>
-
-
-
-              <div className="option-block">
-                <div className="label">Màu sắc</div>
-                <div className="color-swatches">
-                  {colors.map((c, i) => (
-                    <button
-                      key={c.label}
-                      className={color === i ? 'is-active' : ''}
-                      style={{ background: c.hex, borderRadius: '999px', outlineColor: 'var(--rule-strong)' }}
-                      aria-label={c.label}
-                      onClick={() => setColor(i)}
-                    ></button>
-                  ))}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--fg-soft, #475569)' }}>
+                  <i className="bi bi-arrow-return-left" style={{ fontSize: '1.2rem', color: 'var(--info, #0284c7)' }}></i>
+                  <span>Đổi trả 30 ngày</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--fg-soft, #475569)' }}>
+                  <i className="bi bi-truck" style={{ fontSize: '1.2rem', color: 'var(--accent, #f43f5e)' }}></i>
+                  <span>Giao hàng miễn phí</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--fg-soft, #475569)' }}>
+                  <i className="bi bi-credit-card" style={{ fontSize: '1.2rem', color: 'var(--dark, #0f172a)' }}></i>
+                  <span>Thanh toán an toàn</span>
                 </div>
               </div>
 
-              <div className="option-block">
-                <div className="label">Cấu hình</div>
-
-                <div className="option-pills">
-                  {configs.map((c, i) => (
-                    <button
-                      key={c}
-                      className={config === i ? 'is-active' : ''}
-                      onClick={() => setConfig(i)}
-                    >
-                      {c}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="option-block">
-                <div className="label">Bảo hiểm AppleCare+</div>
-                <div className="option-pills">
-                  {carePlans.map((c, i) => (
-                    <button
-                      key={c}
-                      className={care === i ? 'is-active' : ''}
-                      onClick={() => setCare(i)}
-                    >
-                      {c}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-
-              <div className="pdp-cta">
-                <div className="qty">
-                  <button type="button" aria-label="Decrease" onClick={decreaseQty}><Minus size={16} /></button>
-                  <input type="text" value={qty} inputMode="numeric" aria-label="Quantity" readOnly />
-                  <button type="button" aria-label="Increase" onClick={increaseQty}><Plus size={16} /></button>
-                </div>
-                <Link to="/cart" className="btn btn--indigo" style={{ flex: 1, minWidth: '160px' }}>Thêm vào giỏ <ChevronRight size={18} /></Link>
-                <Link to="/cart" className="btn btn--ink">Mua ngay</Link>
-                <button className="icon-btn" aria-label="Yêu thích" style={{ background: 'var(--bg)' }}><Heart size={20} /></button>
-              </div>
-
-              <div className="pdp-features">
-                <div className="pf"><span className="ic"><Zap size={14} /></span><span>Miễn phí giao hàng trên 500.000đ</span></div>
-                <div className="pf"><span className="ic"><RotateCcw size={14} /></span><span>Đổi trả miễn phí 30 ngày</span></div>
-                <div className="pf"><span className="ic"><Star size={14} /></span><span>Bảo hành hạn chế 2 năm</span></div>
-                <div className="pf"><span className="ic"><Check size={14} /></span><span>Sản phẩm Apple chính hãng</span></div>
-              </div>
-
-
-            </div>
-
-          </section>
-
-          {/* Specs + reviews split */}
-          <section className="section" style={{ paddingTop: 0 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--s8)' }}>
-
-              <div>
-                <h2 style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--s5)' }}>Thông số kỹ thuật</h2>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--text-sm)' }}>
-                  <tbody>
-                    {SPECS.map((spec, i) => (
-                      <tr key={spec.label} style={i < SPECS.length - 1 ? { borderBottom: '1px solid var(--rule)' } : undefined}>
-                        <td style={tdLabelStyle}>{spec.label}</td>
-                        <td style={tdValStyle}>{spec.value}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-
-              <div>
-                <h2 style={{ fontSize: 'var(--text-2xl)', marginBottom: 'var(--s5)' }}>Đánh giá</h2>
-                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: 'var(--s5)', alignItems: 'center', padding: 'var(--s5)', background: 'var(--bg)', borderRadius: 'var(--r)', marginBottom: 'var(--s5)' }}>
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontFamily: 'var(--ff-display)', fontSize: '48px', fontWeight: 800, color: 'var(--ink)', lineHeight: 1 }}>4.9</div>
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '2px', color: 'var(--amber)', margin: '4px 0' }}>
-                      {[...Array(5)].map((_, i) => <Star key={i} size={16} fill="currentColor" />)}
+              {/* SELLER REPUTATION CARD */}
+              {seller && (
+                <div className="seller-card" style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '1.2rem',
+                  background: 'var(--bg, #f8fafc)',
+                  borderRadius: '12px',
+                  border: '1px solid var(--border, #e2e8f0)',
+                  gap: '1rem',
+                  flexWrap: 'wrap'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    {/* Seller Logo */}
+                    <div style={{
+                      width: '46px',
+                      height: '46px',
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #4f46e5, #818cf8)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#fff',
+                      fontWeight: 700,
+                      fontSize: '1.1rem',
+                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                    }}>
+                      {seller.name?.charAt(0) || "S"}
                     </div>
-                    <div style={{ fontSize: '11px', color: 'var(--fg-mute)', marginTop: '4px' }}>312 đánh giá</div>
-                  </div>
-
-                  <div style={{ display: 'grid', gap: '6px', fontFamily: 'var(--ff-mono)', fontSize: 'var(--text-xs)', color: 'var(--fg-soft)' }}>
-                    {RATING_BREAKDOWN.map((r) => (
-                      <div key={r.stars} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ width: '16px' }}>{r.stars}</span>
-                        <span style={{ flex: 1, height: '6px', background: 'var(--rule)', borderRadius: '999px', overflow: 'hidden' }}>
-                          <span style={{ display: 'block', width: `${r.pct}%`, height: '100%', background: 'var(--amber)' }}></span>
-                        </span>
-                        <span style={{ width: '28px', textAlign: 'right' }}>{r.pct}%</span>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 700, color: 'var(--ink, #0f172a)' }}>{seller.name}</span>
+                        {seller.is_verified && (
+                          <span style={{
+                            background: 'linear-gradient(135deg, #10b981, #059669)',
+                            color: '#fff',
+                            fontSize: '0.65rem',
+                            fontWeight: 700,
+                            padding: '0.15rem 0.4rem',
+                            borderRadius: '999px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '2px',
+                            boxShadow: '0 2px 4px rgb(16 185 129 / 0.2)'
+                          }}>
+                            <Check size={10} strokeWidth={3} /> {seller.badge_text || "Uy Tín"}
+                          </span>
+                        )}
                       </div>
-                    ))}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--fg-mute, #64748b)', marginTop: '0.25rem' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#f59e0b', fontWeight: 600 }}>
+                          ★ {seller.rating || "5.0"}
+                        </span>
+                        {seller.review_count && <span>({seller.review_count} đánh giá)</span>}
+                        {seller.response_rate && (
+                          <>
+                            <span>•</span>
+                            <span>Phản hồi {seller.response_rate}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button className="btn btn--ghost btn--sm" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                      <i className="bi bi-shop" style={{ marginRight: '4px' }}></i> Xem shop
+                    </button>
+                    <button className="btn btn--indigo btn--sm" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', whiteSpace: 'nowrap', background: 'var(--indigo, #4f46e5)' }}>
+                      <i className="bi bi-chat-dots" style={{ marginRight: '4px' }}></i> Chat ngay
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* RIGHT COLUMN: Product Info & Actions */}
+            <div className="pdp-info">
+              <ProductInfo
+                product={{
+                  category: productData.categories?.[0]?.name || "Thiết bị",
+                  title: productData.title,
+                  subtitle: productData.subtitle || productData.metadata?.subtitle || "",
+                  rating: Number(productData.metadata?.rating || 5.0),
+                  rawProduct: productData
+                }}
+                colors={colors}
+                storages={storages}
+                selectedColor={selectedColor}
+                selectedStorage={selectedStorage}
+                activeVariant={{
+                  price: price,
+                  oldPrice: oldPrice,
+                  stock: activeVariant.stock !== undefined ? activeVariant.stock : 0,
+                  sku: activeVariant.sku || "SPRYLO-PROD"
+                }}
+                qty={qty}
+                reviewsCount={reviews.length}
+                onColorChange={(colorName, colorImg) => {
+                  setSelectedColor(colorName);
+                  if (colorImg) setActiveImage(colorImg);
+                }}
+                onStorageChange={(storageName) => setSelectedStorage(storageName)}
+                onQtyChange={(action) => setQty(q => action === 'inc' ? q + 1 : Math.max(1, q - 1))}
+              />
+            </div>
+          </section>
+
+          {/* DETAIL DESCRIPTION, VIDEO & SPECIFICATIONS SECTION */}
+          <section className="section" style={{ borderTop: '1px solid var(--border)', paddingTop: '2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '3.5rem' }}>
+              
+              {/* Left Column: Description & YouTube Video Embed */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3rem' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.5rem', marginBottom: '1.2rem', fontWeight: 800 }}>Mô tả chi tiết sản phẩm</h2>
+                  <div style={{ position: 'relative' }}>
+                    <div style={{
+                      maxHeight: isDescExpanded ? 'none' : '260px',
+                      overflow: 'hidden',
+                      position: 'relative',
+                      transition: 'max-height 0.3s ease-out'
+                    }}>
+                      <div className="product-desc-content" style={{ fontSize: '0.95rem', lineHeight: '1.75', color: 'var(--fg-soft, #334155)' }}>
+                        {(productData.description || "Chưa có mô tả chi tiết cho sản phẩm này.").split('\n').map((para: string, i: number) => (
+                          <p key={i} style={{ marginBottom: '1rem' }}>{para}</p>
+                        ))}
+                      </div>
+                      
+                      {!isDescExpanded && (
+                        <div style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          height: '90px',
+                          background: 'linear-gradient(to top, var(--bg-body, #ffffff), transparent)',
+                          pointerEvents: 'none'
+                        }}></div>
+                      )}
+                    </div>
+                    
+                    <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+                      <button 
+                        onClick={() => setIsDescExpanded(!isDescExpanded)}
+                        className="btn btn--ghost"
+                        style={{
+                          fontWeight: 600,
+                          color: 'var(--indigo, #4f46e5)',
+                          fontSize: '0.85rem',
+                          padding: '0.5rem 1.5rem',
+                          borderRadius: '8px',
+                          border: '1px solid var(--border, #e2e8f0)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {isDescExpanded ? "Thu gọn nội dung" : "Xem thêm mô tả chi tiết"}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                {REVIEWS.map((review) => (
-                  <article key={review.name} style={{ borderBottom: '1px solid var(--rule)', paddingBottom: 'var(--s5)', marginBottom: 'var(--s5)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <strong style={{ fontWeight: 700 }}>{review.name}</strong>
-                      <span style={{ fontSize: '11px', color: 'var(--fg-mute)' }}>{review.time}</span>
-                    </div>
-                    <div style={{ display: 'flex', gap: '2px', color: 'var(--amber)', marginBottom: '6px' }}>
-                      {[...Array(5)].map((_, i) => <Star key={i} size={14} fill={i < review.stars ? "currentColor" : "none"} />)}
-                    </div>
-                    <p style={{ fontSize: 'var(--text-sm)', color: 'var(--fg-soft)', lineHeight: 1.6 }}>{review.text}</p>
-                  </article>
-                ))}
 
-                <button className="btn btn--ghost btn--block">Xem tất cả 312 đánh giá <ChevronRight size={16} /></button>
               </div>
 
-
+              {/* Right Column: Dynamic Specifications Table */}
+              <div>
+                <ProductSpecsTable specifications={specifications} />
+              </div>
             </div>
           </section>
 
-          {/* Related products */}
-          <section className="section">
-            <div className="section-head">
-              <h2>Có thể bạn sẽ thích</h2>
-              <Link to="/shop" className="view-all">Tất cả sản phẩm <ChevronRight size={16} /></Link>
-            </div>
-
-            <div className="products">
-              {RELATED.map((p) => (
-                <article className="product-card" key={p.name}>
-                  <div className="img-wrap">
-                    {p.badge && (
-                      <span className={`badge ${p.badge === 'Giảm giá' ? 'badge--sale' : ''}`}>{p.badge}</span>
-                    )}
-                    <button className="wishlist"><Heart size={18} /></button>
-                    <img src={`https://images.unsplash.com/${p.img}?w=500&q=80&auto=format&fit=crop`} alt={p.name} />
-                  </div>
-                  <div className="stock"><span className="dot"></span>Còn hàng · {p.stock} sản phẩm</div>
-                  <Link to="/product" className="name">{p.name}</Link>
-                  <div className="price">
-                    <span className="now">{p.price}</span>
-                    {p.was && <span className="was">{p.was}</span>}
-                  </div>
-                  <div className="stars">
-                    <div style={{ display: 'flex', gap: '2px', color: 'var(--amber)' }}>
-                      {[...Array(5)].map((_, i) => <Star key={i} size={14} fill={i < p.stars ? "currentColor" : "none"} />)}
-                    </div>
-                    <span className="count">({p.count})</span>
-                  </div>
-                  <Link to="/cart" className="btn">Đặt hàng ngay <ArrowRight size={16} /></Link>
-                </article>
-
-              ))}
-            </div>
+          {/* REVIEWS SECTION */}
+          <section className="section" style={{ borderTop: '1px solid var(--border)', paddingTop: '3rem', marginBottom: '2rem' }}>
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '2rem', fontWeight: 800 }}>Đánh giá của khách hàng</h2>
+            <ProductReviewsTab
+              reviews={reviews}
+              rating={Number(productData.metadata?.rating || 5.0)}
+              newReviewName={newReviewName}
+              newReviewRating={newReviewRating}
+              newReviewComment={newReviewComment}
+              setNewReviewName={setNewReviewName}
+              setNewReviewRating={setNewReviewRating}
+              setNewReviewComment={setNewReviewComment}
+              onAddReview={handleAddReview}
+            />
           </section>
+
+          {/* RELATED PRODUCTS */}
+          {relatedProducts.length > 0 && (
+            <section className="section" style={{ borderTop: '1px solid var(--border)', paddingTop: '3rem' }}>
+              <div className="section-head">
+                <h2 style={{ fontWeight: 800 }}>Có thể bạn sẽ thích</h2>
+                <Link to="/products" className="view-all">Tất cả sản phẩm <ChevronRight size={16} /></Link>
+              </div>
+
+              <div className="products">
+                {relatedProducts.map((p: any) => {
+                  const pPrice = p.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount 
+                    || p.variants?.[0]?.prices?.[0]?.amount 
+                    || p.variants?.[0]?.price 
+                    || p.price 
+                    || 0;
+                  
+                  const displayPrice = typeof pPrice === 'number' && pPrice > 0 ? pPrice.toLocaleString('vi-VN') + 'đ' : 'Liên hệ';
+                  const imgUrl = p.thumbnail || 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=500&q=80&auto=format&fit=crop';
+
+                  return (
+                    <article className="product-card" key={p.id || p.name}>
+                      <div className="img-wrap">
+                        <button className="wishlist"><Heart size={18} /></button>
+                        <img src={imgUrl} alt={p.title || p.name} style={{ objectFit: 'contain' }} />
+                      </div>
+                      <div className="stock"><span className="dot"></span>Còn hàng</div>
+                      <Link to={`/product/${p.id}`} className="name">{p.title || p.name}</Link>
+                      <div className="price">
+                        <span className="now">{displayPrice}</span>
+                      </div>
+                      <div className="stars">
+                        <div style={{ display: 'flex', gap: '2px', color: 'var(--amber)' }}>
+                          {[...Array(5)].map((_, i) => <Star key={i} size={14} fill={i < 5 ? "currentColor" : "none"} />)}
+                        </div>
+                        <span className="count">({p.metadata?.review_count || 10})</span>
+                      </div>
+                      <Link to="/cart" className="btn">Đặt hàng ngay <ArrowRight size={16} /></Link>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
         </div>
       </main>

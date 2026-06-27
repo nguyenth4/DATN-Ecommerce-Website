@@ -297,22 +297,6 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
           <span className="text-success"><i className="bi bi-truck"></i> GHN / GHTK – Giao tận nhà 1-3 ngày</span>
         </div>
       </div>
-
-      {/* TRUST BADGES */}
-      <div className="flex-center" style={{ gap: '1.5rem', marginTop: '1.5rem', padding: '1rem', background: 'var(--bg)', borderRadius: 'var(--radius)', justifyContent: 'space-between' }}>
-        <div style={{ textAlign: 'center', flex: 1 }} className="text-xs text-muted">
-          <i className="bi bi-shield-check" style={{ fontSize: '1.4rem', color: 'var(--success)', display: 'block', marginBottom: '0.3rem' }}></i>BH 12 tháng
-        </div>
-        <div style={{ textAlign: 'center', flex: 1 }} className="text-xs text-muted">
-          <i className="bi bi-arrow-return-left" style={{ fontSize: '1.4rem', color: 'var(--info)', display: 'block', marginBottom: '0.3rem' }}></i>Đổi trả 30 ngày
-        </div>
-        <div style={{ textAlign: 'center', flex: 1 }} className="text-xs text-muted">
-          <i className="bi bi-truck" style={{ fontSize: '1.4rem', color: 'var(--accent)', display: 'block', marginBottom: '0.3rem' }}></i>Giao miễn phí
-        </div>
-        <div style={{ textAlign: 'center', flex: 1 }} className="text-xs text-muted">
-          <i className="bi bi-credit-card" style={{ fontSize: '1.4rem', color: 'var(--dark)', display: 'block', marginBottom: '0.3rem' }}></i>Thanh toán an toàn
-        </div>
-      </div>
     </div>
   );
 };
