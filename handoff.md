@@ -1,151 +1,54 @@
-# HANDOFF — DATN E-Commerce Website
-> Cập nhật lần cuối: 2026-06-22
+# Handoff: Chức năng Checkout & Tích hợp GHN/GHTK
 
----
+## 1. Mục tiêu (Mục đích nhánh `feature/checkout`)
+Hoàn thiện luồng Checkout (Thanh toán), bao gồm:
+- Tính phí vận chuyển (Shipping Fee) tự động và có tuỳ chọn (Nhanh / Tiết kiệm).
+- Tích hợp tính toán khối lượng và kích thước động từ giỏ hàng.
+- Xử lý luồng tạo Order (từ phía Frontend đến Backend API).
+- Sử dụng Subscriber `order.placed` (thay cho `order.created` trên bản Medusa v2) để trừ tồn kho (Inventory), thanh toán (Payment) và đẩy vận đơn sang giao hàng (GHN SOC).
 
-## 1. TỔNG QUAN DỰ ÁN
+## 2. Chi tiết các thay đổi đã thực hiện
 
-| Thành phần | Công nghệ | Trạng thái |
-|-----------|-----------|-----------|
-| Frontend | React 18 + Vite + TypeScript | ✅ Hoạt động |
-| Backend | MedusaJS v2.16 (Node.js 20) | ✅ Hoạt động (Docker đang build) |
-| Database | Supabase PostgreSQL | ✅ Đã cấu hình |
-| UI Template | HTML/CSS đã migrate sang React | ✅ Hoàn tất |
+### 2.1. Phía Frontend (`src/client/pages/CheckoutPage.tsx`)
+- **Quản lý dữ liệu giỏ hàng động**: Bổ sung các trường `weight`, `height`, `length`, `width` cho các sản phẩm trong giỏ hàng. Dùng hàm `reduce` để tính `totalWeight`, `totalHeight`, `maxLength`, `maxWidth` và `insuranceValue` thay vì hard-code.
+- **Tính phí vận chuyển**: Tự động gọi API `POST http://localhost:9000/store/ghn/fee` mỗi khi người dùng thay đổi Quận/Huyện, Phường/Xã. 
+- **Lựa chọn dịch vụ vận chuyển**: 
+  - Thêm xử lý để khi người dùng chọn "Giao hàng Nhanh", hệ thống gửi `service_type_id: 2`.
+  - Khi chọn "Giao hàng Tiết kiệm", hệ thống gửi `service_type_id: 5` để lấy 2 mức giá khác nhau. 
+  - Có cơ chế fallback: Nếu API báo lỗi hoặc khu vực không hỗ trợ mức giá Tiết kiệm, hệ thống sẽ set mặc định về 25,000đ hoặc 35,000đ.
+- **Tích hợp API Checkout**: Cập nhật hàm `handlePlaceOrder` để bắn payload về API `POST /store/checkout`. Xử lý chuyển hướng đến trang thanh toán VNPay nếu nhận được URL `paymentUrl` từ Backend trả về.
 
----
+### 2.2. Phía Backend (Medusa Framework)
+- **API `/store/checkout`**: Được khởi tạo tại `medusa-backend/apps/backend/src/api/store/checkout/route.ts` nhằm đóng vai trò nhận request từ Frontend, validation giỏ hàng và mock trả về link payment.
+- **Subscriber `order.placed`**: Được tạo tại `medusa-backend/apps/backend/src/subscribers/order-placed.ts`. Luồng xử lý nền:
+  1. Ghi log xử lý Inventory.
+  2. Ghi log xử lý Payment.
+  3. Quét các item trong order để tính lại khối lượng (`totalWeight`).
+  4. POST lên cổng `https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/create` (GHN SOC API) để tạo vận đơn tự động.
 
-## 2. MÔI TRƯỜNG
+## 3. Trạng thái hiện tại
+- Nhánh làm việc: `feature/checkout`
+- Toàn bộ thay đổi đã được add và commit đầy đủ trên nhánh cục bộ của bạn.
+- Cả Frontend React và Backend Medusa đều có code đồng bộ và hoạt động khớp với nhau về flow dữ liệu.
 
-### Node.js trên máy Host
-- **Phiên bản hiện tại:** v26.3.0 (npm 11.16.0)
-- **Lưu ý:** Node v26 quá mới, MedusaJS backend yêu cầu `>=20`. Backend được chạy qua **Docker (Node 20-alpine)** để đảm bảo tương thích.
+## 4. Hướng dẫn Test/Chạy thử
+1. Mở 2 terminal.
+2. Terminal 1 (Backend): 
+   ```bash
+   cd medusa-backend/apps/backend
+   npm run dev 
+   ```
+3. Terminal 2 (Frontend):
+   ```bash
+   npm run dev # Chạy vite React (tại thư mục gốc)
+   ```
+4. Truy cập giao diện giỏ hàng, tiến hành điền thông tin địa chỉ.
+5. Quan sát Network tab hoặc Console:
+   - Khi đổi địa chỉ/tỉnh/phường, sẽ có 1 request gọi sang `http://localhost:9000/store/ghn/fee` để báo cước Nhanh/Tiết kiệm.
+   - Khi chọn đổi Giao hàng Nhanh / Tiết kiệm, giá sẽ tự nhảy tự động theo API.
+   - Khi ấn Đặt hàng, 1 request POST đi sang `http://localhost:9000/store/checkout`.
 
-### Docker
-- **Phiên bản:** Docker 29.2.1
-- **Trạng thái:** Đang hoạt động
-- Image backend: `node:20-alpine` (đã tải sẵn trong Docker cache)
-
----
-
-## 3. CẤU TRÚC THƯ MỤC
-
-```
-DATN-Ecommerce-Website/
-├── src/                        # Frontend React/Vite
-│   ├── client/
-│   │   ├── pages/              # Các trang: Home, Product, Cart, Checkout...
-│   │   ├── components/         # Header, Footer, ProductCard, Sidebar...
-│   │   ├── layouts/            # ClientLayout.tsx
-│   │   ├── routes/             # index.tsx (React Router)
-│   │   ├── controllers/        # useProductController.ts
-│   │   ├── models/             # mockData.ts
-│   │   ├── services/           # product.service.ts
-│   │   └── styles/             # custom.css
-│   ├── shared/lib/             # medusa.ts (Medusa JS client)
-│   ├── index.css               # Global styles (từ shopflow-ui template)
-│   └── main.tsx                # Entry point
-├── medusa-backend/             # Backend MedusaJS v2
-│   ├── apps/backend/
-│   │   ├── .env                # Biến môi trường (DATABASE_URL, secrets...)
-│   │   ├── medusa-config.ts    # Cấu hình Medusa
-│   │   └── src/                # Source backend
-│   ├── Dockerfile.dev          # Docker build config (Node 20-alpine)
-│   └── docker-compose.yml      # Docker Compose config
-├── public/                     # Static assets
-├── index.html                  # Vite entry HTML
-├── package.json                # Frontend deps
-└── vite.config.ts              # Vite config
-```
-
----
-
-## 4. DATABASE — SUPABASE
-
-| Thông số | Giá trị |
-|---------|---------|
-| Provider | Supabase (AWS ap-northeast-1) |
-| Project ID | `xeqsnglavqnlkpnqxrdx` |
-| Session Pooler (port 6543) | `postgresql://postgres.xeqsnglavqnlkpnqxrdx:***@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true` |
-| Direct URL (port 5432) | `postgresql://postgres.xeqsnglavqnlkpnqxrdx:***@aws-1-ap-northeast-1.pooler.supabase.com:5432/postgres` |
-| Password | `duantotnghiep@123` |
-
-Cấu hình trong: `medusa-backend/apps/backend/.env`
-
----
-
-## 5. CÁCH CHẠY DỰ ÁN
-
-### Frontend (React/Vite)
-```powershell
-# Tại thư mục gốc
-npm run dev
-# → http://localhost:5173
-```
-
-### Backend (MedusaJS via Docker)
-```powershell
-# Di chuyển vào thư mục backend
-cd medusa-backend
-
-# Lần đầu (hoặc khi đổi package.json) — mất ~5-10 phút (tùy mạng)
-docker compose up --build
-
-# Từ lần 2 trở đi — nhanh hơn nhiều
-docker compose up
-```
-- Backend: `http://localhost:9000`
-- Admin Dashboard: `http://localhost:9000/app`
-
-### Tắt server
-```powershell
-# Tại terminal Docker
-Ctrl + C
-
-# Hoặc tại terminal mới
-docker compose down
-```
-
----
-
-## 6. CORS ĐÃ CẤU HÌNH
-
-| Biến | Giá trị |
-|-----|---------|
-| `STORE_CORS` | `http://localhost:8000` |
-| `ADMIN_CORS` | `http://localhost:5173, http://localhost:9000` |
-| `AUTH_CORS` | `http://localhost:5173, http://localhost:9000, http://localhost:8000` |
-
----
-
-## 7. LỖI THƯỜNG GẶP & CÁCH XỬ LÝ
-
-### Docker npm install bị ETIMEDOUT
-Mạng chậm khi Docker tải packages. Đã sửa trong `Dockerfile.dev` bằng cách tăng timeout:
-- `fetch-timeout`: 600000ms (10 phút)
-- `fetch-retries`: 5 lần
-- Nếu vẫn lỗi: thử lại bằng `docker compose up --build` (Docker sẽ resume từ layer đã cache)
-
-### Port bị chiếm (EADDRINUSE)
-```powershell
-taskkill /F /IM node.exe
-```
-
-### Lỗi node_modules hỏng
-```powershell
-npm cache clean --force
-Remove-Item -Recurse -Force node_modules
-npm install --legacy-peer-deps
-```
-
----
-
-## 8. TRẠNG THÁI PHÁT TRIỂN (22/06/2026)
-
-- [x] Frontend React migrate từ HTML template (shopflow-ui)
-- [x] Routing: Home, Products, Product Detail, Cart, Checkout, Account, Login, Register, Order Success, Order Tracking, Comparison, Contact
-- [x] Layout: ClientLayout (Header + Footer dùng chung)
-- [x] MedusaJS backend setup với Supabase
-- [x] Docker environment cho backend
-- [ ] Kết nối Frontend ↔ Backend API (đang phát triển)
-- [ ] Seed dữ liệu sản phẩm thực
-- [ ] Authentication flow hoàn chỉnh
+## 5. Next steps (Cần làm tiếp)
+- **API GHN/GHTK**: Nếu muốn dùng GHTK thực thụ, bạn sẽ cần tạo thêm route `/store/ghtk/fee` và `/store/ghtk/soc` ở Backend, sau đó ở Frontend gán URL endpoint tương ứng khi chọn GHTK thay vì lấy giá trị mô phỏng proxy qua GHN.
+- **Cấu hình Cart & Order Medusa SDK**: Trong route `checkout/route.ts`, hãy bổ sung hoàn chỉnh bằng các module chính thống của Medusa `cartService`, `orderService` để tạo đơn thật xuống DB nếu team muốn xài hoàn toàn core Medusa cho phần Orders.
+- **Env variables**: Đảm bảo add ENV cho `GHN_TOKEN`, `GHN_SHOP_ID` ở `.env` của backend để API tạo vận đơn hoạt động được.
