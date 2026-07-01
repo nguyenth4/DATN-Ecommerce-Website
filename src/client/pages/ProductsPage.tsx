@@ -1,23 +1,36 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { getCompareList, toggleCompareProduct } from '../utils/compare';
 import { 
   Star, 
   Heart, 
   ChevronRight, 
-  ChevronLeft 
+  ChevronLeft,
+  Search,
+  Filter,
+  X,
+  Loader2,
+  SlidersHorizontal
 } from 'lucide-react';
-import { useProducts } from '../services/product.service';
+import { useProducts, useCategories } from '../services/product.service';
+import './ProductsPage.css';
 
 const ProductsPage = () => {
-  const [sort, setSort] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [compareList, setCompareList] = useState(getCompareList());
+  
+  // Filter states
+  const [search, setSearch] = useState(searchParams.get('q') || '');
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const [sortBy, setSortBy] = useState(searchParams.get('order') || 'popular');
+  const [selectedCats, setSelectedCats] = useState<string[]>(
+    searchParams.get('category_id')?.split(',') || []
+  );
+  const [page, setPage] = useState(1);
+  const limit = 12;
 
-  // Fetch products dynamically from the database
-  const { data, isLoading } = useProducts();
-  const products = data?.products || [];
-  const totalCount = data?.count || 0;
-
+  // Listen for compare list updates
   useEffect(() => {
     const handleUpdate = () => {
       setCompareList(getCompareList());
@@ -28,6 +41,71 @@ const ProductsPage = () => {
     };
   }, []);
 
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      if (search) searchParams.set('q', search);
+      else searchParams.delete('q');
+      setSearchParams(searchParams);
+      setPage(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Fetch data from Medusa
+  const { data: productsData, isLoading: isLoadingProducts } = useProducts({
+    limit,
+    offset: (page - 1) * limit,
+    q: debouncedSearch || undefined,
+    category_id: selectedCats.length > 0 ? selectedCats : undefined,
+    order: sortBy === 'popular' ? undefined : sortBy
+  });
+
+  const { data: categoriesData } = useCategories();
+
+  const products = productsData?.products || [];
+  const totalCount = productsData?.count || 0;
+  const categories = categoriesData || [];
+
+  // Price formatting helper
+  const formatPrice = (p: any) => {
+    if (!p) return 'Liên hệ';
+    let amount = 0;
+    if (p.variants?.length > 0) {
+      amount = p.variants[0].prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount
+            || p.variants[0].prices?.[0]?.amount
+            || 0;
+    }
+    return amount.toLocaleString('vi-VN') + 'đ';
+  };
+
+  const getProductImage = (p: any) => {
+    return p.thumbnail || (p.images?.[0]?.url) || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80';
+  };
+
+  // Handle category toggle
+  const toggleCategory = (id: string) => {
+    setSelectedCats(prev => {
+      const next = prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id];
+      // Sync with URL
+      if (next.length > 0) searchParams.set('category_id', next.join(','));
+      else searchParams.delete('category_id');
+      setSearchParams(searchParams);
+      return next;
+    });
+    setPage(1); // Reset to first page
+  };
+
+  // Handle sort change
+  const handleSortChange = (val: string) => {
+    setSortBy(val);
+    if (val !== 'popular') searchParams.set('order', val);
+    else searchParams.delete('order');
+    setSearchParams(searchParams);
+    setPage(1);
+  };
+
   return (
     <>
       <main id="main">
@@ -36,90 +114,133 @@ const ProductsPage = () => {
             <div className="crumbs">
               <Link to="/">Trang chủ</Link> <span className="sep">/</span> <span>Cửa hàng · Tất cả sản phẩm</span>
             </div>
-            <h1>Tất cả sản phẩm</h1>
-            <p>{totalCount} sản phẩm bao gồm điện thoại thông minh, máy tính xách tay, âm thanh, máy ảnh, thiết bị đeo và chơi game. Sử dụng bộ lọc bên trái để tìm kiếm theo thương hiệu, giá cả, đánh giá hoặc tình trạng hàng.</p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 'var(--s4)' }}>
+              <div>
+                <h1>Tất cả sản phẩm</h1>
+                <p>Khám phá bộ sưu tập công nghệ mới nhất từ điện thoại, máy tính đến phụ kiện âm thanh.</p>
+              </div>
+              
+              {/* Search Implementation */}
+              <div className="search-bar" style={{ position: 'relative', width: '100%', maxWidth: '400px' }}>
+                <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-mute)' }} />
+                <input 
+                  type="text" 
+                  placeholder="Tìm kiếm sản phẩm..." 
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  style={{ 
+                    width: '100%', 
+                    padding: '10px 16px 10px 40px', 
+                    borderRadius: '50px', 
+                    border: '1px solid var(--border)',
+                    background: 'var(--paper)',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+            </div>
           </div>
         </section>
 
         <section className="section">
           <div className="container">
+            {/* Mobile Filter Trigger */}
+            <button 
+              className="btn btn--paper mobile-filter-btn" 
+              onClick={() => setDrawerOpen(true)}
+              style={{ display: 'none', marginBottom: 'var(--s4)', width: '100%', justifyContent: 'center' }}
+            >
+              <SlidersHorizontal size={18} /> Bộ lọc
+            </button>
+
             <div className="shop-layout">
 
-              <aside className="filters" aria-label="Bộ lọc">
-                <div className="filter-block">
-                  <h3>Danh mục</h3>
-                  <label><input type="checkbox" defaultChecked /> Điện thoại <span className="ct">76</span></label>
-                  <label><input type="checkbox" /> Máy tính &amp; Laptop <span className="ct">42</span></label>
-                  <label><input type="checkbox" /> Đồng hồ thông minh <span className="ct">28</span></label>
-                  <label><input type="checkbox" /> Máy ảnh <span className="ct">42</span></label>
-                  <label><input type="checkbox" /> Tai nghe &amp; Buds <span className="ct">35</span></label>
-                  <label><input type="checkbox" /> Chơi game <span className="ct">31</span></label>
-                  <label><input type="checkbox" /> Phụ kiện <span className="ct">112</span></label>
+              <aside className={`filters${drawerOpen ? ' is-open' : ''}`} aria-label="Bộ lọc">
+                <div className="drawer-head" style={{ display: 'none', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--s6)' }}>
+                  <h3>Bộ lọc</h3>
+                  <button onClick={() => setDrawerOpen(false)}><X size={24} /></button>
                 </div>
+
+                <div className="filter-block">
+                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--s3)' }}>
+                    <h3>Danh mục</h3>
+                    {selectedCats.length > 0 && (
+                      <button 
+                        onClick={() => { setSelectedCats([]); searchParams.delete('category_id'); setSearchParams(searchParams); }}
+                        style={{ fontSize: '12px', color: 'var(--indigo)', fontWeight: 600 }}
+                      >
+                        Xoá lọc
+                      </button>
+                    )}
+                  </div>
+                  {categories.map((cat: any) => (
+                    <label key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '4px 0' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={selectedCats.includes(cat.id)}
+                        onChange={() => toggleCategory(cat.id)}
+                      /> 
+                      {cat.name} 
+                      <span className="ct" style={{ marginLeft: 'auto', opacity: 0.5, fontSize: '12px' }}>
+                        {cat.products?.length || ''}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+
                 <div className="filter-block">
                   <h3>Khoảng giá</h3>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--fg-mute)' }}>
-                    <span>120.000đ</span><span>30.000.000đ</span>
+                    <span>0đ</span><span>50.000.000đ+</span>
                   </div>
-                  <div className="range-bar" aria-hidden="true"></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--ink)', marginTop: 'var(--s2)' }}>
-                    <span>420.000đ</span><span>20.380.000đ</span>
+                  <div className="range-bar" aria-hidden="true" style={{ height: '4px', background: 'var(--indigo-light)', borderRadius: '2px', margin: '12px 0' }}>
+                    <div style={{ width: '60%', height: '100%', background: 'var(--indigo)', borderRadius: '2px' }}></div>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--ink)' }}>
+                    <span>0đ</span><span>20.000.000đ</span>
                   </div>
                 </div>
 
                 <div className="filter-block">
-                  <h3>Thương hiệu</h3>
-                  <label><input type="checkbox" /> Apple <span className="ct">84</span></label>
-                  <label><input type="checkbox" defaultChecked /> Samsung <span className="ct">72</span></label>
-                  <label><input type="checkbox" /> Sony <span className="ct">36</span></label>
-                  <label><input type="checkbox" /> Canon <span className="ct">22</span></label>
-                  <label><input type="checkbox" /> HP <span className="ct">28</span></label>
-                  <label><input type="checkbox" /> Huawei <span className="ct">19</span></label>
-                  <label><input type="checkbox" /> Logitech <span className="ct">31</span></label>
-                </div>
-                <div className="filter-block">
-                  <h3>Đánh giá</h3>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><input type="checkbox" /> 5 sao &amp; lên <span className="ct">186</span></label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><input type="checkbox" /> 4 sao &amp; lên <span className="ct">242</span></label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><input type="checkbox" /> 3 sao &amp; lên <span className="ct">296</span></label>
-                </div>
-                <div className="filter-block">
                   <h3>Tình trạng</h3>
-                  <label><input type="checkbox" defaultChecked /> Còn hàng <span className="ct">298</span></label>
-                  <label><input type="checkbox" /> Đang giảm giá <span className="ct">64</span></label>
-                  <label><input type="checkbox" /> Sản phẩm mới <span className="ct">28</span></label>
+                  <label><input type="checkbox" defaultChecked /> Còn hàng</label>
+                  <label><input type="checkbox" /> Đang giảm giá</label>
+                  <label><input type="checkbox" /> Sản phẩm mới</label>
                 </div>
-                <a href="#" className="btn btn--indigo btn--block">Áp dụng bộ lọc</a>
+                
+                <button className="btn btn--indigo btn--block" onClick={() => setDrawerOpen(false)}>
+                  Xem {totalCount} sản phẩm
+                </button>
               </aside>
 
               <div>
                 <div className="shop-toolbar">
-                  <span className="count">Hiển thị 1 – {products.length} của {totalCount} sản phẩm</span>
+                  <span className="count">
+                    {isLoadingProducts ? 'Đang tải...' : `Hiển thị ${(page-1)*limit + 1} – ${Math.min(page*limit, totalCount)} của ${totalCount} sản phẩm`}
+                  </span>
                   <div style={{ display: 'flex', gap: 'var(--s3)', alignItems: 'center' }}>
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--fg-mute)' }}>SẮP XẾP</span>
-                    <select value={sort} onChange={(e) => setSort(e.target.value)}>
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--fg-mute)', fontWeight: 600 }}>SẮP XẾP</span>
+                    <select 
+                      value={sortBy} 
+                      onChange={(e) => handleSortChange(e.target.value)}
+                      style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--paper)', fontSize: '14px' }}
+                    >
                       <option value="popular">Phổ biến nhất</option>
-                      <option value="price-asc">Giá: thấp đến cao</option>
-                      <option value="price-desc">Giá: cao đến thấp</option>
-                      <option value="newest">Mới nhất</option>
-                      <option value="rating">Đánh giá cao nhất</option>
+                      <option value="createdAt">Mới nhất</option>
+                      <option value="price_asc">Giá: thấp đến cao</option>
+                      <option value="price_desc">Giá: cao đến thấp</option>
                     </select>
                   </div>
                 </div>
 
-                <div className="shop-grid">
-                  {isLoading ? (
-                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '5rem 0', color: 'var(--fg-mute, #64748b)' }}>
-                      <div className="spinner" style={{ margin: '0 auto 1rem', width: '40px', height: '40px', border: '3px solid #e2e8f0', borderTopColor: 'var(--indigo)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-                      Đang tải danh sách sản phẩm...
-                    </div>
-                  ) : products.length === 0 ? (
-                    <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '5rem 0', color: 'var(--fg-mute, #64748b)' }}>
-                      Không tìm thấy sản phẩm nào trong cơ sở dữ liệu.
-                    </div>
-                  ) : (
-                    products.map((p: any) => {
+                {isLoadingProducts ? (
+                  <div className="flex-center" style={{ minHeight: '400px', flexDirection: 'column', gap: '16px' }}>
+                    <Loader2 className="animate-spin" size={40} color="var(--indigo)" />
+                    <p style={{ color: 'var(--fg-mute)' }}>Đang tìm kiếm sản phẩm cho bạn...</p>
+                  </div>
+                ) : products.length > 0 ? (
+                  <div className="shop-grid">
+                    {products.map((p: any) => {
                       const pPrice = p.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount 
                         || p.variants?.[0]?.prices?.[0]?.amount 
                         || p.variants?.[0]?.price 
@@ -131,7 +252,7 @@ const ProductsPage = () => {
                       const displayOldPrice = oldPrice ? oldPrice.toLocaleString('vi-VN') + 'đ' : null;
 
                       const stock = p.variants?.[0]?.stock !== undefined ? p.variants[0].stock : 10;
-                      const imgUrl = p.thumbnail || 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=500&q=80&auto=format&fit=crop';
+                      const imgUrl = getProductImage(p);
                       const rating = Number(p.metadata?.rating || 5);
                       const ratingCount = p.metadata?.review_count || 10;
 
@@ -139,7 +260,7 @@ const ProductsPage = () => {
                         <article className="product-card" key={p.id}>
                           <div className="img-wrap">
                             {oldPrice && <span className="badge badge--sale">Giảm giá</span>}
-                            <button className="wishlist"><Heart size={18} /></button>
+                            <button className="wishlist" aria-label="Add to wishlist"><Heart size={18} /></button>
                             <img src={imgUrl} alt={p.title} style={{ objectFit: 'contain' }} />
                           </div>
                           <div className="stock"><span className="dot"></span>Còn hàng · {stock} sản phẩm</div>
@@ -189,19 +310,54 @@ const ProductsPage = () => {
                           <Link to="/cart" className="btn" style={{ marginTop: '0.65rem' }}>Đặt ngay <ChevronRight size={16} /></Link>
                         </article>
                       );
-                    })
-                  )}
-                </div>
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex-center" style={{ minHeight: '400px', flexDirection: 'column', textAlign: 'center' }}>
+                    <div style={{ background: 'var(--paper)', padding: 'var(--s8)', borderRadius: '24px', maxWidth: '400px' }}>
+                      <Search size={48} color="var(--fg-mute)" style={{ marginBottom: 'var(--s4)' }} />
+                      <h3>Không tìm thấy sản phẩm</h3>
+                      <p style={{ color: 'var(--fg-mute)', marginTop: 'var(--s2)' }}>
+                        Rất tiếc, chúng tôi không tìm thấy sản phẩm nào khớp với bộ lọc của bạn. Hãy thử thay đổi từ khóa hoặc bộ lọc khác.
+                      </p>
+                      <button 
+                        className="btn btn--indigo" 
+                        style={{ marginTop: 'var(--s6)' }}
+                        onClick={() => { setSearch(''); setSelectedCats([]); setSortBy('popular'); setSearchParams({}); }}
+                      >
+                        Xoá tất cả bộ lọc
+                      </button>
+                    </div>
+                  </div>
+                )}
 
-                <div className="pagination">
-                  <a href="#" className="pg"><ChevronLeft size={16} /></a>
-                  <a href="#" className="pg is-active">1</a>
-                  <a href="#" className="pg">2</a>
-                  <a href="#" className="pg">3</a>
-                  <a href="#" className="pg">...</a>
-                  <a href="#" className="pg">26</a>
-                  <a href="#" className="pg"><ChevronRight size={16} /></a>
-                </div>
+                {totalCount > limit && (
+                  <div className="pagination">
+                    <button 
+                      className="pg" 
+                      disabled={page === 1}
+                      onClick={() => setPage(p => p - 1)}
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    {[...Array(Math.ceil(totalCount / limit))].map((_, i) => (
+                      <button 
+                        key={i} 
+                        className={`pg${page === i + 1 ? ' is-active' : ''}`}
+                        onClick={() => setPage(i + 1)}
+                      >
+                        {i + 1}
+                      </button>
+                    ))}
+                    <button 
+                      className="pg" 
+                      disabled={page === Math.ceil(totalCount / limit)}
+                      onClick={() => setPage(p => p + 1)}
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                )}
 
               </div>
 
