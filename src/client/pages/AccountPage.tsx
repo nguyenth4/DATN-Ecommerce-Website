@@ -115,7 +115,7 @@ const MOCK_ORDERS = [
 ];
 
 const AccountPage = () => {
-  const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'addresses' | 'wishlist' | 'password'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'addresses' | 'wishlist' | 'password' | 'policies'>('profile');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   
   const [wishlistIds, setWishlistIds] = useState<string[]>(getWishlist());
@@ -249,6 +249,12 @@ const AccountPage = () => {
                 >
                   <Lock size={18} style={{marginRight: '12px'}}/> Đổi mật khẩu
                 </div>
+                <div 
+                  className={`account-nav-item ${activeTab === 'policies' ? 'active' : ''}`}
+                  onClick={() => { setActiveTab('policies'); setSelectedOrderId(null); }}
+                >
+                  <CheckCircle size={18} style={{marginRight: '12px'}}/> Quản lý chính sách (Seller)
+                </div>
                 <div className="account-nav-divider"></div>
                 <Link to="/login" className="account-nav-item text-danger">
                   <LogOut size={18} style={{marginRight: '12px'}}/> Đăng xuất
@@ -258,7 +264,7 @@ const AccountPage = () => {
 
 
             {/* CONTENT */}
-            <div>
+            <div style={{ flex: 1 }}>
               
               {/* PROFILE TAB */}
               {activeTab === 'profile' && (
@@ -657,6 +663,52 @@ const AccountPage = () => {
                     </div>
                     <div className="flex-center" style={{ justifyContent: 'flex-end', marginTop: '1.8rem' }}>
                       <button className="btn btn--indigo"><i className="bi bi-shield-lock"></i> Cập nhật mật khẩu</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* POLICIES TAB (Seller) */}
+              {activeTab === 'policies' && (
+                <div id="tab-policies" className="tab-panel active">
+                  <div style={{ background: 'white', borderRadius: 'var(--r-lg)', border: '1px solid var(--rule)', padding: '1.8rem', boxShadow: 'var(--shadow-sm)' }}>
+                    <div style={{ fontFamily: "var(--ff-display)", fontSize: '1.3rem', fontWeight: 700, marginBottom: '1.5rem', paddingBottom: '0.8rem', borderBottom: '1px solid var(--rule)' }}>
+                      Quản lý Chính sách Sản phẩm (Seller)
+                    </div>
+                    <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                      Thiết lập các chính sách bảo hành và đổi trả áp dụng cho các sản phẩm của bạn. Các thay đổi sẽ được hiển thị ngay trên trang chi tiết sản phẩm.
+                    </p>
+
+                    <div style={{ marginBottom: '2rem' }}>
+                      <div className="form-group">
+                        <label className="form-label">Chọn sản phẩm cần áp dụng:</label>
+                        <select className="form-control" style={{ maxWidth: '400px' }}>
+                          <option>— Áp dụng cho tất cả sản phẩm —</option>
+                          <option>iPhone 15 Pro Max</option>
+                          <option>Samsung Galaxy S24 Ultra</option>
+                          <option>MacBook Pro M3</option>
+                        </select>
+                      </div>
+
+                      <div className="form-row">
+                        <div className="form-group">
+                          <label className="form-label">Chính sách bảo hành</label>
+                          <input type="text" className="form-control" placeholder="Ví dụ: BH 12 tháng chính hãng" defaultValue="BH 12 tháng chính hãng" />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Chính sách đổi trả</label>
+                          <input type="text" className="form-control" placeholder="Ví dụ: Đổi trả 30 ngày" defaultValue="Đổi trả 30 ngày" />
+                        </div>
+                      </div>
+
+                      <div className="form-group">
+                        <label className="form-label">Chi tiết chính sách (Mô tả chi tiết)</label>
+                        <textarea className="form-control" rows={4} defaultValue="Dòng sản phẩm chính hãng Apple Việt Nam. Đổi mới trong 30 ngày đầu nếu có lỗi phần cứng từ nhà sản xuất. Bảo hành 12 tháng tại các trung tâm bảo hành ủy quyền của Apple trên toàn quốc."></textarea>
+                      </div>
+
+                      <button className="btn btn--indigo" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Check size={18} /> Cập nhật chính sách
+                      </button>
                     </div>
                   </div>
                 </div>

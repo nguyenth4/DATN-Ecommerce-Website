@@ -47,7 +47,7 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
   const getStoragePrice = (size: string) => {
     const raw = product.rawProduct;
     if (!raw || !raw.variants) return 0;
-    
+
     // Tìm tuỳ chọn dung lượng
     const storageOptionId = raw.options?.find((o: any) => o.title === 'Dung lượng' || o.title === 'Storage')?.id;
     // Lấy variant đầu tiên khớp với dung lượng này
@@ -55,8 +55,8 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
       v.options?.some((opt: any) => opt.option_id === storageOptionId && opt.value === size)
     );
     return variant?.prices?.find((p: any) => p.currency_code === 'vnd')?.amount
-        || variant?.prices?.[0]?.amount
-        || 0;
+      || variant?.prices?.[0]?.amount
+      || 0;
   };
 
   // Lấy giá cho từng tuỳ chọn màu sắc (dựa vào dung lượng đang được chọn)
@@ -80,8 +80,8 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
     );
 
     return variant?.prices?.find((p: any) => p.currency_code === 'vnd')?.amount
-        || variant?.prices?.[0]?.amount
-        || 0;
+      || variant?.prices?.[0]?.amount
+      || 0;
   };
 
   return (
@@ -128,7 +128,7 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
             {storages.map((size) => {
               const price = getStoragePrice(size);
               return (
-                <button 
+                <button
                   key={size}
                   className={`storage-btn ${selectedStorage === size ? 'active' : ''}`}
                   style={{
@@ -171,10 +171,10 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
             {colors.map((col, idx) => {
               const price = getColorPrice(col.name);
               return (
-                <button 
+                <button
                   key={idx}
-                  className={`color-btn-card ${selectedColor === col.name ? 'active' : ''}`} 
-                  style={{ 
+                  className={`color-btn-card ${selectedColor === col.name ? 'active' : ''}`}
+                  style={{
                     flex: '1 1 calc(33.333% - 0.6rem)',
                     minWidth: '120px',
                     padding: '0.5rem 0.6rem',
@@ -188,13 +188,13 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
                     alignItems: 'center',
                     gap: '0.5rem',
                     textAlign: 'left'
-                  }} 
+                  }}
                   title={col.name}
                   onClick={() => onColorChange(col.name, col.img)}
                 >
-                  <img 
-                    src={col.img} 
-                    alt={col.name} 
+                  <img
+                    src={col.img}
+                    alt={col.name}
                     style={{ width: '32px', height: '32px', objectFit: 'contain' }}
                   />
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
@@ -216,23 +216,23 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
       <div className="variant-section" style={{ marginBottom: '1.5rem' }}>
         <div className="variant-label" style={{ marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 600 }}>Số lượng</div>
         <div className="qty-control" style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
-          <button 
-            className="qty-btn" 
+          <button
+            className="qty-btn"
             style={{ width: '36px', height: '36px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.1rem' }}
             onClick={() => onQtyChange('dec')}
             disabled={activeVariant.stock === 0}
           >
             <i className="bi bi-dash"></i>
           </button>
-          <input 
-            type="text" 
-            className="qty-value" 
-            value={activeVariant.stock > 0 ? qty : 0} 
-            readOnly 
-            style={{ width: '40px', height: '36px', textAlign: 'center', border: 'none', borderLeft: '1px solid var(--border)', borderRight: '1px solid var(--border)', fontWeight: 600 }} 
+          <input
+            type="text"
+            className="qty-value"
+            value={activeVariant.stock > 0 ? qty : 0}
+            readOnly
+            style={{ width: '40px', height: '36px', textAlign: 'center', border: 'none', borderLeft: '1px solid var(--border)', borderRight: '1px solid var(--border)', fontWeight: 600 }}
           />
-          <button 
-            className="qty-btn" 
+          <button
+            className="qty-btn"
             style={{ width: '36px', height: '36px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.1rem' }}
             onClick={() => onQtyChange('inc')}
             disabled={activeVariant.stock === 0}
@@ -244,23 +244,23 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
 
       {/* ACTIONS */}
       <div className="product-actions" style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
-        <button 
-          className="btn btn-primary btn-add-cart" 
+        <button
+          className="btn btn-primary btn-add-cart"
           style={{ flex: 1, padding: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
           disabled={activeVariant.stock === 0}
           onClick={() => alert(`Đã thêm ${qty} sản phẩm ${product.title} (${selectedColor} / ${selectedStorage}) vào giỏ hàng!`)}
         >
           <i className="bi bi-bag-plus"></i> Thêm giỏ hàng
         </button>
-        <Link 
-          to={activeVariant.stock > 0 ? "/checkout" : "#"} 
+        <Link
+          to={activeVariant.stock > 0 ? "/checkout" : "#"}
           className={`btn btn-accent ${activeVariant.stock === 0 ? 'disabled-link' : ''}`}
-          style={{ 
-            flex: 1, 
-            padding: '0.9rem', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
+          style={{
+            flex: 1,
+            padding: '0.9rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             gap: '0.5rem',
             background: activeVariant.stock === 0 ? '#cccccc' : 'var(--accent)',
             borderColor: activeVariant.stock === 0 ? '#cccccc' : 'var(--accent)',
@@ -295,6 +295,24 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
         <div className="product-meta-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.4rem 0', fontSize: '0.9rem' }}>
           <strong>Giao hàng</strong>
           <span className="text-success"><i className="bi bi-truck"></i> GHN / GHTK – Giao tận nhà 1-3 ngày</span>
+        </div>
+      </div>
+
+      {/* TRUST BADGES */}
+      <div className="flex-center" style={{ gap: '1.5rem', marginTop: '1.5rem', padding: '1rem', background: 'var(--bg)', borderRadius: 'var(--radius)', justifyContent: 'space-between' }}>
+        <div style={{ textAlign: 'center', flex: 1 }} className="text-xs text-muted">
+          <i className="bi bi-shield-check" style={{ fontSize: '1.4rem', color: 'var(--success)', display: 'block', marginBottom: '0.3rem' }}></i>
+          {product.rawProduct?.metadata?.warranty || 'BH 12 tháng'}
+        </div>
+        <div style={{ textAlign: 'center', flex: 1 }} className="text-xs text-muted">
+          <i className="bi bi-arrow-return-left" style={{ fontSize: '1.4rem', color: 'var(--info)', display: 'block', marginBottom: '0.3rem' }}></i>
+          {product.rawProduct?.metadata?.return_policy || 'Đổi trả 30 ngày'}
+        </div>
+        <div style={{ textAlign: 'center', flex: 1 }} className="text-xs text-muted">
+          <i className="bi bi-truck" style={{ fontSize: '1.4rem', color: 'var(--accent)', display: 'block', marginBottom: '0.3rem' }}></i>Giao miễn phí
+        </div>
+        <div style={{ textAlign: 'center', flex: 1 }} className="text-xs text-muted">
+          <i className="bi bi-credit-card" style={{ fontSize: '1.4rem', color: 'var(--dark)', display: 'block', marginBottom: '0.3rem' }}></i>Thanh toán an toàn
         </div>
       </div>
     </div>
