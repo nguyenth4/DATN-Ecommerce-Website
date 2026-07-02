@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface Review {
-  name: string;
+  id?: string;
+  name?: string;
+  user_name?: string;
   rating: number;
-  date: string;
+  date?: string;
+  created_at?: string;
   comment: string;
 }
 
@@ -17,6 +20,8 @@ interface ProductReviewsTabProps {
   setNewReviewRating: (val: number) => void;
   setNewReviewComment: (val: string) => void;
   onAddReview: (e: React.FormEvent) => void;
+  errorMessage?: string;
+  successMessage?: string;
 }
 
 const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
@@ -29,7 +34,47 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
   setNewReviewRating,
   setNewReviewComment,
   onAddReview,
+  errorMessage,
+  successMessage,
 }) => {
+  const [testUser, setTestUser] = useState(localStorage.getItem('test_customer_id') || 'cus_01KWH0KYDJM5N7GW2G6WMXMXC4');
+
+  useEffect(() => {
+    // Tự động đồng bộ tên khi đổi user test
+    if (testUser === 'cus_01KWH0KYDJM5N7GW2G6WMXMXC4') {
+      setNewReviewName('Trần Ngọc');
+    } else {
+      setNewReviewName('Huỳnh Trần Khang Hỷ');
+    }
+    localStorage.setItem('test_customer_id', testUser);
+  }, [testUser, setNewReviewName]);
+
+  const handleUserChange = (val: string) => {
+    setTestUser(val);
+    localStorage.setItem('test_customer_id', val);
+    window.dispatchEvent(new Event('test-customer-changed'));
+  };
+
+  // Tính toán biểu đồ sao động
+  const totalReviews = reviews.length;
+  const starCounts = [0, 0, 0, 0, 0];
+  reviews.forEach(r => {
+    const s = Math.round(r.rating);
+    if (s >= 1 && s <= 5) {
+      starCounts[s - 1]++;
+    }
+  });
+
+  const getPercentage = (stars: number) => {
+    if (totalReviews === 0) return 0;
+    return Math.round((starCounts[stars - 1] / totalReviews) * 100);
+  };
+
+  const getStarsString = (ratingValue: number) => {
+    const r = Math.round(ratingValue);
+    return "★".repeat(r) + "☆".repeat(5 - r);
+  };
+
   return (
     <div id="panelReview" style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '3rem' }}>
       
@@ -37,46 +82,25 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
       <div style={{ background: '#fafafa', padding: '2rem', borderRadius: '8px', border: '1px solid var(--border)', alignSelf: 'start', textAlign: 'center' }}>
         <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem' }}>ĐÁNH GIÁ TRUNG BÌNH</h3>
         <div style={{ fontSize: '3rem', fontWeight: 900, color: 'var(--dark)' }}>{rating}</div>
-        <div className="stars" style={{ color: '#ffc107', fontSize: '1.4rem', margin: '0.5rem 0' }}>★★★★★</div>
+        <div className="stars" style={{ color: '#ffc107', fontSize: '1.4rem', margin: '0.5rem 0' }}>
+          {getStarsString(rating)}
+        </div>
         <p className="text-xs text-muted" style={{ marginBottom: '1.5rem' }}>({reviews.length} đánh giá khách hàng)</p>
         
-        {/* Cột phần trăm sao */}
+        {/* Cột phần trăm sao động */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', textAlign: 'left' }}>
-          <div style={{ display: 'flex', alignItems: 'center', fontSize: '0.75rem', gap: '0.5rem' }}>
-            <span style={{ width: '40px' }}>5 sao</span>
-            <div style={{ flex: 1, height: '8px', background: '#e0e0e0', borderRadius: '4px', overflow: 'hidden' }}>
-              <div style={{ width: '85%', height: '100%', background: '#ffc107' }}></div>
-            </div>
-            <span style={{ width: '30px', textAlign: 'right' }}>85%</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', fontSize: '0.75rem', gap: '0.5rem' }}>
-            <span style={{ width: '40px' }}>4 sao</span>
-            <div style={{ flex: 1, height: '8px', background: '#e0e0e0', borderRadius: '4px', overflow: 'hidden' }}>
-              <div style={{ width: '12%', height: '100%', background: '#ffc107' }}></div>
-            </div>
-            <span style={{ width: '30px', textAlign: 'right' }}>12%</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', fontSize: '0.75rem', gap: '0.5rem' }}>
-            <span style={{ width: '40px' }}>3 sao</span>
-            <div style={{ flex: 1, height: '8px', background: '#e0e0e0', borderRadius: '4px', overflow: 'hidden' }}>
-              <div style={{ width: '3%', height: '100%', background: '#ffc107' }}></div>
-            </div>
-            <span style={{ width: '30px', textAlign: 'right' }}>3%</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', fontSize: '0.75rem', gap: '0.5rem' }}>
-            <span style={{ width: '40px' }}>2 sao</span>
-            <div style={{ flex: 1, height: '8px', background: '#e0e0e0', borderRadius: '4px', overflow: 'hidden' }}>
-              <div style={{ width: '0%', height: '100%', background: '#ffc107' }}></div>
-            </div>
-            <span style={{ width: '30px', textAlign: 'right' }}>0%</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', fontSize: '0.75rem', gap: '0.5rem' }}>
-            <span style={{ width: '40px' }}>1 sao</span>
-            <div style={{ flex: 1, height: '8px', background: '#e0e0e0', borderRadius: '4px', overflow: 'hidden' }}>
-              <div style={{ width: '0%', height: '100%', background: '#ffc107' }}></div>
-            </div>
-            <span style={{ width: '30px', textAlign: 'right' }}>0%</span>
-          </div>
+          {[5, 4, 3, 2, 1].map((stars) => {
+            const pct = getPercentage(stars);
+            return (
+              <div key={stars} style={{ display: 'flex', alignItems: 'center', fontSize: '0.75rem', gap: '0.5rem' }}>
+                <span style={{ width: '40px' }}>{stars} sao</span>
+                <div style={{ flex: 1, height: '8px', background: '#e0e0e0', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ width: `${pct}%`, height: '100%', background: '#ffc107' }}></div>
+                </div>
+                <span style={{ width: '30px', textAlign: 'right' }}>{pct}%</span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -84,16 +108,43 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
       <div>
         {/* Form viết đánh giá */}
         <form onSubmit={onAddReview} style={{ background: '#fff', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '2rem' }}>
-          <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem' }}><i className="bi bi-pencil-square"></i> Viết đánh giá của bạn</h4>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}><i className="bi bi-pencil-square"></i> Viết đánh giá của bạn</h4>
+            
+            {/* Swticher tài khoản test */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
+              <span style={{ color: '#666' }}>Tài khoản test:</span>
+              <select 
+                value={testUser} 
+                onChange={(e) => handleUserChange(e.target.value)}
+                style={{ padding: '2px 6px', border: '1px solid var(--border)', borderRadius: '4px', background: '#f5f5f5', fontSize: '0.75rem' }}
+              >
+                <option value="cus_01KWH0KYDJM5N7GW2G6WMXMXC4">Trần Ngọc (Chưa mua)</option>
+                <option value="cus_01KVS3CAPF91NGY79S5F3TAC7S">Khang Hỷ (Đã mua)</option>
+              </select>
+            </div>
+          </div>
+
+          {errorMessage && (
+            <div className="alert alert-danger" style={{ padding: '0.75rem 1rem', marginBottom: '1rem', borderRadius: '6px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px', background: '#fef2f2', border: '1px solid #fee2e2', color: '#991b1b' }}>
+              <i className="bi bi-exclamation-triangle-fill"></i> {errorMessage}
+            </div>
+          )}
+
+          {successMessage && (
+            <div className="alert alert-success" style={{ padding: '0.75rem 1rem', marginBottom: '1rem', borderRadius: '6px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px', background: '#f0fdf4', border: '1px solid #dcfce7', color: '#166534' }}>
+              <i className="bi bi-check-circle-fill"></i> {successMessage}
+            </div>
+          )}
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.3rem' }}>Tên của bạn *</label>
               <input 
                 type="text" 
                 value={newReviewName} 
-                onChange={(e) => setNewReviewName(e.target.value)} 
-                placeholder="Nhập tên..." 
-                style={{ width: '100%', padding: '0.5rem', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }} 
+                disabled
+                style={{ width: '100%', padding: '0.5rem', border: '1px solid var(--border)', borderRadius: 'var(--radius)', background: '#f5f5f5', cursor: 'not-allowed' }} 
               />
             </div>
             <div>
@@ -126,20 +177,53 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
 
         {/* Danh sách các review */}
         <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem' }}>Ý kiến khách hàng</h4>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-          {reviews.map((rev, idx) => (
-            <div key={idx} style={{ paddingBottom: '1.2rem', borderBottom: '1px solid #f0f0f0' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem', alignItems: 'center' }}>
-                <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{rev.name}</span>
-                <span style={{ fontSize: '0.75rem', color: '#999' }}>{rev.date}</span>
-              </div>
-              <div className="stars" style={{ color: '#ffc107', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
-                {"★".repeat(rev.rating) + "☆".repeat(5 - rev.rating)}
-              </div>
-              <p style={{ fontSize: '0.85rem', color: '#444', lineHeight: '1.6' }}>{rev.comment}</p>
-            </div>
-          ))}
-        </div>
+        
+        {reviews.length === 0 ? (
+          <p style={{ fontSize: '0.85rem', color: '#888', fontStyle: 'italic' }}>Chưa có đánh giá nào cho sản phẩm này.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+            {reviews.map((rev, idx) => {
+              const name = rev.user_name || rev.name || "Khách hàng";
+              const initials = name.trim().split(" ").pop()?.[0]?.toUpperCase() || "K";
+              const dateStr = rev.created_at 
+                ? new Date(rev.created_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                : rev.date || "Vừa xong";
+
+              return (
+                <div key={idx} style={{ display: 'flex', gap: '1rem', paddingBottom: '1.2rem', borderBottom: '1px solid #f0f0f0' }}>
+                  {/* Avatar */}
+                  <div style={{ 
+                    width: '40px', 
+                    height: '40px', 
+                    borderRadius: '50%', 
+                    background: '#e0e7ff', 
+                    color: 'var(--indigo, #4f46e5)', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                    flexShrink: 0,
+                    border: '1px solid #c7d2fe'
+                  }}>
+                    {initials}
+                  </div>
+                  
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem', alignItems: 'center' }}>
+                      <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{name}</span>
+                      <span style={{ fontSize: '0.75rem', color: '#999' }}>{dateStr}</span>
+                    </div>
+                    <div className="stars" style={{ color: '#ffc107', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
+                      {"★".repeat(rev.rating) + "☆".repeat(5 - rev.rating)}
+                    </div>
+                    <p style={{ fontSize: '0.85rem', color: '#444', lineHeight: '1.6' }}>{rev.comment}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
     </div>
@@ -147,3 +231,4 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
 };
 
 export default ProductReviewsTab;
+

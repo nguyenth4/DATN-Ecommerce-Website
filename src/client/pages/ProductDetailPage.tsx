@@ -67,6 +67,29 @@ const ProductDetailPage = () => {
   const [newReviewName, setNewReviewName] = useState("");
   const [newReviewRating, setNewReviewRating] = useState(5);
   const [newReviewComment, setNewReviewComment] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  const fetchReviews = async () => {
+    if (!id) return;
+    try {
+      const res = await fetch(`http://localhost:9000/store/reviews?product_id=${id}`, {
+        headers: {
+          'x-publishable-api-key': 'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483'
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReviews(data.reviews || []);
+        if (data.average_rating !== undefined && fetchedProduct) {
+          if (!fetchedProduct.metadata) fetchedProduct.metadata = {};
+          fetchedProduct.metadata.rating = data.average_rating;
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch reviews dynamically:", err);
+    }
+  };
 
   // Sync reviews and initial selection when product data is loaded
   useEffect(() => {
@@ -83,14 +106,22 @@ const ProductDetailPage = () => {
         setSelectedStorage(storages[0]);
       }
       setActiveImage(fetchedProduct.thumbnail || "");
-
-      if (fetchedProduct.metadata?.reviewsList) {
-        setReviews(fetchedProduct.metadata.reviewsList);
-      } else {
-        setReviews([]);
-      }
     }
   }, [fetchedProduct]);
+
+  useEffect(() => {
+    fetchReviews();
+
+    const handleCustomerChanged = () => {
+      setErrorMessage("");
+      setSuccessMessage("");
+    };
+
+    window.addEventListener('test-customer-changed', handleCustomerChanged);
+    return () => {
+      window.removeEventListener('test-customer-changed', handleCustomerChanged);
+    };
+  }, [id]);
 
   if (isLoading) {
     return <SkeletonLoader />;
@@ -169,18 +200,45 @@ const ProductDetailPage = () => {
   // Seller Reputation Data
   const seller = productData.metadata?.seller;
 
-  const handleAddReview = (e: React.FormEvent) => {
+  const handleAddReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newReviewName.trim() || !newReviewComment.trim()) return;
-    const newRev = {
-      name: newReviewName,
-      rating: newReviewRating,
-      date: 'Vừa xong',
-      comment: newReviewComment
-    };
-    setReviews([newRev, ...reviews]);
-    setNewReviewName("");
-    setNewReviewComment("");
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    if (!newReviewComment.trim()) {
+      setErrorMessage("Vui lòng nhập nội dung bình luận.");
+      return;
+    }
+
+    const customerId = localStorage.getItem('test_customer_id') || 'cus_01KWH0KYDJM5N7GW2G6WMXMXC4';
+
+    try {
+      const res = await fetch(`http://localhost:9000/store/reviews`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-publishable-api-key': 'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483',
+          'x-customer-id': customerId
+        },
+        body: JSON.stringify({
+          product_id: id,
+          rating: newReviewRating,
+          comment: newReviewComment
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setSuccessMessage("Gửi đánh giá của bạn thành công!");
+        setNewReviewComment("");
+        fetchReviews(); // Refresh review list
+      } else {
+        setErrorMessage(data.message || "Gửi đánh giá thất bại.");
+      }
+    } catch (err) {
+      setErrorMessage("Không thể kết nối đến server backend.");
+    }
   };
 
   // Gallery Images
@@ -432,6 +490,8 @@ const ProductDetailPage = () => {
               setNewReviewRating={setNewReviewRating}
               setNewReviewComment={setNewReviewComment}
               onAddReview={handleAddReview}
+              errorMessage={errorMessage}
+              successMessage={successMessage}
             />
           </section>
 
