@@ -100,7 +100,7 @@ const ContactPage = () => {
                 ></div>
                 <div style={{ position: 'relative' }}>
                   <h3 style={{ color: 'var(--paper)', fontSize: 'var(--text-xl)', marginBottom: 'var(--s3)' }}>
-                    Looking for trade or bulk pricing?
+                    Bạn đang tìm giá bán buôn hoặc thương mại?
                   </h3>
                   <p
                     style={{
@@ -110,11 +110,10 @@ const ContactPage = () => {
                       marginBottom: 'var(--s4)',
                     }}
                   >
-                    Companies ordering 10+ units qualify for tiered discounts, NET-30 terms, and a dedicated account
-                    manager.
+                    Các doanh nghiệp đặt hàng từ 10 đơn vị trở lên sẽ đủ điều kiện được hưởng chiết khấu theo cấp độ, thời hạn thanh toán NET-30 và có quản lý tài khoản riêng.
                   </p>
                   <a href="mailto:trade@sprylo.example" className="btn btn--paper">
-                    Email the trade desk →
+                    Gửi email cho bộ phận thương mại →
                   </a>
                 </div>
               </div>
@@ -130,7 +129,7 @@ const ContactPage = () => {
             >
               <h2 style={{ fontSize: 'var(--text-xl)', marginBottom: 'var(--s2)' }}>Gửi tin nhắn cho chúng tôi</h2>
               <p style={{ color: 'var(--fg-soft)', fontSize: 'var(--text-sm)', marginBottom: 'var(--s5)' }}>
-                Không phải bot, không phải phản hồi mẫu — một nhân viên thực thụ tại văn phòng SF hoặc Berlin của chúng tôi sẽ tiếp nhận vấn đề này.
+                Không phải bot, không phải phản hồi mẫu — một nhân viên thực thụ tại văn phòng chúng tôi sẽ tiếp nhận vấn đề này.
               </p>
 
               <div className="field-row">
@@ -200,11 +199,11 @@ const ContactPage = () => {
                   lineHeight: 1.6,
                 }}
               >
-                By submitting, you agree to our{' '}
+                Bằng cách gửi, bạn đồng ý với{' '}
                 <Link to="#" style={{ color: 'var(--indigo)' }}>
-                  privacy policy
+                  chính sách bảo mật
                 </Link>
-                . We never sell your data and never share with third parties.
+                . Chúng tôi không bao giờ bán dữ liệu của bạn và không bao giờ chia sẻ với bên thứ ba.
               </p>
             </form>
           </div>
@@ -214,9 +213,9 @@ const ContactPage = () => {
       <section className="section" style={{ background: 'var(--bg)' }}>
         <div className="container">
           <div className="section-head">
-            <h2>Quick answers</h2>
+            <h2>Giải đáp nhanh</h2>
             <Link to="#" className="view-all">
-              Full help centre →
+              Trung tâm hỗ trợ đầy đủ →
             </Link>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 'var(--s5)' }}>
@@ -228,13 +227,13 @@ const ContactPage = () => {
                 padding: 'var(--s5)',
               }}
             >
-              <h3 style={{ fontSize: 'var(--text-md)', marginBottom: 'var(--s2)' }}>Where is my order?</h3>
+              <h3 style={{ fontSize: 'var(--text-md)', marginBottom: 'var(--s2)' }}>Đơn hàng của tôi đâu rồi?</h3>
               <p style={{ color: 'var(--fg-soft)', fontSize: 'var(--text-sm)', lineHeight: 1.6 }}>
-                Every order ships with a tracking number sent by email within 2 hours of dispatch. Use the{' '}
-                <Link to="#" style={{ color: 'var(--indigo)', fontWeight: 600 }}>
-                  order tracker
+                Mỗi đơn hàng đều được gửi kèm mã vận đơn qua email trong vòng 2 giờ sau khi gửi đi. Sử dụng{' '}
+                <Link to="/order-tracking" style={{ color: 'var(--indigo)', fontWeight: 600 }}>
+                  trình theo dõi đơn hàng
                 </Link>{' '}
-                with your email + order number for live status.
+                với email + mã đơn hàng để xem trạng thái trực tiếp.
               </p>
             </article>
 
@@ -246,10 +245,9 @@ const ContactPage = () => {
                 padding: 'var(--s5)',
               }}
             >
-              <h3 style={{ fontSize: 'var(--text-md)', marginBottom: 'var(--s2)' }}>How do returns work?</h3>
+              <h3 style={{ fontSize: 'var(--text-md)', marginBottom: 'var(--s2)' }}>Chính sách đổi trả hoạt động như thế nào?</h3>
               <p style={{ color: 'var(--fg-soft)', fontSize: 'var(--text-sm)', lineHeight: 1.6 }}>
-                30 days, no questions asked. Initiate from your account → orders → return. We email a prepaid label;
-                drop off at any carrier point. Refund hits your card 3 – 5 business days after we receive it.
+                30 ngày đổi trả không cần lý do. Bắt đầu từ tài khoản của bạn → đơn hàng → đổi trả. Chúng tôi sẽ gửi email nhãn vận chuyển trả trước; bạn chỉ cần gửi hàng tại bất kỳ điểm chuyển phát nào. Hoàn tiền sẽ về tài khoản sau 3 - 5 ngày làm việc.
               </p>
             </article>
 
@@ -261,10 +259,9 @@ const ContactPage = () => {
                 padding: 'var(--s5)',
               }}
             >
-              <h3 style={{ fontSize: 'var(--text-md)', marginBottom: 'var(--s2)' }}>Do you ship internationally?</h3>
+              <h3 style={{ fontSize: 'var(--text-md)', marginBottom: 'var(--s2)' }}>Bạn có giao hàng quốc tế không?</h3>
               <p style={{ color: 'var(--fg-soft)', fontSize: 'var(--text-sm)', lineHeight: 1.6 }}>
-                Yes — to 48 countries. Free standard shipping on orders over $50 to the US, EU, UK, Canada, and
-                Australia. Other destinations carry a flat shipping fee shown at checkout.
+                Có — tới hơn 48 quốc gia. Miễn phí vận chuyển tiêu chuẩn cho các đơn hàng trên 1.200.000đ tại Việt Nam. Các điểm đến khác sẽ có phí vận chuyển cố định được hiển thị khi thanh toán.
               </p>
             </article>
 
@@ -276,10 +273,9 @@ const ContactPage = () => {
                 padding: 'var(--s5)',
               }}
             >
-              <h3 style={{ fontSize: 'var(--text-md)', marginBottom: 'var(--s2)' }}>What is the warranty?</h3>
+              <h3 style={{ fontSize: 'var(--text-md)', marginBottom: 'var(--s2)' }}>Chế độ bảo hành như thế nào?</h3>
               <p style={{ color: 'var(--fg-soft)', fontSize: 'var(--text-sm)', lineHeight: 1.6 }}>
-                Every Sprylo order ships with a 2-year limited warranty in addition to the manufacturer's. Optional
-                extended cover (3 or 5 years) can be added at checkout from $39.
+                Mỗi đơn hàng tại Sprylo đều được kèm theo bảo hành giới hạn 2 năm ngoài chế độ của nhà sản xuất. Có thể mua thêm gói bảo hành mở rộng (3 hoặc 5 năm) khi thanh toán chỉ từ 99.000đ.
               </p>
             </article>
           </div>

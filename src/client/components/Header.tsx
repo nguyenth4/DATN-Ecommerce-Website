@@ -49,7 +49,7 @@ const Header = () => {
         <div className="container">
           <span className="promo">
             <span className="tag">GIẢM GIÁ</span>
-            Miễn phí vận chuyển cho đơn hàng trên $50 · 30 ngày đổi trả
+            Miễn phí vận chuyển cho đơn hàng trên 1.200.000đ · 30 ngày đổi trả
           </span>
           <span className="links">
             <Link to="/order-tracking">Theo dõi đơn hàng</Link>

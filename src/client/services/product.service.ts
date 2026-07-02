@@ -20,7 +20,7 @@ export const productService = {
       });
       return { products, count, offset, limit };
     } catch (error) {
-      console.warn('Medusa API connection failed:', error);
+      console.error('Medusa API connection failed:', error);
       return {
         products: [],
         count: 0,
@@ -38,7 +38,7 @@ export const productService = {
       });
       return product_categories;
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      console.error('Lỗi khi tải danh mục sản phẩm:', error);
       throw error;
     }
   },
@@ -51,7 +51,7 @@ export const productService = {
       });
       return product;
     } catch (error) {
-      console.error(`Medusa API connection failed for product ${id}:`, error);
+      console.error(`Lỗi khi tải thông tin sản phẩm ${id}:`, error);
       throw error;
     }
   }
