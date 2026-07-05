@@ -43,6 +43,9 @@ module.exports = defineConfig({
         ],
       },
     },
+    "wallet": {
+      resolve: "./modules/wallet",
+    },
   }
 })
 

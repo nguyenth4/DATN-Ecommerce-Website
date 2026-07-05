@@ -383,5 +383,38 @@
   font-size: 0.9375rem;
   color: var(--checkout-text);
   line-height: 1.5;
-  font-weight: 500;
+}
+
+/* Custom Toggle */
+.custom-toggle {
+  width: 44px;
+  height: 24px;
+  background: var(--checkout-border);
+  border-radius: 999px;
+  position: relative;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.custom-toggle.active {
+  background: var(--checkout-accent);
+}
+.custom-toggle .toggle-knob {
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+.custom-toggle.active .toggle-knob {
+  left: 23px;
+}
+.opacity-50 {
+  opacity: 0.5;
+}
+.pointer-events-none {
+  pointer-events: none;
 }

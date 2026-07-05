@@ -11,9 +11,11 @@ import {
   Lock, 
   LogOut, 
   CheckCircle, 
-  Check
+  Check,
+  Wallet
 } from 'lucide-react';
 import { useProducts } from '../services/product.service';
+import { walletService } from '../services/wallet.service';
 import { getWishlist } from '../utils/wishlist';
 import ProductCard from '../components/ProductCard';
 
@@ -115,8 +117,17 @@ const MOCK_ORDERS = [
 ];
 
 const AccountPage = () => {
-  const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'addresses' | 'wishlist' | 'password' | 'policies'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'addresses' | 'wishlist' | 'wallet' | 'password' | 'policies'>('profile');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [walletData, setWalletData] = useState<any>(null);
+
+  useEffect(() => {
+    if (activeTab === 'wallet') {
+      walletService.getWallet('cus_demo_123')
+        .then(res => setWalletData(res.wallet))
+        .catch(console.error);
+    }
+  }, [activeTab]);
   
   const [wishlistIds, setWishlistIds] = useState<string[]>(getWishlist());
 
@@ -242,6 +253,12 @@ const AccountPage = () => {
                   onClick={() => { setActiveTab('wishlist'); setSelectedOrderId(null); }}
                 >
                   <Heart size={18} style={{marginRight: '12px'}}/> Sản phẩm yêu thích
+                </div>
+                <div 
+                  className={`account-nav-item ${activeTab === 'wallet' ? 'active' : ''}`}
+                  onClick={() => { setActiveTab('wallet'); setSelectedOrderId(null); }}
+                >
+                  <Wallet size={18} style={{marginRight: '12px'}}/> Ví điện tử Sprylo
                 </div>
                 <div 
                   className={`account-nav-item ${activeTab === 'password' ? 'active' : ''}`}
@@ -636,6 +653,65 @@ const AccountPage = () => {
                         {wishlistProducts.map(product => (
                           <ProductCard key={product.id} product={product} />
                         ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* WALLET TAB */}
+              {activeTab === 'wallet' && (
+                <div className="tab-panel active">
+                  <div style={{ background: 'white', borderRadius: 'var(--r-lg)', border: '1px solid var(--rule)', padding: '1.8rem', boxShadow: 'var(--shadow-sm)' }}>
+                    <div style={{ fontFamily: "var(--ff-display)", fontSize: '1.3rem', fontWeight: 700, marginBottom: '1.5rem', paddingBottom: '0.8rem', borderBottom: '1px solid var(--rule)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      Ví điện tử Sprylo
+                      <button className="btn btn-sm btn--ghost" onClick={() => walletService.topupMock(5000000, 'cus_demo_123').then(res => setWalletData(res.wallet))}>
+                        Nạp 5.000.000đ (Demo)
+                      </button>
+                    </div>
+                    
+                    <div className="wallet-card-bg" style={{ background: 'linear-gradient(135deg, var(--indigo) 0%, var(--card-purple) 100%)', borderRadius: 'var(--r-lg)', padding: '2rem', color: 'white', marginBottom: '2rem', position: 'relative', overflow: 'hidden' }}>
+                       <div style={{ position: 'relative', zIndex: 2 }}>
+                         <div style={{ fontSize: '0.9rem', opacity: 0.8, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Số dư khả dụng</div>
+                         <div style={{ fontSize: '2.5rem', fontWeight: 800, fontFamily: 'var(--ff-display)' }}>
+                           {walletData ? formatPrice(Number(walletData.balance)) : 'Đang tải...'}
+                         </div>
+                         <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                           <div>
+                             <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>Chủ tài khoản</div>
+                             <div style={{ fontWeight: 600, letterSpacing: '1px' }}>{firstName.toUpperCase()} {lastName.toUpperCase()}</div>
+                           </div>
+                           <Wallet size={36} style={{ opacity: 0.5 }} />
+                         </div>
+                       </div>
+                       <div style={{ position: 'absolute', right: '-10%', top: '-20%', width: '200px', height: '200px', background: 'rgba(255,255,255,0.1)', borderRadius: '50%', zIndex: 1 }}></div>
+                       <div style={{ position: 'absolute', right: '20%', bottom: '-30%', width: '150px', height: '150px', background: 'rgba(255,255,255,0.05)', borderRadius: '50%', zIndex: 1 }}></div>
+                    </div>
+
+                    <h4 style={{ fontFamily: 'var(--ff-display)', fontWeight: 700, fontSize: '1.1rem', marginBottom: '1rem' }}>Lịch sử giao dịch</h4>
+                    
+                    {walletData?.transactions?.length > 0 ? (
+                      <div className="wallet-transactions">
+                        {[...walletData.transactions].sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map((tx: any) => (
+                          <div key={tx.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 0', borderBottom: '1px solid var(--rule)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: tx.type === 'payment' ? 'var(--rose-soft)' : 'var(--emerald-soft, #d1fae5)', color: tx.type === 'payment' ? 'var(--rose)' : 'var(--emerald)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {tx.type === 'payment' ? <Wallet size={18} /> : <CheckCircle size={18} />}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{tx.description || (tx.type === 'payment' ? 'Thanh toán đơn hàng' : 'Nạp tiền / Hoàn tiền')}</div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--fg-mute)' }}>{new Date(tx.created_at).toLocaleString('vi-VN')}</div>
+                              </div>
+                            </div>
+                            <div style={{ fontWeight: 700, color: tx.type === 'payment' ? 'var(--ink)' : 'var(--emerald)' }}>
+                              {tx.type === 'payment' ? '-' : '+'}{formatPrice(Number(tx.amount))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--fg-mute)', background: 'var(--bg-soft)', borderRadius: 'var(--r)' }}>
+                        Chưa có giao dịch nào
                       </div>
                     )}
                   </div>

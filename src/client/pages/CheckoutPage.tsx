@@ -11,9 +11,11 @@ import {
   ShoppingBag, 
   CheckCircle2,
   Lock,
-  User
+  User,
+  Wallet
 } from 'lucide-react';
 import './CheckoutPage.css';
+import { walletService } from '../services/wallet.service';
 
 interface Location {
   id: string;
@@ -41,6 +43,10 @@ const CheckoutPage = () => {
   const [detailAddress, setDetailAddress] = useState('');
   const [note, setNote] = useState('');
   
+  // Wallet State
+  const [walletData, setWalletData] = useState<any>(null);
+  const [useWallet, setUseWallet] = useState(false);
+  
   // Computed Merged Address
   const provinceName = provinces.find(p => p.id === selectedProvince)?.name || '';
   const districtName = districts.find(d => d.id === selectedDistrict)?.name || '';
@@ -53,6 +59,11 @@ const CheckoutPage = () => {
 
   // Fetch Provinces on mount
   useEffect(() => {
+    // Load wallet
+    walletService.getWallet('cus_demo_123')
+      .then(res => setWalletData(res.wallet))
+      .catch(console.error);
+
     fetch('https://esgoo.net/api-tinhthanh/1/0.htm')
       .then(res => res.json())
       .then(data => {
@@ -115,17 +126,14 @@ const CheckoutPage = () => {
         },
         note,
         items: cartItems,
+        use_wallet: useWallet,
+        customer_id: 'cus_demo_123'
     };
 
     console.log("Placing order...", orderData);
     
     try {
-      const response = await fetch('http://localhost:9000/store/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
-      });
-      const data = await response.json();
+      const data = await walletService.checkout(orderData);
       
       if (data.paymentUrl) {
         window.location.href = data.paymentUrl;
@@ -206,7 +214,30 @@ const CheckoutPage = () => {
     }
   }, [selectedDistrict, selectedWard, shippingMethod, totalHeight, maxLength, totalWeight, maxWidth, insuranceValue]);
 
-  const total = subtotal + shippingFee;
+  const rawTotal = subtotal + shippingFee;
+  const walletBalance = walletData ? Number(walletData.balance) : 0;
+  
+  let walletDeducted = 0;
+  let finalTotal = rawTotal;
+
+  if (useWallet) {
+    if (walletBalance >= rawTotal) {
+      walletDeducted = rawTotal;
+      finalTotal = 0;
+    } else {
+      walletDeducted = walletBalance;
+      finalTotal = rawTotal - walletBalance;
+    }
+  }
+
+  // Auto select wallet as payment method if fully covered
+  useEffect(() => {
+    if (finalTotal === 0 && useWallet) {
+      setPaymentMethod('wallet');
+    } else if (paymentMethod === 'wallet' && finalTotal > 0) {
+      setPaymentMethod('vnpay');
+    }
+  }, [finalTotal, useWallet, paymentMethod]);
 
   return (
     <div className="checkout-page">
@@ -423,8 +454,41 @@ const CheckoutPage = () => {
               className="checkout-section"
             >
               <h2 className="section-title">
-                <CreditCard size={22} /> Phương thức thanh toán
+                <Wallet size={22} /> Thanh toán bằng ví
               </h2>
+              {walletData && (
+                <div 
+                  className={`option-card ${useWallet ? 'selected' : ''}`}
+                  onClick={() => setUseWallet(!useWallet)}
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                >
+                  <div>
+                    <div className="option-name">Sử dụng ví điện tử Sprylo</div>
+                    <div className="option-desc" style={{ marginTop: '0.2rem' }}>
+                      Số dư khả dụng: <strong style={{ color: 'var(--indigo)' }}>{walletBalance.toLocaleString('vi-VN')}đ</strong>
+                    </div>
+                  </div>
+                  <div className={`custom-toggle ${useWallet ? 'active' : ''}`}>
+                    <div className="toggle-knob"></div>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className={`checkout-section ${finalTotal === 0 ? 'opacity-50 pointer-events-none' : ''}`}
+            >
+              <h2 className="section-title">
+                <CreditCard size={22} /> Phương thức thanh toán bổ sung
+              </h2>
+              {finalTotal === 0 && (
+                <div className="alert-info" style={{ marginBottom: '1rem', padding: '0.8rem', background: 'var(--indigo-soft)', color: 'var(--indigo-deep)', borderRadius: 'var(--r-sm)', fontSize: '0.9rem' }}>
+                  Đơn hàng đã được thanh toán toàn bộ bằng Ví điện tử.
+                </div>
+              )}
               <div className="option-grid">
                 <div 
                   className={`option-card ${paymentMethod === 'vnpay' ? 'selected' : ''}`}
@@ -512,9 +576,16 @@ const CheckoutPage = () => {
                 <span>-0đ</span>
               </div>
 
+              {useWallet && walletDeducted > 0 && (
+                <div className="summary-row" style={{ color: 'var(--indigo)', fontWeight: 600 }}>
+                  <span>Thanh toán từ ví</span>
+                  <span>-{walletDeducted.toLocaleString('vi-VN')}đ</span>
+                </div>
+              )}
+
               <div className="summary-total">
-                <span>Tổng cộng</span>
-                <span>{total.toLocaleString('vi-VN')}đ</span>
+                <span>Tổng cộng cần thanh toán</span>
+                <span style={{ fontSize: '1.4rem' }}>{finalTotal.toLocaleString('vi-VN')}đ</span>
               </div>
 
               <button className="btn-checkout" onClick={handlePlaceOrder}>
