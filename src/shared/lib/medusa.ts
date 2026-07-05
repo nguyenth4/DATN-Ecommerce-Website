@@ -16,3 +16,25 @@ export const medusa = new Medusa({
     Authorization: `Bearer ${token}`,
   } : undefined,
 });
+
+export const adminOrders = {
+  /** Get list of orders with optional pagination and status filter */
+  async list(params: { limit?: number; offset?: number; status?: string }) {
+    const response = await medusa.admin.orders.list(params);
+    return response;
+  },
+
+  /** Get a single order by ID */
+  async retrieve(id: string) {
+    const response = await medusa.admin.orders.retrieve(id);
+    return response;
+  },
+
+  /** Update order status and optionally set shipping method */
+  async updateStatus(id: string, status: string, shippingMethod?: string) {
+    const payload: any = { status };
+    if (shippingMethod) payload.metadata = { shipping_method: shippingMethod };
+    const response = await medusa.admin.orders.update(id, payload);
+    return response;
+  },
+};
