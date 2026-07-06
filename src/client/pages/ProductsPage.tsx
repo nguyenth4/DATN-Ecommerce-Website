@@ -13,6 +13,8 @@ import {
   SlidersHorizontal
 } from 'lucide-react';
 import { useProducts, useCategories } from '../services/product.service';
+import { ProductCardSkeleton } from '../components/ProductCardSkeleton';
+import toast from 'react-hot-toast';
 import './ProductsPage.css';
 
 const ProductsPage = () => {
@@ -234,9 +236,10 @@ const ProductsPage = () => {
                 </div>
 
                 {isLoadingProducts ? (
-                  <div className="flex-center" style={{ minHeight: '400px', flexDirection: 'column', gap: '16px' }}>
-                    <Loader2 className="animate-spin" size={40} color="var(--indigo)" />
-                    <p style={{ color: 'var(--fg-mute)' }}>Đang tìm kiếm sản phẩm cho bạn...</p>
+                  <div className="shop-grid">
+                    {[...Array(12)].map((_, i) => (
+                      <ProductCardSkeleton key={i} />
+                    ))}
                   </div>
                 ) : products.length > 0 ? (
                   <div className="shop-grid">
@@ -295,8 +298,14 @@ const ProductsPage = () => {
                             <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', margin: 0 }}>
                               <input 
                                 type="checkbox" 
-                                checked={compareList.includes(p.id)}
-                                onChange={() => toggleCompareProduct(p.id, p.title)}
+                                onChange={() => {
+                                  toggleCompareProduct(p.id, p.title);
+                                  if (!compareList.includes(p.id)) {
+                                    toast.success('Đã thêm vào danh sách so sánh', { icon: '✨' });
+                                  } else {
+                                    toast('Đã gỡ khỏi danh sách so sánh', { icon: '🗑️' });
+                                  }
+                                }}
                                 style={{ 
                                   cursor: 'pointer', 
                                   accentColor: 'var(--indigo, #4f46e5)',

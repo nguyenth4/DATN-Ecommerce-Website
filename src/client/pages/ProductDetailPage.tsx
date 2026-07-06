@@ -12,40 +12,10 @@ import ProductGallery from '../components/ProductDetail/ProductGallery';
 import ProductInfo from '../components/ProductDetail/ProductInfo';
 import ProductSpecsTable from '../components/ProductDetail/ProductSpecsTable';
 import ProductReviewsTab from '../components/ProductDetail/ProductReviewsTab';
+import { ProductDetailSkeleton } from '../components/ProductDetailSkeleton';
+import toast from 'react-hot-toast';
 
-
-
-// Loading Skeleton Component
-const SkeletonLoader = () => (
-  <div className="container" style={{ paddingTop: 'var(--s5)' }}>
-    <style>{`
-      @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: .5; }
-      }
-    `}</style>
-    <div style={{ height: '24px', width: '200px', background: '#e2e8f0', borderRadius: '4px', marginBottom: '2rem', animation: 'pulse 1.5s infinite' }}></div>
-    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '3rem', marginBottom: '3rem' }}>
-      <div>
-        <div style={{ height: '400px', background: '#e2e8f0', borderRadius: '12px', marginBottom: '1rem', animation: 'pulse 1.5s infinite' }}></div>
-        <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'center' }}>
-          {[...Array(4)].map((_, i) => (
-            <div key={i} style={{ width: '70px', height: '70px', background: '#e2e8f0', borderRadius: '8px', animation: 'pulse 1.5s infinite' }}></div>
-          ))}
-        </div>
-      </div>
-      <div>
-        <div style={{ height: '14px', width: '80px', background: '#e2e8f0', borderRadius: '4px', marginBottom: '0.5rem', animation: 'pulse 1.5s infinite' }}></div>
-        <div style={{ height: '36px', width: '80%', background: '#e2e8f0', borderRadius: '6px', marginBottom: '1rem', animation: 'pulse 1.5s infinite' }}></div>
-        <div style={{ height: '20px', width: '60%', background: '#e2e8f0', borderRadius: '4px', marginBottom: '1.5rem', animation: 'pulse 1.5s infinite' }}></div>
-        <div style={{ height: '60px', background: '#e2e8f0', borderRadius: '8px', marginBottom: '1.5rem', animation: 'pulse 1.5s infinite' }}></div>
-        <div style={{ height: '40px', background: '#e2e8f0', borderRadius: '8px', marginBottom: '1rem', animation: 'pulse 1.5s infinite' }}></div>
-        <div style={{ height: '50px', background: '#e2e8f0', borderRadius: '8px', animation: 'pulse 1.5s infinite' }}></div>
-      </div>
-    </div>
-  </div>
-);
-
+// Removed inline skeleton, now using imported ProductDetailSkeleton
 const ProductDetailPage = () => {
   const { id } = useParams<{ id: string }>();
 
@@ -124,7 +94,7 @@ const ProductDetailPage = () => {
   }, [id]);
 
   if (isLoading) {
-    return <SkeletonLoader />;
+    return <ProductDetailSkeleton />;
   }
 
   if (!fetchedProduct) {
@@ -231,13 +201,16 @@ const ProductDetailPage = () => {
 
       if (res.ok) {
         setSuccessMessage("Gửi đánh giá của bạn thành công!");
+        toast.success("Cảm ơn bạn đã đánh giá sản phẩm!");
         setNewReviewComment("");
         fetchReviews(); // Refresh review list
       } else {
         setErrorMessage(data.message || "Gửi đánh giá thất bại.");
+        toast.error(data.message || "Gửi đánh giá thất bại.");
       }
     } catch (err) {
       setErrorMessage("Không thể kết nối đến server backend.");
+      toast.error("Lỗi kết nối server.");
     }
   };
 

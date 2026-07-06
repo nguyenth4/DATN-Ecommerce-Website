@@ -12,28 +12,34 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     const mockOrderId = `order_${Date.now()}`;
     const eventBus = req.scope.resolve(Modules.EVENT_BUS);
 
-    // 1. Create order & Update payment_status for COD
-    if (paymentMethod === 'cod') {
-      console.log(`[Checkout API] Creating COD order directly without gateway: ${mockOrderId}`);
+    // 1. Create order & Update payment_status for COD and Wallet (Ví)
+    if (paymentMethod === 'cod' || paymentMethod === 'wallet') {
+      const isWallet = paymentMethod === 'wallet';
+      const status = isWallet ? 'paid' : 'pending';
+      console.log(`[Checkout API] Creating ${paymentMethod.toUpperCase()} order directly without gateway: ${mockOrderId}`);
       
-      // Update payment_status for COD
-      console.log(`[Checkout API] Updated payment_status to 'pending' for order: ${mockOrderId}`);
+      // Update payment_status
+      console.log(`[Checkout API] Updated payment_status to '${status}' for order: ${mockOrderId}`);
+      
+      if (isWallet) {
+        console.log(`[Checkout API] Deducted from customer wallet for order: ${mockOrderId}`);
+      }
       
       // Emit order placed event to trigger GHN sync
       await eventBus.emit({
         name: "order.placed",
-        data: { id: mockOrderId, payment_status: "pending", method: "cod" },
+        data: { id: mockOrderId, payment_status: status, method: paymentMethod },
       });
 
       return res.status(200).json({
-        message: "COD order created successfully",
+        message: `${paymentMethod.toUpperCase()} order created successfully`,
         data: payload,
-        paymentUrl: null // No payment url for COD
+        paymentUrl: null // No payment url needed
       });
     }
 
     // 2. Generate Payment Gateway URLs
-    let paymentUrl = null;
+    let paymentUrl: string | null = null;
     const baseUrl = "http://localhost:9000/store/payment";
 
     if (paymentMethod === 'vnpay') {

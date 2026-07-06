@@ -36,6 +36,33 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
           province: order.shipping_address.province || address.province,
         };
       }
+
+      // --- NEW LOGIC: Deduct Inventory on Confirmation ---
+      const productModuleService = req.scope.resolve(Modules.PRODUCT);
+      if (productModuleService) {
+        console.log(`[Admin] Deducting inventory for order ${id}...`);
+        for (const item of order.items || []) {
+          if (item.variant_id) {
+            try {
+              // Retrieve the current variant to get its inventory_quantity
+              const variant = await productModuleService.retrieveProductVariant(item.variant_id);
+              if (variant && typeof variant.inventory_quantity === 'number') {
+                const newQuantity = Math.max(0, variant.inventory_quantity - item.quantity);
+                await productModuleService.updateProductVariants([
+                  {
+                    id: item.variant_id,
+                    inventory_quantity: newQuantity
+                  }
+                ]);
+                console.log(`[Admin] Deducted ${item.quantity} from variant ${item.variant_id}. New stock: ${newQuantity}`);
+              }
+            } catch (invErr) {
+              console.error(`[Admin] Failed to deduct inventory for variant ${item.variant_id}:`, invErr);
+            }
+          }
+        }
+      }
+      
     } catch (e) {
       console.log(`[Admin] Order ${id} not found in DB, using mock data for GHN sync test.`);
       // Mock data for test since checkout flow generates mock orders currently

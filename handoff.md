@@ -53,11 +53,20 @@ Hoàn thiện luồng Checkout (Thanh toán), bao gồm:
 - **Env variables**: Đảm bảo add ENV cho `GHN_TOKEN`, `GHN_SHOP_ID` ở `.env` của backend để API tạo vận đơn hoạt động được.
 
 ## 6. Cập nhật mới (Tích hợp thanh toán)
-- **Cổng thanh toán & Callback**: Đã bổ sung giả lập tạo URL thanh toán cho `MoMo`, `ZaloPay`, và `VNPay` tại `POST /store/checkout`.
+- **Cổng thanh toán & Callback**: Đã bổ sung giả lập tạo URL thanh toán cho 3 ví/cổng ngoại vi: `MoMo`, `ZaloPay`, và `VNPay` tại `POST /store/checkout`.
 - **API Callback**: Đã tạo đầy đủ 3 API route xử lý Callback trả về (GET) cho `momo`, `vnpay`, `zalopay` tại `api/store/payment/[gateway]/callback/route.ts`. Khi nhận được Callback thành công, hệ thống tự động phát event `order.placed` với `payment_status: "paid"` và chuyển hướng về trang Frontend `http://localhost:5173/order-success`.
-- **Thanh toán COD**: Nếu phương thức là `cod`, API Checkout sẽ trực tiếp cập nhật `payment_status` là `"pending"` và không qua cổng thanh toán, đồng thời phát event `order.placed` để đẩy đơn qua giao hàng.
+- **Thanh toán Nội bộ (COD & Ví Sprylo)**: Đã tích hợp đủ 5 phương thức. Riêng `cod` và `wallet` không qua cổng thanh toán ngoài. API Checkout sẽ trực tiếp cập nhật `payment_status` là `"pending"` (với COD) hoặc `"paid"` (với Ví nội bộ), đồng thời phát event `order.placed`.
 
 ## 7. Cập nhật mới (Đẩy đơn vận chuyển Giao Hàng Nhanh)
 - **Thay đổi luồng đẩy vận đơn**: Đã vô hiệu hóa tính năng tự động tạo vận đơn bên trong Subscriber `order.placed` nhằm đảm bảo đơn hàng chưa được xác nhận sẽ không bị đẩy nhầm sang hệ thống GHN.
 - **Tạo API cho Seller xác nhận đơn**: Xây dựng endpoint mới dành cho Admin/Seller tại `POST /admin/orders/:id/sync-shipping`.
 - **Chức năng API**: Khi Admin kích hoạt API này, hệ thống sẽ gom dữ liệu đơn hàng (trọng lượng, số lượng, địa chỉ...) gọi sang GHN API để khởi tạo Vận đơn (Shipping Order). Sau đó tiến hành lấy `order_code` trả về từ GHN và lưu vào metadata của order Medusa dưới trường `tracking_code`.
+
+## 8. Cập nhật mới (Cải thiện UI/UX)
+- **Hệ thống Toast Notification**: Tích hợp thư viện `react-hot-toast` vào `App.tsx` để cung cấp các thông báo (toast) nhất quán, thiết kế đẹp mắt. Đã áp dụng hiển thị toast khi thêm/xoá So sánh sản phẩm và khi Gửi đánh giá (Review) thành công/thất bại.
+- **Skeleton Loader (Trang Danh Sách)**: Tạo `ProductCardSkeleton` thay thế vòng xoay Loading cũ, hiển thị dưới dạng lưới mô phỏng các thẻ sản phẩm với hiệu ứng Shimmer mượt mà, giúp cấu trúc layout không bị giật lag khi chờ API tải.
+- **Skeleton Loader (Trang Chi Tiết)**: Tạo `ProductDetailSkeleton` mô phỏng chính xác bố cục lưới (hình ảnh lớn, tiêu đề, nút bấm) của trang Chi tiết Sản phẩm.
+
+## 9. Cập nhật mới (Quản lý tồn kho / Inventory)
+- **Trừ kho khi Seller xác nhận**: Đã bổ sung logic trừ số lượng tồn kho (inventory_quantity) của từng Product Variant vào trong API `POST /admin/orders/:id/sync-shipping`. Khi Seller/Admin duyệt đẩy đơn, hệ thống không chỉ gọi sang GHN mà còn tự động tính toán trừ kho các mặt hàng có trong đơn.
+- **Rollback khi huỷ đơn (Canceled)**: Đã tạo thêm Subscriber `order-canceled.ts` lắng nghe event `order.canceled`. Nếu đơn hàng bị huỷ, hệ thống sẽ tự động hoàn trả (cộng lại) số lượng tồn kho tương ứng của các variant bị huỷ. Đồng thời chuẩn bị sẵn block code để bắn API huỷ vận đơn bên GHN nếu cần.
