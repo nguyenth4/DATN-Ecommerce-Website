@@ -170,7 +170,8 @@ const CheckoutPage = () => {
   const insuranceValue = cartItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
-  const [shippingFee, setShippingFee] = useState(35000);
+  const [shippingFee, setShippingFee] = useState(0);
+  const [insuranceFee, setInsuranceFee] = useState(0);
   
   useEffect(() => {
     // Call Shipping Fee API when district/ward changes
@@ -198,23 +199,27 @@ const CheckoutPage = () => {
       })
       .then(res => res.json())
       .then(data => {
-        if (data.data?.total) {
-          setShippingFee(data.data.total);
+        if (data.data) {
+          setShippingFee(data.data.service_fee || 0);
+          setInsuranceFee(data.data.insurance_fee || 0);
         } else {
           setShippingFee(0);
+          setInsuranceFee(0);
         }
       })
       .catch(error => {
         console.error("Fee API error:", error);
         setShippingFee(0);
+        setInsuranceFee(0);
       });
     } else {
       // Default initial prices before location is selected
       setShippingFee(0);
+      setInsuranceFee(0);
     }
   }, [selectedDistrict, selectedWard, shippingMethod, totalHeight, maxLength, totalWeight, maxWidth, insuranceValue]);
 
-  const rawTotal = subtotal + shippingFee;
+  const rawTotal = subtotal + shippingFee + insuranceFee;
   const walletBalance = walletData ? Number(walletData.balance) : 0;
   
   let walletDeducted = 0;
@@ -428,7 +433,7 @@ const CheckoutPage = () => {
                 >
                   <div className="option-card-header">
                     <span className="option-name">Giao hàng Nhanh</span>
-                    <span className="option-price">{shippingMethod === 'ghn' && shippingFee > 0 ? `${shippingFee.toLocaleString('vi-VN')}đ` : 'Chưa tính'}</span>
+                    <span className="option-price">{shippingMethod === 'ghn' && (shippingFee + insuranceFee) > 0 ? `${(shippingFee + insuranceFee).toLocaleString('vi-VN')}đ` : 'Chưa tính'}</span>
                   </div>
                   <span className="option-desc">Giao tốc hành 1-2 ngày</span>
                   {shippingMethod === 'ghn' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
@@ -439,7 +444,7 @@ const CheckoutPage = () => {
                 >
                   <div className="option-card-header">
                     <span className="option-name">Giao hàng Tiết kiệm</span>
-                    <span className="option-price">{shippingMethod === 'ghtk' && shippingFee > 0 ? `${shippingFee.toLocaleString('vi-VN')}đ` : 'Chưa tính'}</span>
+                    <span className="option-price">{shippingMethod === 'ghtk' && (shippingFee + insuranceFee) > 0 ? `${(shippingFee + insuranceFee).toLocaleString('vi-VN')}đ` : 'Chưa tính'}</span>
                   </div>
                   <span className="option-desc">Giao tiêu chuẩn 3-4 ngày</span>
                   {shippingMethod === 'ghtk' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
@@ -563,12 +568,19 @@ const CheckoutPage = () => {
               </div>
               <div className="summary-row">
                 <span>Phí vận chuyển</span>
-                {shippingFee > 0 ? (
+                {(shippingFee + insuranceFee) > 0 ? (
                   <span>{shippingFee.toLocaleString('vi-VN')}đ</span>
                 ) : (
                   <span style={{ color: 'var(--emerald)', fontWeight: 600 }}>Chưa tính</span>
                 )}
               </div>
+              
+              {(shippingFee + insuranceFee) > 0 && (
+                <div className="summary-row" style={{ color: 'var(--fg-mute)', fontSize: '0.85rem', marginTop: '-0.5rem' }}>
+                  <span>Phí bảo hiểm hàng hoá</span>
+                  <span>{insuranceFee.toLocaleString('vi-VN')}đ</span>
+                </div>
+              )}
 
 
               <div className="summary-row">
