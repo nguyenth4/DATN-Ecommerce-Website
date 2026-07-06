@@ -51,3 +51,13 @@ Hoàn thiện luồng Checkout (Thanh toán), bao gồm:
 - **API GHN/GHTK**: Nếu muốn dùng GHTK thực thụ, bạn sẽ cần tạo thêm route `/store/ghtk/fee` và `/store/ghtk/soc` ở Backend, sau đó ở Frontend gán URL endpoint tương ứng khi chọn GHTK thay vì lấy giá trị mô phỏng proxy qua GHN.
 - **Cấu hình Cart & Order Medusa SDK**: Trong route `checkout/route.ts`, hãy bổ sung hoàn chỉnh bằng các module chính thống của Medusa `cartService`, `orderService` để tạo đơn thật xuống DB nếu team muốn xài hoàn toàn core Medusa cho phần Orders.
 - **Env variables**: Đảm bảo add ENV cho `GHN_TOKEN`, `GHN_SHOP_ID` ở `.env` của backend để API tạo vận đơn hoạt động được.
+
+## 6. Cập nhật mới (Tích hợp thanh toán)
+- **Cổng thanh toán & Callback**: Đã bổ sung giả lập tạo URL thanh toán cho `MoMo`, `ZaloPay`, và `VNPay` tại `POST /store/checkout`.
+- **API Callback**: Đã tạo đầy đủ 3 API route xử lý Callback trả về (GET) cho `momo`, `vnpay`, `zalopay` tại `api/store/payment/[gateway]/callback/route.ts`. Khi nhận được Callback thành công, hệ thống tự động phát event `order.placed` với `payment_status: "paid"` và chuyển hướng về trang Frontend `http://localhost:5173/order-success`.
+- **Thanh toán COD**: Nếu phương thức là `cod`, API Checkout sẽ trực tiếp cập nhật `payment_status` là `"pending"` và không qua cổng thanh toán, đồng thời phát event `order.placed` để đẩy đơn qua giao hàng.
+
+## 7. Cập nhật mới (Đẩy đơn vận chuyển Giao Hàng Nhanh)
+- **Thay đổi luồng đẩy vận đơn**: Đã vô hiệu hóa tính năng tự động tạo vận đơn bên trong Subscriber `order.placed` nhằm đảm bảo đơn hàng chưa được xác nhận sẽ không bị đẩy nhầm sang hệ thống GHN.
+- **Tạo API cho Seller xác nhận đơn**: Xây dựng endpoint mới dành cho Admin/Seller tại `POST /admin/orders/:id/sync-shipping`.
+- **Chức năng API**: Khi Admin kích hoạt API này, hệ thống sẽ gom dữ liệu đơn hàng (trọng lượng, số lượng, địa chỉ...) gọi sang GHN API để khởi tạo Vận đơn (Shipping Order). Sau đó tiến hành lấy `order_code` trả về từ GHN và lưu vào metadata của order Medusa dưới trường `tracking_code`.

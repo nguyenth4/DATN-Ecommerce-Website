@@ -26,6 +26,9 @@ export default async function orderPlacedHandler({
   console.log(`[Order Placed] Capturing Payment for order ${orderId}`);
 
   // 3. Push to GHN/GHTK (Shipping Order Create)
+  // This logic has been moved to the Seller Confirmation API
+  // at POST /admin/orders/:id/sync-shipping
+  /*
   try {
     const token = process.env.GHN_TOKEN;
     const shopId = process.env.GHN_SHOP_ID;
@@ -73,6 +76,7 @@ export default async function orderPlacedHandler({
   } catch (error) {
     console.error(`[Order Placed] Failed to sync with GHN:`, error);
   }
+  */
 }
 
 export const config: SubscriberConfig = {
