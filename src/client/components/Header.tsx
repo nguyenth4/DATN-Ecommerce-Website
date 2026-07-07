@@ -12,6 +12,7 @@ const Header = () => {
   const [compareCount, setCompareCount] = useState(getCompareList().length);
   const [wishlistCount, setWishlistCount] = useState(getWishlist().length);
   const [cartCount, setCartCount] = useState(getCartCount());
+  const [customerInfo, setCustomerInfo] = useState<any>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,15 +30,23 @@ const Header = () => {
     const handleCartUpdate = () => {
       setCartCount(getCartCount());
     };
+    const handleAuthChange = () => {
+      const info = localStorage.getItem('customer_info');
+      setCustomerInfo(info ? JSON.parse(info) : null);
+    };
+    
+    handleAuthChange();
     
     window.addEventListener('compare-updated', handleCompareUpdate);
     window.addEventListener('wishlist-updated', handleWishlistUpdate);
     window.addEventListener('cart-updated', handleCartUpdate);
+    window.addEventListener('customer-auth-change', handleAuthChange);
     
     return () => {
       window.removeEventListener('compare-updated', handleCompareUpdate);
       window.removeEventListener('wishlist-updated', handleWishlistUpdate);
       window.removeEventListener('cart-updated', handleCartUpdate);
+      window.removeEventListener('customer-auth-change', handleAuthChange);
     };
   }, []);
 
@@ -90,9 +99,18 @@ const Header = () => {
 
 
           <div className="icon-row">
-            <Link to="/account" className="icon-btn" aria-label="Tài khoản">
-              <User size={20} />
-            </Link>
+            {customerInfo ? (
+              <Link to="/account" className="icon-btn" aria-label="Tài khoản" title={`Chào, ${customerInfo.first_name || 'bạn'}`} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <User size={20} />
+                <span className="text-xs font-semibold" style={{ fontSize: '0.8rem', fontWeight: 600, maxWidth: '70px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {customerInfo.first_name}
+                </span>
+              </Link>
+            ) : (
+              <Link to="/login" className="icon-btn" aria-label="Đăng nhập" title="Đăng nhập">
+                <User size={20} />
+              </Link>
+            )}
             <Link to="/compare" className="icon-btn" aria-label="Compare" title="So sánh sản phẩm">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M16 3h5v5M21 3L14 10M8 21H3v-5M3 21l7-7"/>

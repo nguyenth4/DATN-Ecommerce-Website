@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import '../styles/account.css';
 import '../styles/order-tracking.css';
 import { 
@@ -18,6 +18,9 @@ import { useProducts } from '../services/product.service';
 import { walletService } from '../services/wallet.service';
 import { getWishlist } from '../utils/wishlist';
 import ProductCard from '../components/ProductCard';
+
+const MEDUSA_BACKEND_URL = (import.meta as any).env?.VITE_MEDUSA_BACKEND_URL || 'http://localhost:9000';
+const PUBLISHABLE_KEY = (import.meta as any).env?.VITE_MEDUSA_PUBLISHABLE_KEY || 'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483';
 
 // Mock Orders Data
 const MOCK_ORDERS = [
@@ -117,17 +120,78 @@ const MOCK_ORDERS = [
 ];
 
 const AccountPage = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'addresses' | 'wishlist' | 'wallet' | 'password' | 'policies'>('profile');
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [walletData, setWalletData] = useState<any>(null);
+  const [customerId, setCustomerId] = useState<string | null>(null);
+
+  // Profile form state
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [gender, setGender] = useState('Nam');
+  const [dob, setDob] = useState('1998-05-15');
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Fetch profile on mount
+  useEffect(() => {
+    const token = localStorage.getItem('customer_token');
+    if (!token) {
+      navigate('/login', { state: { from: location } });
+      return;
+    }
+
+    const fetchProfile = async () => {
+      try {
+        const res = await fetch(`${MEDUSA_BACKEND_URL}/store/customers/me`, {
+          headers: {
+            'x-publishable-api-key': PUBLISHABLE_KEY,
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (res.ok) {
+          const { customer } = await res.json();
+          if (customer) {
+            setCustomerId(customer.id);
+            setFirstName(customer.first_name || '');
+            setLastName(customer.last_name || '');
+            setEmail(customer.email || '');
+            setPhone(customer.phone || '');
+            
+            // cache user details
+            localStorage.setItem('customer_info', JSON.stringify({
+              id: customer.id,
+              email: customer.email,
+              first_name: customer.first_name,
+              last_name: customer.last_name,
+              phone: customer.phone,
+            }));
+          }
+        } else {
+          // Token expired or invalid
+          localStorage.removeItem('customer_token');
+          localStorage.removeItem('customer_info');
+          navigate('/login', { state: { from: location } });
+        }
+      } catch (err) {
+        console.error("Fetch profile error:", err);
+      }
+    };
+
+    fetchProfile();
+  }, [navigate]);
 
   useEffect(() => {
     if (activeTab === 'wallet') {
-      walletService.getWallet('cus_demo_123')
+      const targetCusId = customerId || 'cus_demo_123';
+      walletService.getWallet(targetCusId)
         .then(res => setWalletData(res.wallet))
         .catch(console.error);
     }
-  }, [activeTab]);
+  }, [activeTab, customerId]);
   
   const [wishlistIds, setWishlistIds] = useState<string[]>(getWishlist());
 
@@ -154,27 +218,55 @@ const AccountPage = () => {
       .filter(Boolean);
   }, [productsData, wishlistIds]);
 
-  // Profile form state
-  const [firstName, setFirstName] = useState('Trần');
-  const [lastName, setLastName] = useState('Ngọc');
-  const [email, setEmail] = useState('tran.ngoc@email.com');
-  const [phone, setPhone] = useState('0912 345 678');
-  const [gender, setGender] = useState('Nam');
-  const [dob, setDob] = useState('1998-05-15');
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  const handleSaveProfile = async () => {
+    const token = localStorage.getItem('customer_token');
+    if (!token) return;
 
-  const handleSaveProfile = () => {
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+    try {
+      const res = await fetch(`${MEDUSA_BACKEND_URL}/store/customers/me`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-publishable-api-key': PUBLISHABLE_KEY,
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          first_name: firstName,
+          last_name: lastName,
+          phone: phone
+        })
+      });
+      if (res.ok) {
+        const { customer } = await res.json();
+        setSaveSuccess(true);
+        localStorage.setItem('customer_info', JSON.stringify({
+          id: customer.id,
+          email: customer.email,
+          first_name: customer.first_name,
+          last_name: customer.last_name,
+          phone: customer.phone,
+        }));
+        window.dispatchEvent(new Event('customer-auth-change'));
+        setTimeout(() => setSaveSuccess(false), 3000);
+      } else {
+        const body = await res.json().catch(() => ({}));
+        alert(body?.message || 'Cập nhật thất bại');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Lỗi kết nối máy chủ');
+    }
   };
 
   const handleCancelProfile = () => {
-    setFirstName('Trần');
-    setLastName('Ngọc');
-    setEmail('tran.ngoc@email.com');
-    setPhone('0912 345 678');
-    setGender('Nam');
-    setDob('1998-05-15');
+    const cached = localStorage.getItem('customer_info');
+    if (cached) {
+      const customer = JSON.parse(cached);
+      setFirstName(customer.first_name || '');
+      setLastName(customer.last_name || '');
+      setEmail(customer.email || '');
+      setPhone(customer.phone || '');
+    }
   };
 
   const selectedOrder = MOCK_ORDERS.find(o => o.id === selectedOrderId);
@@ -273,7 +365,15 @@ const AccountPage = () => {
                   <CheckCircle size={18} style={{marginRight: '12px'}}/> Quản lý chính sách (Seller)
                 </div>
                 <div className="account-nav-divider"></div>
-                <Link to="/login" className="account-nav-item text-danger">
+                <Link 
+                  to="/login" 
+                  className="account-nav-item text-danger"
+                  onClick={() => {
+                    localStorage.removeItem('customer_token');
+                    localStorage.removeItem('customer_info');
+                    window.dispatchEvent(new Event('customer-auth-change'));
+                  }}
+                >
                   <LogOut size={18} style={{marginRight: '12px'}}/> Đăng xuất
                 </Link>
               </div>
