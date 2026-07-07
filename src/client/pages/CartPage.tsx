@@ -1,128 +1,302 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   Plus, 
   Minus, 
   X, 
   ChevronRight, 
   ArrowLeft,
-  Zap,
-  RotateCcw,
-  Star,
-  ShieldCheck
+  Trash2,
+  Check
 } from 'lucide-react';
 
 const INIT_ITEMS = [
-  { id: 1, img: 'photo-1608043152269-423dbba4e7e1', name: 'Loa Apple HomePod Thế hệ 2', variant: 'Trắng · Cặp loa Stereo · Không bảo hiểm', price: 280000, qty: 1 },
-  { id: 2, img: 'photo-1523275335684-37898b6baf30', name: 'Apple Watch Series 9', variant: '41mm · Nhôm Midnight · Dây Sport M/L', price: 680000, qty: 1 },
-  { id: 3, img: 'photo-1606220945770-b5b6c2c55bf1', name: 'Tai nghe Beats Studio Buds Pro', variant: 'Đen · Chống ồn chủ động', price: 280000, qty: 2 },
+  { id: 1, img: 'photo-1608043152269-423dbba4e7e1', name: 'Pin dự phòng Xiaomi 1C1A 20000mAh 1C 22.5W tích hợp cáp Type-C - Xám đậm', variant: '', price: 590000, oldPrice: 690000, qty: 1 },
+  { id: 2, img: 'photo-1523275335684-37898b6baf30', name: 'Apple Watch Series 9 41mm Nhôm Midnight', variant: '', price: 680000, oldPrice: 850000, qty: 1 },
 ];
 
 const PROMO_CODE = 'WELCOME20';
 const PROMO_DISCOUNT = 56000;
 
+const cartStyles = `
+  .cps-cart-page {
+    background-color: #f4f6f8;
+    min-height: 100vh;
+    font-family: 'Inter', sans-serif;
+    padding-bottom: 120px;
+    padding-top: 10px;
+  }
+  .cps-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 0 16px;
+  }
+  .cps-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding: 12px 0;
+    margin-bottom: 16px;
+  }
+  .cps-back-btn {
+    position: absolute;
+    left: 0;
+    color: #444;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .cps-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #000;
+  }
+  .cps-tabs {
+    display: flex;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 16px;
+  }
+  .cps-tab-active {
+    background-color: #2563eb;
+    color: #fff;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .cps-box {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .cps-select-all-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f3f4f6;
+  }
+  .cps-checkbox-wrap {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    gap: 8px;
+    font-size: 14px;
+    color: #444;
+  }
+  .cps-checkbox {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 1px solid #ccc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .cps-checkbox.active {
+    background-color: #2563eb;
+    border-color: #2563eb;
+    color: #fff;
+  }
+  .cps-delete-text {
+    font-size: 13px;
+    color: #6b7280;
+    cursor: pointer;
+  }
+  .cps-delete-text:hover {
+    color: #2563eb;
+  }
+  .cps-product-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid #f3f4f6;
+    align-items: flex-start;
+  }
+  .cps-product-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  .cps-product-img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border: 1px solid #f3f4f6;
+    border-radius: 8px;
+  }
+  .cps-product-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .cps-product-name {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 8px;
+    padding-right: 24px;
+  }
+  .cps-trash-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    color: #6b7280;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+  }
+  .cps-trash-btn:hover {
+    color: #2563eb;
+  }
+  .cps-price-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .cps-price {
+    color: #2563eb;
+    font-weight: 600;
+    font-size: 15px;
+  }
+  .cps-old-price {
+    color: #9ca3af;
+    font-size: 13px;
+    text-decoration: line-through;
+  }
+  .cps-qty-controls {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    height: 28px;
+    width: fit-content;
+  }
+  .cps-qty-btn {
+    width: 28px;
+    height: 100%;
+    background: #f9fafb;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #4b5563;
+  }
+  .cps-qty-input {
+    width: 32px;
+    height: 100%;
+    border: none;
+    border-left: 1px solid #e5e7eb;
+    border-right: 1px solid #e5e7eb;
+    text-align: center;
+    font-size: 13px;
+    color: #111;
+    background: #fff;
+  }
+  .cps-bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #fff;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+    padding: 12px 16px;
+    z-index: 50;
+  }
+  .cps-bottom-content {
+    max-width: 600px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .cps-total-info {
+    display: flex;
+    flex-direction: column;
+  }
+  .cps-total-label {
+    font-size: 14px;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .cps-total-price {
+    color: #2563eb;
+    font-weight: 700;
+    font-size: 16px;
+  }
+  .cps-save-text {
+    font-size: 13px;
+    color: #333;
+  }
+  .cps-save-amount {
+    color: #2563eb;
+  }
+  .cps-buy-btn {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 32px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+  }
+  .cps-buy-btn:hover {
+    background: #1d4ed8;
+  }
+  .cps-ghn-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #333;
+  }
+  .cps-ghn-select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    font-size: 14px;
+    background: #fff;
+    outline: none;
+  }
+  .cps-ghn-select:focus {
+    border-color: #2563eb;
+  }
+  .cps-shipping-fee-text {
+    font-size: 14px;
+    color: #333;
+    display: flex;
+    justify-content: space-between;
+    margin-top: 12px;
+    border-top: 1px dashed #e5e7eb;
+    padding-top: 12px;
+  }
+`;
 
 const CartPage = () => {
   const [items, setItems] = useState(INIT_ITEMS);
-  const [promo, setPromo] = useState('');
-  const [promoApplied, setPromoApplied] = useState(false);
-
+  const [selectedItems, setSelectedItems] = useState<number[]>(INIT_ITEMS.map(i => i.id));
+  
   // Shipping Fee State
-  const [provinces, setProvinces] = useState<any[]>([]);
-  const [districts, setDistricts] = useState<any[]>([]);
-  const [wards, setWards] = useState<any[]>([]);
-  
-  const [selectedProvince, setSelectedProvince] = useState('');
-  const [selectedDistrict, setSelectedDistrict] = useState('');
-  const [selectedWard, setSelectedWard] = useState('');
-  
-  const [shippingFee, setShippingFee] = useState<number>(0);
-
-  // Fetch Provinces
-  useEffect(() => {
-    fetch('https://esgoo.net/api-tinhthanh/1/0.htm')
-      .then(res => res.json())
-      .then(data => {
-        if (data.error === 0) setProvinces(data.data);
-      })
-      .catch(console.error);
-  }, []);
-
-  // Fetch Districts
-  useEffect(() => {
-    if (selectedProvince) {
-      fetch(`https://esgoo.net/api-tinhthanh/2/${selectedProvince}.htm`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.error === 0) setDistricts(data.data);
-          else setDistricts([]);
-          setWards([]);
-          setSelectedDistrict('');
-          setSelectedWard('');
-        })
-        .catch(console.error);
-    } else {
-      setDistricts([]);
-      setWards([]);
-    }
-  }, [selectedProvince]);
-
-  // Fetch Wards
-  useEffect(() => {
-    if (selectedDistrict) {
-      fetch(`https://esgoo.net/api-tinhthanh/3/${selectedDistrict}.htm`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.error === 0) setWards(data.data);
-          else setWards([]);
-          setSelectedWard('');
-        })
-        .catch(console.error);
-    } else {
-      setWards([]);
-    }
-  }, [selectedDistrict]);
-
-  // Fetch Shipping Fee
-  useEffect(() => {
-    if (selectedDistrict && selectedWard) {
-      const totalWeight = items.reduce((acc, item) => acc + 250 * item.qty, 0);
-      const insuranceValue = items.reduce((acc, item) => acc + item.price * item.qty, 0);
-
-      fetch('http://localhost:9000/store/ghn/fee', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          from_district_id: 1442,
-          from_ward_code: "21211",
-          service_type_id: 2, // GHN Express
-          to_district_id: parseInt(selectedDistrict) || 1442,
-          to_ward_code: selectedWard,
-          height: 10,
-          length: 15,
-          weight: totalWeight || 250,
-          width: 10,
-          insurance_value: insuranceValue > 5000000 ? 5000000 : insuranceValue,
-          cod_failed_amount: 2000,
-          coupon: null
-        })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.data?.total) {
-          setShippingFee(data.data.total);
-        } else {
-          setShippingFee(0);
-        }
-      })
-      .catch((err) => {
-        console.error(err);
-        setShippingFee(0);
-      });
-    } else {
-      setShippingFee(0);
-    }
-  }, [selectedDistrict, selectedWard, items]);
 
   const updateQty = (id: number, delta: number) => {
     setItems((prev) => prev.map((i) => (i.id === id ? { ...i, qty: Math.max(1, i.qty + delta) } : i)));
@@ -130,190 +304,129 @@ const CartPage = () => {
 
   const removeItem = (id: number) => {
     setItems((prev) => prev.filter((i) => i.id !== id));
+    setSelectedItems((prev) => prev.filter((i) => i !== id));
   };
+  
+  const removeSelectedItems = () => {
+    setItems((prev) => prev.filter((i) => !selectedItems.includes(i.id)));
+    setSelectedItems([]);
+  }
 
-  const applyPromo = () => {
-    if (promo.trim().toUpperCase() === PROMO_CODE) {
-      setPromoApplied(true);
+  const toggleSelectAll = () => {
+    if (selectedItems.length === items.length) {
+      setSelectedItems([]);
+    } else {
+      setSelectedItems(items.map(i => i.id));
+    }
+  };
+  
+  const toggleSelectItem = (id: number) => {
+    if (selectedItems.includes(id)) {
+      setSelectedItems(prev => prev.filter(i => i !== id));
+    } else {
+      setSelectedItems(prev => [...prev, id]);
     }
   };
 
-  const itemCount = items.reduce((sum, i) => sum + i.qty, 0);
-  const subtotal = items.reduce((sum, i) => sum + i.price * i.qty, 0);
-  const tax = Math.round(subtotal * 0.08);
-  const discount = promoApplied ? PROMO_DISCOUNT : 0;
-  const total = subtotal + tax + shippingFee - discount;
-
+  const selectedItemsData = items.filter(i => selectedItems.includes(i.id));
+  const subtotal = selectedItemsData.reduce((sum, i) => sum + i.price * i.qty, 0);
+  const oldTotal = selectedItemsData.reduce((sum, i) => sum + i.oldPrice * i.qty, 0);
+  const savedAmount = oldTotal - subtotal;
+  const itemCount = selectedItemsData.reduce((sum, i) => sum + i.qty, 0);
 
   return (
     <>
-      <main id="main">
-
-        <section className="page-head">
-          <div className="container">
-            <div className="crumbs"><Link to="/">Trang chủ</Link> <span className="sep">/</span> <span>Giỏ hàng</span></div>
-            <h1>Giỏ hàng của bạn</h1>
-            <p>{itemCount} {itemCount === 1 ? 'sản phẩm' : 'sản phẩm'} · sẵn sàng giao. Miễn phí vận chuyển cho đơn hàng này. Dự kiến giao hàng 21 – 23 Tháng 5.</p>
+      <style>{cartStyles}</style>
+      <div className="cps-cart-page">
+        <div className="cps-container">
+          
+          <div className="cps-header">
+            <Link to="/" className="cps-back-btn">
+              <ArrowLeft size={20} style={{ marginRight: '4px' }} />
+            </Link>
+            <h1 className="cps-title">Giỏ hàng của bạn</h1>
           </div>
-        </section>
 
-        <section className="section">
-          <div className="container">
-            <div className="cart-layout">
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+             <div className="cps-tab-active">Giỏ hàng</div>
+          </div>
 
-              <div>
-                {items.length > 0 ? (
-                  <div className="cart-list">
-                    {items.map((item) => (
-                      <article className="cart-row" key={item.id}>
-                        <div className="pic">
-                          <img src={`https://images.unsplash.com/${item.img}?w=200&q=80&auto=format&fit=crop`} alt="" />
-                        </div>
-                        <div className="info">
-                          <div className="name">{item.name}</div>
-                          <div className="variant">{item.variant}</div>
-                        </div>
-                        <div className="qty">
-                          <button aria-label="Decrease" onClick={() => updateQty(item.id, -1)}><Minus size={16} /></button>
-                          <input type="text" value={item.qty} inputMode="numeric" aria-label="Quantity" readOnly />
-                          <button aria-label="Increase" onClick={() => updateQty(item.id, 1)}><Plus size={16} /></button>
-                        </div>
-                        <span className="subtotal">{(item.price * item.qty).toLocaleString('vi-VN')}đ</span>
-                        <button className="remove" aria-label="Remove" onClick={() => removeItem(item.id)}><X size={18} /></button>
-
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <p>Giỏ hàng của bạn đang trống. <Link to="/shop">Tiếp tục mua sắm →</Link></p>
-                )}
-
-                <div style={{ marginTop: 'var(--s5)', display: 'flex', gap: 'var(--s3)', flexWrap: 'wrap' }}>
-                  <Link to="/products" className="btn btn--ghost"><ArrowLeft size={16} style={{marginRight: '8px'}}/> Tiếp tục mua sắm</Link>
-                  <button className="btn btn--ghost">Cập nhật giỏ hàng</button>
+          <div className="cps-box">
+            <div className="cps-select-all-bar">
+              <div className="cps-checkbox-wrap" onClick={toggleSelectAll}>
+                <div className={`cps-checkbox ${selectedItems.length === items.length && items.length > 0 ? 'active' : ''}`}>
+                  {selectedItems.length === items.length && items.length > 0 && <Check size={14} />}
                 </div>
-
-                {/* Trust strip */}
-                <div style={{ marginTop: 'var(--s7)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--s4)', padding: 'var(--s5)', background: 'var(--bg)', borderRadius: 'var(--r)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s3)' }}>
-                    <div style={{ width: '40px', height: '40px', background: 'var(--indigo-soft)', color: 'var(--indigo)', borderRadius: '999px', display: 'grid', placeItems: 'center' }}>
-                      <Zap size={20} />
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>Giao hàng nhanh miễn phí</div>
-                      <div style={{ fontSize: '11px', color: 'var(--fg-mute)' }}>2 — 3 ngày làm việc</div>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s3)' }}>
-                    <div style={{ width: '40px', height: '40px', background: 'var(--indigo-soft)', color: 'var(--indigo)', borderRadius: '999px', display: 'grid', placeItems: 'center' }}>
-                      <RotateCcw size={20} />
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>30 ngày đổi trả miễn phí</div>
-                      <div style={{ fontSize: '11px', color: 'var(--fg-mute)' }}>Không cần lý do</div>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s3)' }}>
-                    <div style={{ width: '40px', height: '40px', background: 'var(--indigo-soft)', color: 'var(--indigo)', borderRadius: '999px', display: 'grid', placeItems: 'center' }}>
-                      <Star size={20} />
-                    </div>
-                    <div>
-                      <div style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>Bảo hành 2 năm</div>
-                      <div style={{ fontSize: '11px', color: 'var(--fg-mute)' }}>Cho mọi đơn hàng Sprylo</div>
-                    </div>
-                  </div>
-                </div>
+                <span>Chọn tất cả</span>
               </div>
+              <div className="cps-delete-text" onClick={removeSelectedItems}>
+                Xóa sản phẩm đã chọn
+              </div>
+            </div>
 
-              <aside className="cart-summary">
-                <h3>Tóm tắt đơn hàng</h3>
+            {items.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '24px 0', color: '#6b7280' }}>
+                Giỏ hàng của bạn đang trống
+              </div>
+            )}
 
-                <div className="promo-input">
-                  <input
-                    type="text"
-                    placeholder="Mã giảm giá"
-                    value={promo}
-                    onChange={(e) => setPromo(e.target.value)}
-                  />
-                  <button onClick={applyPromo}>Áp dụng</button>
-                </div>
-
-                <div style={{ marginBottom: 'var(--s4)' }}>
-                  <p style={{ fontSize: '12px', fontWeight: 600, marginBottom: '8px', color: 'var(--fg-mute)' }}>TÍNH PHÍ VẬN CHUYỂN (GHN)</p>
-                  <select 
-                    style={{ width: '100%', padding: '10px', marginBottom: '8px', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '14px', background: 'var(--bg)' }}
-                    value={selectedProvince} onChange={e => setSelectedProvince(e.target.value)}
+            <div className="cps-product-list">
+              {items.map((item) => (
+                <div className="cps-product-item" key={item.id}>
+                  <div 
+                    className="cps-checkbox-wrap" 
+                    onClick={() => toggleSelectItem(item.id)}
+                    style={{ marginTop: '30px' }}
                   >
-                    <option value="">Chọn Tỉnh/Thành phố</option>
-                    {provinces.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
-                  <select 
-                    style={{ width: '100%', padding: '10px', marginBottom: '8px', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '14px', background: 'var(--bg)' }}
-                    value={selectedDistrict} onChange={e => setSelectedDistrict(e.target.value)}
-                    disabled={!selectedProvince}
-                  >
-                    <option value="">Chọn Quận/Huyện</option>
-                    {districts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                  </select>
-                  <select 
-                    style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '14px', background: 'var(--bg)' }}
-                    value={selectedWard} onChange={e => setSelectedWard(e.target.value)}
-                    disabled={!selectedDistrict}
-                  >
-                    <option value="">Chọn Phường/Xã</option>
-                    {wards.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-                  </select>
-                </div>
-
-                <div className="cart-line">
-                  <span>Tạm tính · {itemCount} sản phẩm</span>
-                  <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{subtotal.toLocaleString('vi-VN')}đ</span>
-                </div>
-                <div className="cart-line">
-                  <span>Phí vận chuyển</span>
-                  {shippingFee > 0 ? (
-                    <span style={{ color: 'var(--ink)', fontWeight: 600 }}>{shippingFee.toLocaleString('vi-VN')}đ</span>
-                  ) : (
-                    <span style={{ color: 'var(--emerald)', fontWeight: 600 }}>Chưa tính</span>
-                  )}
-                </div>
-                <div className="cart-line">
-                  <span>Thuế ước tính (8%)</span>
-                  <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{tax.toLocaleString('vi-VN')}đ</span>
-                </div>
-                {promoApplied && (
-                  <div className="cart-line">
-                    <span>Khuyến mãi · {PROMO_CODE}</span>
-                    <span style={{ color: 'var(--rose)', fontWeight: 600 }}>−{discount.toLocaleString('vi-VN')}đ</span>
+                    <div className={`cps-checkbox ${selectedItems.includes(item.id) ? 'active' : ''}`}>
+                      {selectedItems.includes(item.id) && <Check size={14} />}
+                    </div>
                   </div>
-                )}
-
-                <div className="cart-line is-total"><span>Tổng cộng</span><span>{total.toLocaleString('vi-VN')}đ</span></div>
-
-
-                <Link to="/checkout" className="btn btn--indigo btn--block">Tiến hành thanh toán <ChevronRight size={18} style={{marginLeft: '4px'}}/></Link>
-
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--s3)', marginTop: 'var(--s5)', flexWrap: 'wrap' }}>
-                  {['VISA', 'MASTERCARD', 'AMEX', 'PAYPAL', 'APPLE PAY'].map((method) => (
-                    <span
-                      key={method}
-                      style={{ fontSize: '11px', color: 'var(--fg-mute)', padding: '6px 10px', background: 'var(--paper)', borderRadius: '4px' }}
-                    >
-                      {method}
-                    </span>
-                  ))}
+                  
+                  <img src={`https://images.unsplash.com/${item.img}?w=200&q=80&auto=format&fit=crop`} alt={item.name} className="cps-product-img" />
+                  
+                  <div className="cps-product-info">
+                    <div className="cps-product-name">{item.name}</div>
+                    <button className="cps-trash-btn" onClick={() => removeItem(item.id)}>
+                      <Trash2 size={16} />
+                    </button>
+                    
+                    <div className="cps-price-row">
+                      <span className="cps-price">{item.price.toLocaleString('vi-VN')}đ</span>
+                      <span className="cps-old-price">{item.oldPrice.toLocaleString('vi-VN')}đ</span>
+                    </div>
+                    
+                    <div className="cps-qty-controls">
+                      <button className="cps-qty-btn" onClick={() => updateQty(item.id, -1)}><Minus size={14} /></button>
+                      <input type="text" className="cps-qty-input" value={item.qty} readOnly />
+                      <button className="cps-qty-btn" onClick={() => updateQty(item.id, 1)}><Plus size={14} /></button>
+                    </div>
+                  </div>
                 </div>
-
-                <p style={{ marginTop: 'var(--s5)', fontSize: '11px', color: 'var(--fg-mute)', textAlign: 'center', lineHeight: 1.6 }}>
-                   <ShieldCheck size={12} style={{display: 'inline', verticalAlign: 'middle', marginRight: '4px'}}/> Giao dịch <Link to="/checkout" style={{ color: 'inherit', textDecoration: 'underline' }}>thanh toán</Link> được mã hoá · Bảo mật SSL. Thông tin thanh toán không bao giờ được lưu trữ trên máy chủ của chúng tôi.
-                </p>
-              </aside>
-
+              ))}
             </div>
           </div>
-        </section>
 
-      </main>
+        </div>
+
+        <div className="cps-bottom-bar">
+          <div className="cps-bottom-content">
+            <div className="cps-total-info">
+              <div className="cps-total-label">
+                Tạm tính: <span className="cps-total-price">{subtotal.toLocaleString('vi-VN')}đ</span>
+              </div>
+              {savedAmount > 0 && (
+                <div className="cps-save-text">
+                  Tiết kiệm <span className="cps-save-amount">{savedAmount.toLocaleString('vi-VN')}đ</span>
+                </div>
+              )}
+            </div>
+            <Link to="/checkout" className="cps-buy-btn">
+              Mua ngay ({itemCount})
+            </Link>
+          </div>
+        </div>
+      </div>
     </>
   );
 };
