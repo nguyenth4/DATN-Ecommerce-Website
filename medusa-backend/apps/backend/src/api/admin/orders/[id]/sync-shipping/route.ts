@@ -45,15 +45,15 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
           if (item.variant_id) {
             try {
               // Retrieve the current variant to get its inventory_quantity
-              const variant = await productModuleService.retrieveProductVariant(item.variant_id);
+              const variant = (await productModuleService.retrieveProductVariant(item.variant_id)) as any;
               if (variant && typeof variant.inventory_quantity === 'number') {
                 const newQuantity = Math.max(0, variant.inventory_quantity - item.quantity);
-                await productModuleService.updateProductVariants([
+                await productModuleService.updateProductVariants(
+                  item.variant_id,
                   {
-                    id: item.variant_id,
                     inventory_quantity: newQuantity
-                  }
-                ]);
+                  } as any
+                );
                 console.log(`[Admin] Deducted ${item.quantity} from variant ${item.variant_id}. New stock: ${newQuantity}`);
               }
             } catch (invErr) {
@@ -121,8 +121,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     // 3. Save Tracking Code to Order Metadata
     try {
       // Use Medusa v2 method to update metadata
-      await orderService.updateOrders({
-        id: id,
+      await orderService.updateOrders(id, {
         metadata: {
           tracking_code: trackingCode,
           shipping_provider: "GHN"

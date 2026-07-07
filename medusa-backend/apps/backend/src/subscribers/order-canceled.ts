@@ -29,17 +29,17 @@ export default async function orderCanceledHandler({
       for (const item of order.items) {
         if (item.variant_id) {
           try {
-            const variant = await productModuleService.retrieveProductVariant(item.variant_id);
+            const variant = (await productModuleService.retrieveProductVariant(item.variant_id)) as any;
             if (variant && typeof variant.inventory_quantity === 'number') {
               // Rollback: increase the inventory by the canceled item quantity
               const newQuantity = variant.inventory_quantity + item.quantity;
               
-              await productModuleService.updateProductVariants([
+              await productModuleService.updateProductVariants(
+                item.variant_id,
                 {
-                  id: item.variant_id,
                   inventory_quantity: newQuantity
-                }
-              ]);
+                } as any
+              );
               console.log(`[Order Canceled] Rolled back ${item.quantity} to variant ${item.variant_id}. Restored stock: ${newQuantity}`);
             }
           } catch (invErr) {
