@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { getCompareList, toggleCompareProduct } from '../utils/compare';
-import { 
-  Star, 
-  Heart, 
-  ChevronRight, 
+import {
+  Star,
+  Heart,
+  ChevronRight,
   ChevronLeft,
   Search,
   Filter,
@@ -21,7 +21,7 @@ const ProductsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [compareList, setCompareList] = useState(getCompareList());
-  
+
   // Filter states
   const [search, setSearch] = useState(searchParams.get('q') || '');
   const [debouncedSearch, setDebouncedSearch] = useState(search);
@@ -76,8 +76,8 @@ const ProductsPage = () => {
     let amount = 0;
     if (p.variants?.length > 0) {
       amount = p.variants[0].prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount
-            || p.variants[0].prices?.[0]?.amount
-            || 0;
+        || p.variants[0].prices?.[0]?.amount
+        || 0;
     }
     return amount.toLocaleString('vi-VN') + 'đ';
   };
@@ -121,19 +121,19 @@ const ProductsPage = () => {
                 <h1>Tất cả sản phẩm</h1>
                 <p>Khám phá bộ sưu tập công nghệ mới nhất từ điện thoại, máy tính đến phụ kiện âm thanh.</p>
               </div>
-              
+
               {/* Search Implementation */}
               <div className="search-bar" style={{ position: 'relative', width: '100%', maxWidth: '400px' }}>
                 <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-mute)' }} />
-                <input 
-                  type="text" 
-                  placeholder="Tìm kiếm sản phẩm..." 
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm sản phẩm..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  style={{ 
-                    width: '100%', 
-                    padding: '10px 16px 10px 40px', 
-                    borderRadius: '50px', 
+                  style={{
+                    width: '100%',
+                    padding: '10px 16px 10px 40px',
+                    borderRadius: '50px',
                     border: '1px solid var(--border)',
                     background: 'var(--paper)',
                     fontSize: '14px'
@@ -147,8 +147,8 @@ const ProductsPage = () => {
         <section className="section">
           <div className="container">
             {/* Mobile Filter Trigger */}
-            <button 
-              className="btn btn--paper mobile-filter-btn" 
+            <button
+              className="btn btn--paper mobile-filter-btn"
               onClick={() => setDrawerOpen(true)}
               style={{ display: 'none', marginBottom: 'var(--s4)', width: '100%', justifyContent: 'center' }}
             >
@@ -164,10 +164,10 @@ const ProductsPage = () => {
                 </div>
 
                 <div className="filter-block">
-                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--s3)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--s3)' }}>
                     <h3>Danh mục</h3>
                     {selectedCats.length > 0 && (
-                      <button 
+                      <button
                         onClick={() => { setSelectedCats([]); searchParams.delete('category_id'); setSearchParams(searchParams); }}
                         style={{ fontSize: '12px', color: 'var(--indigo)', fontWeight: 600 }}
                       >
@@ -177,12 +177,12 @@ const ProductsPage = () => {
                   </div>
                   {categories.map((cat: any) => (
                     <label key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '4px 0' }}>
-                      <input 
-                        type="checkbox" 
+                      <input
+                        type="checkbox"
                         checked={selectedCats.includes(cat.id)}
                         onChange={() => toggleCategory(cat.id)}
-                      /> 
-                      {cat.name} 
+                      />
+                      {cat.name}
                       <span className="ct" style={{ marginLeft: 'auto', opacity: 0.5, fontSize: '12px' }}>
                         {cat.products?.length || ''}
                       </span>
@@ -209,7 +209,7 @@ const ProductsPage = () => {
                   <label><input type="checkbox" /> Đang giảm giá</label>
                   <label><input type="checkbox" /> Sản phẩm mới</label>
                 </div>
-                
+
                 <button className="btn btn--indigo btn--block" onClick={() => setDrawerOpen(false)}>
                   Xem {totalCount} sản phẩm
                 </button>
@@ -218,12 +218,12 @@ const ProductsPage = () => {
               <div>
                 <div className="shop-toolbar">
                   <span className="count">
-                    {isLoadingProducts ? 'Đang tải...' : `Hiển thị ${(page-1)*limit + 1} – ${Math.min(page*limit, totalCount)} của ${totalCount} sản phẩm`}
+                    {isLoadingProducts ? 'Đang tải...' : `Hiển thị ${(page - 1) * limit + 1} – ${Math.min(page * limit, totalCount)} của ${totalCount} sản phẩm`}
                   </span>
                   <div style={{ display: 'flex', gap: 'var(--s3)', alignItems: 'center' }}>
                     <span style={{ fontSize: 'var(--text-xs)', color: 'var(--fg-mute)', fontWeight: 600 }}>SẮP XẾP</span>
-                    <select 
-                      value={sortBy} 
+                    <select
+                      value={sortBy}
                       onChange={(e) => handleSortChange(e.target.value)}
                       style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--paper)', fontSize: '14px' }}
                     >
@@ -244,17 +244,19 @@ const ProductsPage = () => {
                 ) : products.length > 0 ? (
                   <div className="shop-grid">
                     {products.map((p: any) => {
-                      const pPrice = p.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount 
-                        || p.variants?.[0]?.prices?.[0]?.amount 
-                        || p.variants?.[0]?.price 
-                        || p.price 
+                      const pPrice = p.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount
+                        || p.variants?.[0]?.prices?.[0]?.amount
+                        || p.variants?.[0]?.price
+                        || p.price
                         || 0;
 
                       const displayPrice = typeof pPrice === 'number' && pPrice > 0 ? pPrice.toLocaleString('vi-VN') + 'đ' : 'Liên hệ';
                       const oldPrice = p.variants?.[0]?.oldPrice;
                       const displayOldPrice = oldPrice ? oldPrice.toLocaleString('vi-VN') + 'đ' : null;
 
-                      const stock = p.variants?.[0]?.stock !== undefined ? p.variants[0].stock : 10;
+                      const stock = p.variants?.[0]?.inventory_quantity !== undefined
+                        ? p.variants[0].inventory_quantity
+                        : (p.variants?.[0]?.stock !== undefined ? p.variants[0].stock : 10);
                       const imgUrl = getProductImage(p);
                       const rating = Number(p.metadata?.rating || 5);
                       const ratingCount = p.metadata?.review_count || 10;
@@ -280,7 +282,7 @@ const ProductsPage = () => {
                             </div>
                             <span className="count">({ratingCount})</span>
                           </div>
-                          <div 
+                          <div
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
@@ -296,8 +298,8 @@ const ProductsPage = () => {
                             }}
                           >
                             <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', margin: 0 }}>
-                              <input 
-                                type="checkbox" 
+                              <input
+                                type="checkbox"
                                 onChange={() => {
                                   toggleCompareProduct(p.id, p.title);
                                   if (!compareList.includes(p.id)) {
@@ -306,8 +308,8 @@ const ProductsPage = () => {
                                     toast('Đã gỡ khỏi danh sách so sánh', { icon: '🗑️' });
                                   }
                                 }}
-                                style={{ 
-                                  cursor: 'pointer', 
+                                style={{
+                                  cursor: 'pointer',
                                   accentColor: 'var(--indigo, #4f46e5)',
                                   width: '14px',
                                   height: '14px'
@@ -329,8 +331,8 @@ const ProductsPage = () => {
                       <p style={{ color: 'var(--fg-mute)', marginTop: 'var(--s2)' }}>
                         Rất tiếc, chúng tôi không tìm thấy sản phẩm nào khớp với bộ lọc của bạn. Hãy thử thay đổi từ khóa hoặc bộ lọc khác.
                       </p>
-                      <button 
-                        className="btn btn--indigo" 
+                      <button
+                        className="btn btn--indigo"
                         style={{ marginTop: 'var(--s6)' }}
                         onClick={() => { setSearch(''); setSelectedCats([]); setSortBy('popular'); setSearchParams({}); }}
                       >
@@ -342,24 +344,24 @@ const ProductsPage = () => {
 
                 {totalCount > limit && (
                   <div className="pagination">
-                    <button 
-                      className="pg" 
+                    <button
+                      className="pg"
                       disabled={page === 1}
                       onClick={() => setPage(p => p - 1)}
                     >
                       <ChevronLeft size={16} />
                     </button>
                     {[...Array(Math.ceil(totalCount / limit))].map((_, i) => (
-                      <button 
-                        key={i} 
+                      <button
+                        key={i}
                         className={`pg${page === i + 1 ? ' is-active' : ''}`}
                         onClick={() => setPage(i + 1)}
                       >
                         {i + 1}
                       </button>
                     ))}
-                    <button 
-                      className="pg" 
+                    <button
+                      className="pg"
                       disabled={page === Math.ceil(totalCount / limit)}
                       onClick={() => setPage(p => p + 1)}
                     >

@@ -371,7 +371,7 @@ const ProductDetailPage = () => {
                 activeVariant={{
                   price: price,
                   oldPrice: oldPrice,
-                  stock: activeVariant.stock !== undefined ? activeVariant.stock : 0,
+                  stock: activeVariant.inventory_quantity !== undefined ? activeVariant.inventory_quantity : (activeVariant.stock !== undefined ? activeVariant.stock : 0),
                   sku: activeVariant.sku || "SPRYLO-PROD"
                 }}
                 qty={qty}
