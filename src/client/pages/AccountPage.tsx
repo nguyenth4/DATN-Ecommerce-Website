@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useProducts } from '../services/product.service';
 import { walletService } from '../services/wallet.service';
+import { authService } from '../services/auth.service';
 import { getWishlist } from '../utils/wishlist';
 import ProductCard from '../components/ProductCard';
 
@@ -138,20 +139,9 @@ const AccountPage = () => {
 
   // Fetch profile on mount
   useEffect(() => {
-    const token = localStorage.getItem('customer_token');
-    if (!token) {
-      navigate('/login', { state: { from: location } });
-      return;
-    }
-
     const fetchProfile = async () => {
       try {
-        const res = await fetch(`${MEDUSA_BACKEND_URL}/store/customers/me`, {
-          headers: {
-            'x-publishable-api-key': PUBLISHABLE_KEY,
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const res = await authService.authFetch(`${MEDUSA_BACKEND_URL}/store/customers/me`);
         if (res.ok) {
           const { customer } = await res.json();
           if (customer) {
@@ -170,10 +160,8 @@ const AccountPage = () => {
               phone: customer.phone,
             }));
           }
-        } else {
-          // Token expired or invalid
-          localStorage.removeItem('customer_token');
-          localStorage.removeItem('customer_info');
+        } else if (res.status === 401) {
+          // Handled by authFetch logging out
           navigate('/login', { state: { from: location } });
         }
       } catch (err) {
@@ -219,16 +207,11 @@ const AccountPage = () => {
   }, [productsData, wishlistIds]);
 
   const handleSaveProfile = async () => {
-    const token = localStorage.getItem('customer_token');
-    if (!token) return;
-
     try {
-      const res = await fetch(`${MEDUSA_BACKEND_URL}/store/customers/me`, {
+      const res = await authService.authFetch(`${MEDUSA_BACKEND_URL}/store/customers/me`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-publishable-api-key': PUBLISHABLE_KEY,
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           first_name: firstName,
@@ -366,12 +349,11 @@ const AccountPage = () => {
                 </div>
                 <div className="account-nav-divider"></div>
                 <Link 
-                  to="/login" 
+                  to="#" 
                   className="account-nav-item text-danger"
-                  onClick={() => {
-                    localStorage.removeItem('customer_token');
-                    localStorage.removeItem('customer_info');
-                    window.dispatchEvent(new Event('customer-auth-change'));
+                  onClick={(e) => {
+                    e.preventDefault();
+                    authService.logout();
                   }}
                 >
                   <LogOut size={18} style={{marginRight: '12px'}}/> Đăng xuất
