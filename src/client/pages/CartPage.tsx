@@ -7,16 +7,11 @@ import {
   ChevronRight, 
   ArrowLeft,
   Trash2,
-  Check
+  Check,
+  ShoppingBag
 } from 'lucide-react';
-
-const INIT_ITEMS = [
-  { id: 1, img: 'photo-1608043152269-423dbba4e7e1', name: 'Pin dự phòng Xiaomi 1C1A 20000mAh 1C 22.5W tích hợp cáp Type-C - Xám đậm', variant: '', price: 590000, oldPrice: 690000, qty: 1 },
-  { id: 2, img: 'photo-1523275335684-37898b6baf30', name: 'Apple Watch Series 9 41mm Nhôm Midnight', variant: '', price: 680000, oldPrice: 850000, qty: 1 },
-];
-
-const PROMO_CODE = 'WELCOME20';
-const PROMO_DISCOUNT = 56000;
+import { useCart, useUpdateLineItem, useRemoveLineItem } from '../services/cart.service';
+import toast from 'react-hot-toast';
 
 const cartStyles = `
   .cps-cart-page {
@@ -293,22 +288,40 @@ const cartStyles = `
 `;
 
 const CartPage = () => {
-  const [items, setItems] = useState(INIT_ITEMS);
-  const [selectedItems, setSelectedItems] = useState<number[]>(INIT_ITEMS.map(i => i.id));
+  const { data: cart, isLoading } = useCart();
+  const updateLineItem = useUpdateLineItem();
+  const removeLineItem = useRemoveLineItem();
   
-  // Shipping Fee State
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  
+  const items = cart?.items || [];
 
-  const updateQty = (id: number, delta: number) => {
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, qty: Math.max(1, i.qty + delta) } : i)));
+  useEffect(() => {
+    if (items.length > 0 && selectedItems.length === 0) {
+      setSelectedItems(items.map(i => i.id));
+    }
+  }, [items]);
+
+  const handleUpdateQty = (lineId: string, currentQty: number, delta: number) => {
+    const newQty = Math.max(1, currentQty + delta);
+    if (newQty === currentQty) return;
+    
+    updateLineItem.mutate({ lineId, quantity: newQty }, {
+      onError: () => toast.error("Không thể cập nhật số lượng")
+    });
   };
 
-  const removeItem = (id: number) => {
-    setItems((prev) => prev.filter((i) => i.id !== id));
-    setSelectedItems((prev) => prev.filter((i) => i !== id));
+  const handleRemoveItem = (lineId: string) => {
+    removeLineItem.mutate(lineId, {
+      onSuccess: () => toast.success("Đã xóa sản phẩm khỏi giỏ hàng"),
+      onError: () => toast.error("Không thể xóa sản phẩm")
+    });
   };
   
   const removeSelectedItems = () => {
-    setItems((prev) => prev.filter((i) => !selectedItems.includes(i.id)));
+    selectedItems.forEach(id => {
+      removeLineItem.mutate(id);
+    });
     setSelectedItems([]);
   }
 
@@ -320,7 +333,7 @@ const CartPage = () => {
     }
   };
   
-  const toggleSelectItem = (id: number) => {
+  const toggleSelectItem = (id: string) => {
     if (selectedItems.includes(id)) {
       setSelectedItems(prev => prev.filter(i => i !== id));
     } else {
@@ -329,10 +342,17 @@ const CartPage = () => {
   };
 
   const selectedItemsData = items.filter(i => selectedItems.includes(i.id));
-  const subtotal = selectedItemsData.reduce((sum, i) => sum + i.price * i.qty, 0);
-  const oldTotal = selectedItemsData.reduce((sum, i) => sum + i.oldPrice * i.qty, 0);
-  const savedAmount = oldTotal - subtotal;
-  const itemCount = selectedItemsData.reduce((sum, i) => sum + i.qty, 0);
+  const subtotal = selectedItemsData.reduce((sum, i) => sum + i.unit_price * i.quantity, 0);
+  
+  const itemCount = selectedItemsData.reduce((sum, i) => sum + i.quantity, 0);
+
+  if (isLoading) {
+    return (
+      <div className="cps-cart-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p>Đang tải giỏ hàng...</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -360,51 +380,54 @@ const CartPage = () => {
                 <span>Chọn tất cả</span>
               </div>
               <div className="cps-delete-text" onClick={removeSelectedItems}>
-                Xóa sản phẩm đã chọn
+                Xóa sản phẩm đã chọn ({selectedItems.length})
               </div>
             </div>
 
-            {items.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '24px 0', color: '#6b7280' }}>
-                Giỏ hàng của bạn đang trống
+            {items.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px 0', color: '#6b7280' }}>
+                <ShoppingBag size={48} style={{ margin: '0 auto 16px', opacity: 0.2 }} />
+                <p>Giỏ hàng của bạn đang trống</p>
+                <Link to="/products" className="cps-buy-btn" style={{ marginTop: '16px', padding: '10px 24px' }}>
+                  Mua sắm ngay
+                </Link>
+              </div>
+            ) : (
+              <div className="cps-product-list">
+                {items.map((item) => (
+                  <div className="cps-product-item" key={item.id}>
+                    <div 
+                      className="cps-checkbox-wrap" 
+                      onClick={() => toggleSelectItem(item.id)}
+                      style={{ marginTop: '30px' }}
+                    >
+                      <div className={`cps-checkbox ${selectedItems.includes(item.id) ? 'active' : ''}`}>
+                        {selectedItems.includes(item.id) && <Check size={14} />}
+                      </div>
+                    </div>
+                    
+                    <img src={item.thumbnail || 'https://via.placeholder.com/80'} alt={item.title} className="cps-product-img" />
+                    
+                    <div className="cps-product-info">
+                      <div className="cps-product-name">{item.title} {item.variant.title !== 'Default Variant' ? `(${item.variant.title})` : ''}</div>
+                      <button className="cps-trash-btn" onClick={() => handleRemoveItem(item.id)}>
+                        <Trash2 size={16} />
+                      </button>
+                      
+                      <div className="cps-price-row">
+                        <span className="cps-price">{item.unit_price.toLocaleString('vi-VN')}đ</span>
+                      </div>
+                      
+                      <div className="cps-qty-controls">
+                        <button className="cps-qty-btn" onClick={() => handleUpdateQty(item.id, item.quantity, -1)}><Minus size={14} /></button>
+                        <input type="text" className="cps-qty-input" value={item.quantity} readOnly />
+                        <button className="cps-qty-btn" onClick={() => handleUpdateQty(item.id, item.quantity, 1)}><Plus size={14} /></button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
-
-            <div className="cps-product-list">
-              {items.map((item) => (
-                <div className="cps-product-item" key={item.id}>
-                  <div 
-                    className="cps-checkbox-wrap" 
-                    onClick={() => toggleSelectItem(item.id)}
-                    style={{ marginTop: '30px' }}
-                  >
-                    <div className={`cps-checkbox ${selectedItems.includes(item.id) ? 'active' : ''}`}>
-                      {selectedItems.includes(item.id) && <Check size={14} />}
-                    </div>
-                  </div>
-                  
-                  <img src={`https://images.unsplash.com/${item.img}?w=200&q=80&auto=format&fit=crop`} alt={item.name} className="cps-product-img" />
-                  
-                  <div className="cps-product-info">
-                    <div className="cps-product-name">{item.name}</div>
-                    <button className="cps-trash-btn" onClick={() => removeItem(item.id)}>
-                      <Trash2 size={16} />
-                    </button>
-                    
-                    <div className="cps-price-row">
-                      <span className="cps-price">{item.price.toLocaleString('vi-VN')}đ</span>
-                      <span className="cps-old-price">{item.oldPrice.toLocaleString('vi-VN')}đ</span>
-                    </div>
-                    
-                    <div className="cps-qty-controls">
-                      <button className="cps-qty-btn" onClick={() => updateQty(item.id, -1)}><Minus size={14} /></button>
-                      <input type="text" className="cps-qty-input" value={item.qty} readOnly />
-                      <button className="cps-qty-btn" onClick={() => updateQty(item.id, 1)}><Plus size={14} /></button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
 
         </div>
@@ -415,11 +438,9 @@ const CartPage = () => {
               <div className="cps-total-label">
                 Tạm tính: <span className="cps-total-price">{subtotal.toLocaleString('vi-VN')}đ</span>
               </div>
-              {savedAmount > 0 && (
-                <div className="cps-save-text">
-                  Tiết kiệm <span className="cps-save-amount">{savedAmount.toLocaleString('vi-VN')}đ</span>
-                </div>
-              )}
+              <div className="cps-save-text">
+                Bao gồm thuế GTGT (nếu có)
+              </div>
             </div>
             <Link to="/checkout" className="cps-buy-btn">
               Mua ngay ({itemCount})

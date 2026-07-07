@@ -151,7 +151,7 @@ const ProductDetailPage = () => {
       return matchColor && matchStorage;
     }
     return false;
-  }) || productData.variants?.[0] || { price: 0, oldPrice: 0, stock: 0, sku: "SPRYLO-PROD" };
+  }) || productData.variants?.[0] || { id: "", price: 0, oldPrice: 0, stock: 0, sku: "SPRYLO-PROD" };
 
   const price = activeVariant.prices?.find((p: any) => p.currency_code === 'vnd')?.amount 
     || activeVariant.prices?.[0]?.amount 
@@ -369,6 +369,7 @@ const ProductDetailPage = () => {
                 selectedColor={selectedColor}
                 selectedStorage={selectedStorage}
                 activeVariant={{
+                  id: activeVariant.id,
                   price: price,
                   oldPrice: oldPrice,
                   stock: activeVariant.inventory_quantity !== undefined ? activeVariant.inventory_quantity : (activeVariant.stock !== undefined ? activeVariant.stock : 0),

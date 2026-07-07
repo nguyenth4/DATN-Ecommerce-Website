@@ -14,6 +14,7 @@ interface ProductInfoProps {
   selectedColor: string;
   selectedStorage: string;
   activeVariant: {
+    id: string;
     price: number;
     oldPrice: number;
     stock: number;
@@ -25,6 +26,9 @@ interface ProductInfoProps {
   onStorageChange: (storage: string) => void;
   onQtyChange: (action: 'inc' | 'dec') => void;
 }
+
+import { useAddToCart } from '../../services/cart.service';
+import toast from 'react-hot-toast';
 
 const ProductInfo: React.FC<ProductInfoProps> = ({
   product,
@@ -42,6 +46,24 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
   const discountPercent = Math.round(
     ((activeVariant.oldPrice - activeVariant.price) / activeVariant.oldPrice) * 100
   );
+
+  const { mutate: addToCart, isPending } = useAddToCart();
+
+  const handleAddToCart = () => {
+    if (!activeVariant.id) {
+      toast.error("Vui lòng chọn phiên bản sản phẩm hợp lệ");
+      return;
+    }
+    addToCart({ variantId: activeVariant.id, quantity: qty }, {
+      onSuccess: () => {
+        toast.success(`Đã thêm ${qty} sản phẩm vào giỏ hàng!`);
+      },
+      onError: (error) => {
+        console.error("Lỗi thêm vào giỏ hàng:", error);
+        toast.error("Không thể thêm vào giỏ hàng. Vui lòng thử lại.");
+      }
+    });
+  };
 
   // Lấy giá cho từng tuỳ chọn dung lượng
   const getStoragePrice = (size: string) => {
@@ -247,13 +269,12 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
         <button
           className="btn btn-primary btn-add-cart"
           style={{ flex: 1, padding: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-          disabled={activeVariant.stock === 0}
-          onClick={() => alert(`Đã thêm ${qty} sản phẩm ${product.title} (${selectedColor} / ${selectedStorage}) vào giỏ hàng!`)}
+          disabled={activeVariant.stock === 0 || isPending}
+          onClick={handleAddToCart}
         >
-          <i className="bi bi-bag-plus"></i> Thêm giỏ hàng
+          <i className="bi bi-bag-plus"></i> {isPending ? 'Đang thêm...' : 'Thêm giỏ hàng'}
         </button>
-        <Link
-          to={activeVariant.stock > 0 ? "/checkout" : "#"}
+        <button
           className={`btn btn-accent ${activeVariant.stock === 0 ? 'disabled-link' : ''}`}
           style={{
             flex: 1,
@@ -268,9 +289,13 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
             pointerEvents: activeVariant.stock === 0 ? 'none' : 'auto',
             textAlign: 'center'
           }}
+          disabled={activeVariant.stock === 0 || isPending}
+          onClick={() => {
+            handleAddToCart();
+          }}
         >
           <i className="bi bi-lightning-charge"></i> Mua ngay
-        </Link>
+        </button>
         <button className="btn-icon" style={{ width: '48px', height: '48px', border: '1.5px solid var(--border)', borderRadius: 'var(--radius)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'white' }}>
           <i className="bi bi-heart"></i>
         </button>
