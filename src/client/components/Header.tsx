@@ -4,12 +4,14 @@ import { Menu, X, ShoppingCart, User, Heart, Search, ChevronRight } from 'lucide
 
 import { getCompareList } from '../utils/compare';
 import { getWishlist } from '../utils/wishlist';
+import { getCartCount } from '../utils/cart';
 
 const Header = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchQ, setSearchQ] = useState('');
   const [compareCount, setCompareCount] = useState(getCompareList().length);
   const [wishlistCount, setWishlistCount] = useState(getWishlist().length);
+  const [cartCount, setCartCount] = useState(getCartCount());
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,13 +26,18 @@ const Header = () => {
     const handleWishlistUpdate = () => {
       setWishlistCount(getWishlist().length);
     };
+    const handleCartUpdate = () => {
+      setCartCount(getCartCount());
+    };
     
     window.addEventListener('compare-updated', handleCompareUpdate);
     window.addEventListener('wishlist-updated', handleWishlistUpdate);
+    window.addEventListener('cart-updated', handleCartUpdate);
     
     return () => {
       window.removeEventListener('compare-updated', handleCompareUpdate);
       window.removeEventListener('wishlist-updated', handleWishlistUpdate);
+      window.removeEventListener('cart-updated', handleCartUpdate);
     };
   }, []);
 
@@ -98,7 +105,7 @@ const Header = () => {
             </Link>
             <Link to="/cart" className="icon-btn icon-btn--cart" aria-label="Giỏ hàng">
               <ShoppingCart size={20} />
-              <span className="count">0</span>
+              {cartCount > 0 && <span className="count">{cartCount}</span>}
             </Link>
             <button
               className="nav-toggle"
