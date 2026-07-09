@@ -31,7 +31,7 @@ const HomePage = () => {
   // Filter products by active tab categories if they are mapped
   // Since categories are fetched dynamically, let's map tab index to category names
   const categoryTabs = ['Điện thoại', 'Đồng hồ', 'Máy ảnh', 'Phụ kiện', 'Loa'];
-  const filteredProducts = products.filter(p => {
+  const filteredProducts = products.filter((p: any) => {
     if (activeTab === 0) return true; // Show all by default
     const targetCat = categoryTabs[activeTab].toLowerCase();
     return p.categories?.some((cat: any) => 

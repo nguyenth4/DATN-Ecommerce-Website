@@ -13,7 +13,7 @@ export const cartService = {
   },
 
   async createCart() {
-    const { cart } = await medusa.store.cart.create();
+    const { cart } = await medusa.store.cart.create({});
     this.setCartId(cart.id);
     return cart;
   },
@@ -40,7 +40,7 @@ export const cartService = {
       const cart = await this.createCart();
       cartId = cart.id;
     }
-    return await medusa.store.cart.createLineItem(cartId, {
+    return await medusa.store.cart.createLineItem(cartId!, {
       variant_id: variantId,
       quantity,
     });

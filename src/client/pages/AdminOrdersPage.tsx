@@ -1,5 +1,4 @@
-// src/client/pages/AdminOrdersPage.tsx
-import React, { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { adminOrders } from "../../shared/lib/medusa"
 import "./AdminOrdersPage.css"
 

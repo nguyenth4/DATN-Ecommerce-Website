@@ -5,7 +5,7 @@ loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 module.exports = defineConfig({
   admin: {
     path: "/app",
-    vite: (config) => {
+    vite: (config: any) => {
       return {
         ...config,
         server: {

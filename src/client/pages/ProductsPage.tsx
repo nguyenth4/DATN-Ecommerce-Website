@@ -7,9 +7,7 @@ import {
   ChevronRight,
   ChevronLeft,
   Search,
-  Filter,
   X,
-  Loader2,
   SlidersHorizontal
 } from 'lucide-react';
 import { useProducts, useCategories } from '../services/product.service';
@@ -70,17 +68,7 @@ const ProductsPage = () => {
   const totalCount = productsData?.count || 0;
   const categories = categoriesData || [];
 
-  // Price formatting helper
-  const formatPrice = (p: any) => {
-    if (!p) return 'Liên hệ';
-    let amount = 0;
-    if (p.variants?.length > 0) {
-      amount = p.variants[0].prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount
-        || p.variants[0].prices?.[0]?.amount
-        || 0;
-    }
-    return amount.toLocaleString('vi-VN') + 'đ';
-  };
+
 
   const getProductImage = (p: any) => {
     return p.thumbnail || (p.images?.[0]?.url) || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80';

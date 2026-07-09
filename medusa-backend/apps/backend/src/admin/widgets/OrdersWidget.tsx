@@ -1,0 +1,124 @@
+import React, { useEffect, useState } from "react"
+import { defineWidgetConfig } from "@medusajs/admin-sdk"
+import { Container, Heading, StatusBadge, Button } from "@medusajs/ui"
+
+const statusColorMap: Record<string, "grey" | "orange" | "green" | "red" | "blue"> = {
+  draft: "grey",
+  pending: "orange",
+  completed: "green",
+  canceled: "red",
+  fulfilled: "green",
+}
+
+export const OrdersWidget = () => {
+  const [orders, setOrders] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [page, setPage] = useState(0)
+  const limit = 20
+
+  const fetchOrders = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch(`/admin/orders?limit=${limit}&offset=${page * limit}`);
+      if (response.ok) {
+        const data = await response.json();
+        setOrders(data.orders || []);
+      }
+    } catch (e) {
+      console.error("Failed to fetch orders", e)
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    fetchOrders()
+  }, [page])
+
+  const handleFulfill = async (orderId: string, method: string) => {
+    setLoading(true)
+    try {
+      // 1. Call sync-shipping endpoint (GHN/GHTK)
+      await fetch(`/admin/orders/${orderId}/sync-shipping`, {
+        method: "POST"
+      });
+
+      // 2. Update status of the order in Medusa
+      await fetch(`/admin/orders/${orderId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          status: "fulfilled",
+          metadata: {
+            shipping_method: method
+          }
+        })
+      });
+
+      fetchOrders()
+    } catch (e) {
+      console.error("Fulfill error", e)
+    }
+    setLoading(false)
+  }
+
+  return (
+    <Container className="p-6">
+      <div className="flex items-center justify-between mb-4">
+        <Heading level="h2">Quản lý Đơn hàng (GHN / GHTK)</Heading>
+      </div>
+      {loading && <div style={{ padding: "20px", textAlign: "center" }}>Đang tải...</div>}
+      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "10px" }}>
+        <thead>
+          <tr style={{ borderBottom: "1px solid #eaeaea", textAlign: "left" }}>
+            <th style={{ padding: "8px" }}>Mã Đơn Hàng</th>
+            <th style={{ padding: "8px" }}>Trạng thái</th>
+            <th style={{ padding: "8px" }}>Tổng tiền</th>
+            <th style={{ padding: "8px" }}>Hành động</th>
+          </tr>
+        </thead>
+        <tbody>
+          {orders.map((order) => (
+            <tr key={order.id} style={{ borderBottom: "1px solid #eaeaea" }}>
+              <td style={{ padding: "8px" }}>{order.id}</td>
+              <td style={{ padding: "8px" }}>
+                <StatusBadge color={statusColorMap[order.status] || "grey"}>
+                  {order.status}
+                </StatusBadge>
+              </td>
+              <td style={{ padding: "8px" }}>
+                {Number(order.total || 0).toLocaleString()} ₫
+              </td>
+              <td style={{ padding: "8px", display: "flex", gap: "8px" }}>
+                {order.status !== "fulfilled" && (
+                  <>
+                    <Button size="small" variant="secondary" onClick={() => handleFulfill(order.id, "ghn")}>
+                      Duyệt (GHN)
+                    </Button>
+                    <Button size="small" variant="secondary" onClick={() => handleFulfill(order.id, "ghtk")}>
+                      Duyệt (GHTK)
+                    </Button>
+                  </>
+                )}
+              </td>
+            </tr>
+          ))}
+          {orders.length === 0 && !loading && (
+            <tr>
+              <td colSpan={4} style={{ textAlign: "center", padding: "20px", color: "gray" }}>
+                Không có đơn hàng nào
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </Container>
+  )
+}
+
+export const config = defineWidgetConfig({
+  zone: "order.list.after",
+})
+
+export default OrdersWidget

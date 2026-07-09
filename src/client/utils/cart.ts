@@ -16,9 +16,24 @@ export interface CartItem {
   width?: number;
 }
 
+export const getActiveCartKey = (): string => {
+  try {
+    const info = localStorage.getItem('customer_info');
+    if (info) {
+      const customer = JSON.parse(info);
+      if (customer && customer.id) {
+        return `${CART_KEY}_${customer.id}`;
+      }
+    }
+  } catch (e) {
+    // Ignore error
+  }
+  return CART_KEY;
+};
+
 export const getCart = (): CartItem[] => {
   try {
-    const list = localStorage.getItem(CART_KEY);
+    const list = localStorage.getItem(getActiveCartKey());
     return list ? JSON.parse(list) : [];
   } catch (e) {
     return [];
@@ -26,7 +41,7 @@ export const getCart = (): CartItem[] => {
 };
 
 export const saveCart = (cart: CartItem[]) => {
-  localStorage.setItem(CART_KEY, JSON.stringify(cart));
+  localStorage.setItem(getActiveCartKey(), JSON.stringify(cart));
   window.dispatchEvent(new Event('cart-updated'));
 };
 
@@ -59,11 +74,40 @@ export const removeFromCart = (id: string) => {
 };
 
 export const clearCart = () => {
-  localStorage.removeItem(CART_KEY);
+  localStorage.removeItem(getActiveCartKey());
   window.dispatchEvent(new Event('cart-updated'));
 };
 
 export const getCartCount = (): number => {
   const cart = getCart();
   return cart.reduce((sum, item) => sum + item.qty, 0);
+};
+
+export const mergeCartOnLogin = (customerId: string) => {
+  try {
+    const guestCartRaw = localStorage.getItem(CART_KEY);
+    const guestCart: CartItem[] = guestCartRaw ? JSON.parse(guestCartRaw) : [];
+
+    if (guestCart.length > 0) {
+      const userCartKey = `${CART_KEY}_${customerId}`;
+      const userCartRaw = localStorage.getItem(userCartKey);
+      const userCart: CartItem[] = userCartRaw ? JSON.parse(userCartRaw) : [];
+
+      const mergedCart = [...userCart];
+      guestCart.forEach((guestItem) => {
+        const existing = mergedCart.find(i => i.id === guestItem.id);
+        if (existing) {
+          existing.qty += guestItem.qty;
+        } else {
+          mergedCart.push(guestItem);
+        }
+      });
+
+      localStorage.setItem(userCartKey, JSON.stringify(mergedCart));
+      localStorage.removeItem(CART_KEY);
+      window.dispatchEvent(new Event('cart-updated'));
+    }
+  } catch (e) {
+    console.error('Lỗi khi gộp giỏ hàng:', e);
+  }
 };

@@ -11,6 +11,7 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import '../styles/auth.css';
+import { mergeCartOnLogin } from '../utils/cart';
 
 const MEDUSA_BACKEND_URL =
   (import.meta as any).env?.VITE_MEDUSA_BACKEND_URL || 'http://localhost:9000';
@@ -115,6 +116,8 @@ const LoginPage = () => {
               last_name:  customer.last_name,
               phone:      customer.phone,
             }));
+            // Gộp giỏ hàng guest vào tài khoản user
+            mergeCartOnLogin(customer.id);
           }
         }
       } catch {
