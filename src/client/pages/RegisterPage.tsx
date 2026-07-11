@@ -140,11 +140,12 @@ const RegisterPage = () => {
 
       if (!registerRes.ok) {
         const errData = await registerRes.json().catch(() => ({}));
-        const msg: string =
-          errData?.message ||
-          (registerRes.status === 409
-            ? 'Email này đã được đăng ký. Vui lòng dùng email khác hoặc đăng nhập.'
-            : 'Đăng ký thất bại. Vui lòng thử lại.');
+        let msg = errData?.message || '';
+        if (msg.includes('Identity with email already exists') || registerRes.status === 409) {
+          msg = 'Email này đã được đăng ký. Vui lòng dùng email khác hoặc đăng nhập.';
+        } else if (!msg) {
+          msg = 'Đăng ký thất bại. Vui lòng thử lại.';
+        }
         setAlert({ type: 'error', msg });
         setLoading(false);
         return;
