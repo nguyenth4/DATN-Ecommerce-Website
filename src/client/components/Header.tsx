@@ -1,24 +1,214 @@
 import { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { Menu, X, ShoppingCart, User, Heart, Search, ChevronRight } from 'lucide-react';
+import { Menu, X, ShoppingCart, User, Heart, Search, ChevronRight, Plus, Minus, Trash2, ShoppingBag } from 'lucide-react';
 
 import { getCompareList } from '../utils/compare';
 import { getWishlist } from '../utils/wishlist';
-import { getCartCount } from '../utils/cart';
+import { useCart, useUpdateLineItem, useRemoveLineItem } from '../services/cart.service';
+import toast from 'react-hot-toast';
+
+const headerStyles = `
+  .cart-drawer {
+    position: fixed;
+    top: 0;
+    right: -400px;
+    width: 100%;
+    max-width: 400px;
+    height: 100vh;
+    background: #fff;
+    box-shadow: -5px 0 25px rgb(0 0 0 / 15%);
+    z-index: 1000;
+    transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+  }
+  .cart-drawer.is-open {
+    right: 0;
+  }
+  .cart-drawer-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #f3f4f6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .cart-drawer-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cart-drawer-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #6b7280;
+    padding: 4px;
+    border-radius: 50%;
+    transition: background 0.2s;
+  }
+  .cart-drawer-close:hover {
+    background: #f3f4f6;
+    color: #111;
+  }
+  .cart-drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+  }
+  .cart-drawer-item {
+    display: flex;
+    gap: 12px;
+    padding-bottom: 16px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #f3f4f6;
+    align-items: flex-start;
+  }
+  .cart-drawer-img {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #f3f4f6;
+  }
+  .cart-drawer-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .cart-drawer-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cart-drawer-variant {
+    font-size: 11px;
+    color: #6b7280;
+    margin-bottom: 6px;
+  }
+  .cart-drawer-price {
+    font-size: 13px;
+    font-weight: 700;
+    color: #2563eb;
+  }
+  .cart-drawer-item-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+  }
+  .cart-drawer-qty {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    height: 24px;
+  }
+  .cart-drawer-qty-btn {
+    width: 24px;
+    height: 100%;
+    background: #f9fafb;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #4b5563;
+  }
+  .cart-drawer-qty-val {
+    width: 28px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #111;
+  }
+  .cart-drawer-item-delete {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 2px;
+  }
+  .cart-drawer-item-delete:hover {
+    color: #ef4444;
+  }
+  .cart-drawer-footer {
+    padding: 20px;
+    border-top: 1px solid #f3f4f6;
+    background: #fafafa;
+  }
+  .cart-drawer-subtotal {
+    display: flex;
+    justify-content: space-between;
+    font-size: 15px;
+    font-weight: 700;
+    color: #111;
+    margin-bottom: 16px;
+  }
+  .cart-drawer-subtotal-price {
+    color: #2563eb;
+  }
+  .cart-drawer-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .cart-drawer-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 6px;
+    text-decoration: none;
+    text-align: center;
+    cursor: pointer;
+  }
+  .cart-drawer-btn--secondary {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    color: #374151;
+  }
+  .cart-drawer-btn--secondary:hover {
+    background: #f9fafb;
+  }
+  .cart-drawer-btn--primary {
+    background: #2563eb;
+    border: 1px solid #2563eb;
+    color: #fff;
+  }
+  .cart-drawer-btn--primary:hover {
+    background: #1d4ed8;
+  }
+`;
 
 const Header = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [searchQ, setSearchQ] = useState('');
   const [compareCount, setCompareCount] = useState(getCompareList().length);
   const [wishlistCount, setWishlistCount] = useState(getWishlist().length);
-  const [cartCount, setCartCount] = useState(getCartCount());
   const [customerInfo, setCustomerInfo] = useState<any>(null);
+  
+  const { data: cart } = useCart();
+  const updateLineItem = useUpdateLineItem();
+  const removeLineItem = useRemoveLineItem();
   const navigate = useNavigate();
 
+  const cartItems = cart?.items || [];
+  const cartCount = cartItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
+  const cartSubtotal = cartItems.reduce((sum: number, item: any) => sum + item.unit_price * item.quantity, 0);
+
   useEffect(() => {
-    document.body.style.overflow = drawerOpen ? 'hidden' : '';
+    document.body.style.overflow = (drawerOpen || cartDrawerOpen) ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
-  }, [drawerOpen]);
+  }, [drawerOpen, cartDrawerOpen]);
 
   useEffect(() => {
     const handleCompareUpdate = () => {
@@ -26,9 +216,6 @@ const Header = () => {
     };
     const handleWishlistUpdate = () => {
       setWishlistCount(getWishlist().length);
-    };
-    const handleCartUpdate = () => {
-      setCartCount(getCartCount());
     };
     const handleAuthChange = () => {
       const info = localStorage.getItem('customer_info');
@@ -39,13 +226,11 @@ const Header = () => {
     
     window.addEventListener('compare-updated', handleCompareUpdate);
     window.addEventListener('wishlist-updated', handleWishlistUpdate);
-    window.addEventListener('cart-updated', handleCartUpdate);
     window.addEventListener('customer-auth-change', handleAuthChange);
     
     return () => {
       window.removeEventListener('compare-updated', handleCompareUpdate);
       window.removeEventListener('wishlist-updated', handleWishlistUpdate);
-      window.removeEventListener('cart-updated', handleCartUpdate);
       window.removeEventListener('customer-auth-change', handleAuthChange);
     };
   }, []);
@@ -58,8 +243,26 @@ const Header = () => {
     }
   };
 
+  const handleUpdateQty = (lineId: string, currentQty: number, delta: number) => {
+    const newQty = Math.max(1, currentQty + delta);
+    if (newQty === currentQty) return;
+    
+    updateLineItem.mutate({ lineId, quantity: newQty }, {
+      onError: () => toast.error("Không thể cập nhật số lượng")
+    });
+  };
+
+  const handleRemoveItem = (lineId: string) => {
+    removeLineItem.mutate(lineId, {
+      onSuccess: () => toast.success("Đã xóa sản phẩm khỏi giỏ hàng"),
+      onError: () => toast.error("Không thể xóa sản phẩm")
+    });
+  };
+
   return (
     <>
+      <style>{headerStyles}</style>
+
       {/* Utility bar */}
       <div className="utility">
         <div className="container">
@@ -74,7 +277,6 @@ const Header = () => {
           </span>
         </div>
       </div>
-
 
       {/* Header */}
       <header className="site-header">
@@ -96,7 +298,6 @@ const Header = () => {
               <Search size={18} />
             </button>
           </form>
-
 
           <div className="icon-row">
             {customerInfo ? (
@@ -121,10 +322,15 @@ const Header = () => {
               <Heart size={20} />
               {wishlistCount > 0 && <span className="count">{wishlistCount}</span>}
             </Link>
-            <Link to="/cart" className="icon-btn icon-btn--cart" aria-label="Giỏ hàng">
+            <button 
+              className="icon-btn icon-btn--cart" 
+              aria-label="Giỏ hàng" 
+              onClick={() => setCartDrawerOpen(true)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', position: 'relative' }}
+            >
               <ShoppingCart size={20} />
               {cartCount > 0 && <span className="count">{cartCount}</span>}
-            </Link>
+            </button>
             <button
               className="nav-toggle"
               aria-label="Mở menu"
@@ -155,8 +361,86 @@ const Header = () => {
         </div>
       </nav>
 
+      {/* Cart Drawer */}
+      <div className={`cart-drawer ${cartDrawerOpen ? 'is-open' : ''}`}>
+        <div className="cart-drawer-header">
+          <div className="cart-drawer-title">
+            <ShoppingBag size={20} /> Giỏ hàng ({cartCount})
+          </div>
+          <button className="cart-drawer-close" onClick={() => setCartDrawerOpen(false)}><X size={20} /></button>
+        </div>
 
-      {/* Mobile drawer */}
+        <div className="cart-drawer-body">
+          {cartItems.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 0', color: '#9ca3af' }}>
+              <ShoppingCart size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
+              <p style={{ fontSize: '14px' }}>Giỏ hàng của bạn đang trống</p>
+              <button 
+                className="cart-drawer-btn cart-drawer-btn--primary" 
+                style={{ margin: '16px auto 0', width: '140px' }}
+                onClick={() => {
+                  setCartDrawerOpen(false);
+                  navigate('/products');
+                }}
+              >
+                Mua sắm ngay
+              </button>
+            </div>
+          ) : (
+            cartItems.map((item: any) => (
+              <div className="cart-drawer-item" key={item.id}>
+                <img src={item.thumbnail || 'https://via.placeholder.com/64'} alt={item.title} className="cart-drawer-img" />
+                <div className="cart-drawer-info">
+                  <div className="cart-drawer-name" title={item.title}>
+                    {item.title}
+                  </div>
+                  {item.variant.title !== 'Default Variant' && (
+                    <div className="cart-drawer-variant">{item.variant.title}</div>
+                  )}
+                  <div className="cart-drawer-price">{item.unit_price.toLocaleString('vi-VN')}đ</div>
+                  <div className="cart-drawer-item-actions">
+                    <div className="cart-drawer-qty">
+                      <button className="cart-drawer-qty-btn" onClick={() => handleUpdateQty(item.id, item.quantity, -1)}><Minus size={10} /></button>
+                      <span className="cart-drawer-qty-val">{item.quantity}</span>
+                      <button className="cart-drawer-qty-btn" onClick={() => handleUpdateQty(item.id, item.quantity, 1)}><Plus size={10} /></button>
+                    </div>
+                    <button className="cart-drawer-item-delete" onClick={() => handleRemoveItem(item.id)}>
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {cartItems.length > 0 && (
+          <div className="cart-drawer-footer">
+            <div className="cart-drawer-subtotal">
+              <span>Tổng phụ:</span>
+              <span className="cart-drawer-subtotal-price">{cartSubtotal.toLocaleString('vi-VN')}đ</span>
+            </div>
+            <div className="cart-drawer-buttons">
+              <Link 
+                to="/cart" 
+                className="cart-drawer-btn cart-drawer-btn--secondary"
+                onClick={() => setCartDrawerOpen(false)}
+              >
+                Xem giỏ hàng
+              </Link>
+              <Link 
+                to="/checkout" 
+                className="cart-drawer-btn cart-drawer-btn--primary"
+                onClick={() => setCartDrawerOpen(false)}
+              >
+                Thanh toán
+              </Link>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Mobile menu drawer */}
       <div className={`drawer${drawerOpen ? ' is-open' : ''}`} id="drawer" aria-hidden={!drawerOpen}>
         <div className="drawer-head">
           <Link to="/" className="brand" onClick={() => setDrawerOpen(false)}>
@@ -178,11 +462,13 @@ const Header = () => {
         </Link>
       </div>
 
-
-      {/* Overlay khi drawer mở */}
-      {drawerOpen && (
+      {/* Overlays */}
+      {(drawerOpen || cartDrawerOpen) && (
         <div
-          onClick={() => setDrawerOpen(false)}
+          onClick={() => {
+            setDrawerOpen(false);
+            setCartDrawerOpen(false);
+          }}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 99 }}
         />
       )}

@@ -40,7 +40,7 @@ export const cartService = {
       const cart = await this.createCart();
       cartId = cart.id;
     }
-    return await medusa.store.cart.createLineItem(cartId!, {
+    return await medusa.store.cart.createLineItem(cartId as string, {
       variant_id: variantId,
       quantity,
     });
