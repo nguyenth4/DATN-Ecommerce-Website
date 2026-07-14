@@ -7,6 +7,8 @@ import CartPage from '../pages/CartPage';
 import CheckoutPage from '../pages/CheckoutPage';
 import LoginPage from '../pages/LoginPage';
 import RegisterPage from '../pages/RegisterPage';
+import ForgotPasswordPage from '../pages/ForgotPasswordPage';
+import ResetPasswordPage from '../pages/ResetPasswordPage';
 import AccountPage from '../pages/AccountPage';
 import OrderSuccessPage from '../pages/OrderSuccessPage';
 import OrderTrackingPage from '../pages/OrderTrackingPage';
@@ -35,6 +37,8 @@ const ClientRoutes = () => {
       <Route path="checkout" element={<CheckoutPage />} />
       <Route path="login" element={<LoginPage />} />
       <Route path="register" element={<RegisterPage />} />
+      <Route path="forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="reset-password" element={<ResetPasswordPage />} />
       <Route path="order-success" element={<OrderSuccessPage />} />
     </Routes>
   );
