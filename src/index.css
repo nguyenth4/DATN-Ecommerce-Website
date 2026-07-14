@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
 /* =============================================================
    SPRYLO — Tech &amp; Gadgets Ecommerce HTML Template
    White surface · indigo primary · multi-color bento product cards
@@ -1311,4 +1313,99 @@ input, select, textarea { font: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   html { scroll-behavior: auto; }
+}
+
+/* =============================================================
+   ROBOTO FONT APPLICATION & TYPOGRAPHY SYNCHRONIZATION
+   ============================================================= */
+:root {
+  --ff-roboto: 'Roboto', sans-serif;
+}
+
+/* Apply Roboto to all elements in product cards */
+.product-card,
+.product-card * {
+  font-family: var(--ff-roboto) !important;
+}
+
+/* Synchronize Product Card title size, line-height, and height (exactly 2 lines) */
+.product-card .name,
+.product-card .product-name {
+  font-family: var(--ff-roboto) !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
+  line-height: 1.35 !important;
+  height: 38px !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  margin-bottom: 8px !important;
+  color: var(--ink) !important;
+}
+
+/* Synchronize price layout and fonts */
+.product-card .price .now,
+.product-card .product-price {
+  font-family: var(--ff-roboto) !important;
+  font-weight: 700 !important;
+  font-size: 15px !important;
+  line-height: 1.2 !important;
+}
+
+.product-card .price .was,
+.product-card .product-price-old {
+  font-family: var(--ff-roboto) !important;
+  font-weight: 400 !important;
+  font-size: 12px !important;
+  line-height: 1.2 !important;
+  color: var(--ink-faint) !important;
+  text-decoration: line-through !important;
+}
+
+/* Synchronize category/stock text */
+.product-card .stock,
+.product-card .product-category {
+  font-family: var(--ff-roboto) !important;
+  font-weight: 400 !important;
+  font-size: 11px !important;
+  line-height: 1.2 !important;
+  color: var(--fg-mute) !important;
+}
+
+/* Synchronize labels and badges */
+.product-card .badge,
+.product-card .product-badge,
+.product-badge {
+  font-family: var(--ff-roboto) !important;
+  font-weight: 700 !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+}
+
+/* Synchronize comparison section inside cards */
+.product-card-compare-wrapper,
+.product-card-compare-wrapper * {
+  font-family: var(--ff-roboto) !important;
+  font-size: 12px !important;
+}
+
+/* Apply Roboto to all elements of the Product Listing Page and Product Detail Page */
+.page-head,
+.page-head *,
+.shop-layout,
+.shop-layout *,
+.shop-toolbar,
+.shop-toolbar *,
+.product-detail,
+.product-detail *,
+.product-desc-content,
+.product-desc-content *,
+.seller-card,
+.seller-card *,
+#panelReview,
+#panelReview * {
+  font-family: var(--ff-roboto) !important;
 }
