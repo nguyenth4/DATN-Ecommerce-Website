@@ -21,6 +21,42 @@ module.exports = defineConfig({
     }
   },
   modules: {
+    // ── Auth Module — Email/Password + Google OAuth + Facebook OAuth ──────────
+    auth: {
+      resolve: "@medusajs/medusa/auth",
+      options: {
+        providers: [
+          // Email + Password (mặc định — đã hoạt động)
+          {
+            resolve: "@medusajs/medusa/auth-emailpass",
+            id: "emailpass",
+          },
+          // Google OAuth
+          {
+            resolve: "@medusajs/medusa/auth-google",
+            id: "google",
+            options: {
+              clientId: process.env.GOOGLE_CLIENT_ID,
+              clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+              callbackUrl: process.env.GOOGLE_CALLBACK_URL
+                ?? "http://localhost:9000/auth/customer/google/callback",
+            },
+          },
+          // Facebook OAuth (custom provider)
+          {
+            resolve: "./src/modules/auth-providers/facebook",
+            id: "facebook",
+            options: {
+              clientId: process.env.FACEBOOK_APP_ID,
+              clientSecret: process.env.FACEBOOK_APP_SECRET,
+              callbackUrl: process.env.FACEBOOK_CALLBACK_URL
+                ?? "http://localhost:9000/auth/customer/facebook/callback",
+            },
+          },
+        ],
+      },
+    },
+    // ── File Storage (S3 / Supabase) ─────────────────────────────────────────
     file: {
       resolve: "@medusajs/medusa/file",
       options: {
@@ -43,6 +79,7 @@ module.exports = defineConfig({
         ],
       },
     },
+    // ── Custom Wallet Module ──────────────────────────────────────────────────
     "wallet": {
       resolve: "./modules/wallet",
     },

@@ -15,6 +15,7 @@ import OrderTrackingPage from '../pages/OrderTrackingPage';
 import ComparisonPage from '../pages/ComparisonPage';
 import ContactPage from '../pages/ContactPage';
 import WishlistPage from '../pages/WishlistPage';
+import OAuthCallbackPage from '../pages/OAuthCallbackPage';
 
 const ClientRoutes = () => {
   return (
@@ -40,6 +41,8 @@ const ClientRoutes = () => {
       <Route path="forgot-password" element={<ForgotPasswordPage />} />
       <Route path="reset-password" element={<ResetPasswordPage />} />
       <Route path="order-success" element={<OrderSuccessPage />} />
+      {/* OAuth callback — Google / Facebook redirect về đây sau khi xác thực */}
+      <Route path="auth/callback" element={<OAuthCallbackPage />} />
     </Routes>
   );
 };

@@ -139,6 +139,40 @@ const LoginPage = () => {
     }
   };
 
+  // ── Social Login (Google / Facebook) ──────────────────────────────────────
+  const handleSocialLogin = (provider: 'google' | 'facebook') => {
+    // Lưu trang mà user muốn đến trước khi rời đi
+    localStorage.setItem('oauth_return_to', from);
+
+    // Callback FE — trang trung gian nhận token sau OAuth
+    const callbackUrl = `${window.location.origin}/auth/callback?_type=${provider}`;
+
+    // Gọi backend để lấy redirect URL đến OAuth provider
+    // Medusa trả về { location: "https://accounts.google.com/..." }
+    fetch(`${MEDUSA_BACKEND_URL}/auth/customer/${provider}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-publishable-api-key': PUBLISHABLE_KEY,
+      },
+      body: JSON.stringify({ callback_url: callbackUrl }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.location) {
+          // Redirect sang Google/Facebook OAuth consent screen
+          window.location.href = data.location;
+        } else {
+          setError(
+            `Không thể kết nối đến ${provider === 'google' ? 'Google' : 'Facebook'}. Vui lòng thử lại.`
+          );
+        }
+      })
+      .catch(() => {
+        setError('Không thể kết nối đến máy chủ. Vui lòng thử lại.');
+      });
+  };
+
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="auth-layout">
@@ -321,9 +355,11 @@ const LoginPage = () => {
           <div className="divider">hoặc tiếp tục với</div>
 
           <button
+            id="btn-login-google"
             className="social-btn"
-            onClick={() => setError('Đăng nhập bằng Google chưa được hỗ trợ. Vui lòng dùng email.')}
+            onClick={() => handleSocialLogin('google')}
             type="button"
+            disabled={loading || success}
           >
             <svg width="18" height="18" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -335,9 +371,11 @@ const LoginPage = () => {
           </button>
 
           <button
+            id="btn-login-facebook"
             className="social-btn"
-            onClick={() => setError('Đăng nhập bằng Facebook chưa được hỗ trợ. Vui lòng dùng email.')}
+            onClick={() => handleSocialLogin('facebook')}
             type="button"
+            disabled={loading || success}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="#1877F2">
               <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
