@@ -54,7 +54,37 @@ export const productService = {
       console.error(`Lỗi khi tải thông tin sản phẩm ${id}:`, error);
       throw error;
     }
-  }
+  },
+
+  // ── Lấy min/max giá thực tế của products theo danh mục ──────────────────
+  // Dùng limit lớn để lấy toàn bộ price data (không cần nội dung đầy đủ)
+  async getPriceRange(categoryIds?: string[]): Promise<{ min: number; max: number }> {
+    try {
+      const { products } = await medusa.store.product.list({
+        fields: '*variants,*variants.prices',
+        limit: 500,
+        ...(categoryIds && categoryIds.length > 0 ? { category_id: categoryIds } : {}),
+      });
+
+      const prices: number[] = [];
+      for (const p of products) {
+        for (const v of (p as any).variants ?? []) {
+          for (const pr of v.prices ?? []) {
+            const amount = Number(pr.amount);
+            if (amount > 0) prices.push(amount);
+          }
+        }
+      }
+
+      if (prices.length === 0) return { min: 0, max: 50_000_000 };
+      return {
+        min: Math.floor(Math.min(...prices) / 1_000_000) * 1_000_000,
+        max: Math.ceil(Math.max(...prices) / 1_000_000) * 1_000_000,
+      };
+    } catch {
+      return { min: 0, max: 50_000_000 };
+    }
+  },
 };
 
 // --- REACT QUERY HOOKS ---
@@ -83,3 +113,15 @@ export const useProduct = (id: string) => {
     staleTime: 1000 * 60 * 5,
   });
 };
+
+// ── Hook: lấy khoảng giá thực tế theo danh mục đã chọn ─────────────────────
+// Re-fetches khi selectedCats thay đổi (cache theo key)
+export const useProductPriceRange = (selectedCats: string[]) => {
+  return useQuery({
+    queryKey: ['product_price_range', selectedCats.slice().sort()],
+    queryFn: () => productService.getPriceRange(selectedCats.length > 0 ? selectedCats : undefined),
+    staleTime: 1000 * 60 * 5,
+    placeholderData: { min: 0, max: 50_000_000 },
+  });
+};
+
