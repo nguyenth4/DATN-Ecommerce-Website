@@ -74,7 +74,7 @@ export const useCart = () => {
 export const useAddToCart = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ variantId, quantity }: { variantId: string, quantity: number }) => 
+    mutationFn: ({ variantId, quantity }: { variantId: string, quantity: number }) =>
       cartService.addToCart(variantId, quantity),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
@@ -85,7 +85,7 @@ export const useAddToCart = () => {
 export const useUpdateLineItem = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ lineId, quantity }: { lineId: string, quantity: number }) => 
+    mutationFn: ({ lineId, quantity }: { lineId: string, quantity: number }) =>
       cartService.updateLineItem(lineId, quantity),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });

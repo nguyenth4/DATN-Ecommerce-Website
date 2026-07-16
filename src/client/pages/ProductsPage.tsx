@@ -363,6 +363,9 @@ const ProductsPage = () => {
                       style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--paper)', fontSize: '14px' }}
                     >
                       <option value="popular">Phổ biến nhất</option>
+                      <option value="views">Lượt xem nhiều nhất</option>
+                      <option value="sales">Bán chạy nhất</option>
+                      <option value="rating">Đánh giá cao nhất</option>
                       <option value="createdAt">Mới nhất</option>
                       <option value="price_asc">Giá: thấp đến cao</option>
                       <option value="price_desc">Giá: cao đến thấp</option>
@@ -378,85 +381,117 @@ const ProductsPage = () => {
                   </div>
                 ) : products.length > 0 ? (
                   <div className="shop-grid">
-                    {products.map((p: any) => {
-                      const pPrice = p.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount
-                        || p.variants?.[0]?.prices?.[0]?.amount
-                        || p.variants?.[0]?.price
-                        || p.price
-                        || 0;
+                    {(() => {
+                      let sortedProducts = [...products];
 
-                      const displayPrice = typeof pPrice === 'number' && pPrice > 0 ? pPrice.toLocaleString('vi-VN') + 'đ' : 'Liên hệ';
-                      const oldPrice = p.variants?.[0]?.oldPrice;
-                      const displayOldPrice = oldPrice ? oldPrice.toLocaleString('vi-VN') + 'đ' : null;
+                      // Client-side sorting for custom options
+                      if (sortBy === 'views') {
+                        sortedProducts.sort((a, b) => (Number(b.metadata?.view_count || b.metadata?.views || 0) - Number(a.metadata?.view_count || a.metadata?.views || 0)));
+                      } else if (sortBy === 'sales') {
+                        sortedProducts.sort((a, b) => (Number(b.metadata?.sale_count || b.metadata?.sales || 0) - Number(a.metadata?.sale_count || a.metadata?.sales || 0)));
+                      } else if (sortBy === 'rating') {
+                        sortedProducts.sort((a, b) => (Number(b.metadata?.rating || 0) - Number(a.metadata?.rating || 0)));
+                      } else if (sortBy === 'popular') {
+                        // Default popular sorting (combined score or just rating)
+                        sortedProducts.sort((a, b) => {
+                           const scoreA = (Number(a.metadata?.rating || 5) * 10) + (Number(a.metadata?.view_count || 10));
+                           const scoreB = (Number(b.metadata?.rating || 5) * 10) + (Number(b.metadata?.view_count || 10));
+                           return scoreB - scoreA;
+                        });
+                      } else if (sortBy === 'price_asc') {
+                        sortedProducts.sort((a, b) => {
+                          const priceA = a.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount || a.variants?.[0]?.prices?.[0]?.amount || a.variants?.[0]?.price || a.price || 0;
+                          const priceB = b.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount || b.variants?.[0]?.prices?.[0]?.amount || b.variants?.[0]?.price || b.price || 0;
+                          return priceA - priceB;
+                        });
+                      } else if (sortBy === 'price_desc') {
+                        sortedProducts.sort((a, b) => {
+                          const priceA = a.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount || a.variants?.[0]?.prices?.[0]?.amount || a.variants?.[0]?.price || a.price || 0;
+                          const priceB = b.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount || b.variants?.[0]?.prices?.[0]?.amount || b.variants?.[0]?.price || b.price || 0;
+                          return priceB - priceA;
+                        });
+                      }
 
-                      const stock = p.variants?.[0]?.inventory_quantity !== undefined
-                        ? p.variants[0].inventory_quantity
-                        : (p.variants?.[0]?.stock !== undefined ? p.variants[0].stock : 10);
-                      const imgUrl = getProductImage(p);
-                      const rating = Number(p.metadata?.rating || 5);
-                      const ratingCount = p.metadata?.review_count || 10;
+                      return sortedProducts.map((p: any) => {
+                        const pPrice = p.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount
+                          || p.variants?.[0]?.prices?.[0]?.amount
+                          || p.variants?.[0]?.price
+                          || p.price
+                          || 0;
 
-                      return (
-                        <article className="product-card" key={p.id}>
-                          <div className="img-wrap">
-                            {oldPrice && <span className="badge badge--sale">Giảm giá</span>}
-                            <button className="wishlist" aria-label="Add to wishlist"><Heart size={18} /></button>
-                            <img src={imgUrl} alt={p.title} style={{ objectFit: 'contain' }} />
-                          </div>
-                          <div className="stock"><span className="dot"></span>Còn hàng · {stock} sản phẩm</div>
-                          <Link to={`/product/${p.id}`} className="name">{p.title}</Link>
-                          <div className="price">
-                            <span className="now">{displayPrice}</span>
-                            {displayOldPrice && <span className="was">{displayOldPrice}</span>}
-                          </div>
-                          <div className="stars">
-                            <div style={{ display: 'flex', gap: '2px', color: '#fbbf24' }}>
-                              {[...Array(5)].map((_, idx) => (
-                                <Star key={idx} size={14} fill={idx < Math.round(rating) ? "#fbbf24" : "none"} />
-                              ))}
+                        const displayPrice = typeof pPrice === 'number' && pPrice > 0 ? pPrice.toLocaleString('vi-VN') + 'đ' : 'Liên hệ';
+                        const oldPrice = p.variants?.[0]?.oldPrice;
+                        const displayOldPrice = oldPrice ? oldPrice.toLocaleString('vi-VN') + 'đ' : null;
+
+                        const stock = p.variants?.[0]?.inventory_quantity !== undefined
+                          ? p.variants[0].inventory_quantity
+                          : (p.variants?.[0]?.stock !== undefined ? p.variants[0].stock : 10);
+                        const imgUrl = getProductImage(p);
+                        const rating = Number(p.metadata?.rating || 5);
+                        const ratingCount = p.metadata?.review_count || 10;
+
+                        return (
+                          <article className="product-card" key={p.id}>
+                            <div className="img-wrap">
+                              {oldPrice && <span className="badge badge--sale">Giảm giá</span>}
+                              <button className="wishlist" aria-label="Add to wishlist"><Heart size={18} /></button>
+                              <img src={imgUrl} alt={p.title} style={{ objectFit: 'contain' }} />
                             </div>
-                            <span className="count">({ratingCount})</span>
-                          </div>
-                          <div
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                            }}
-                            style={{
-                              marginTop: '0.65rem',
-                              paddingTop: '0.65rem',
-                              borderTop: '1px dashed var(--rule, #eaeaea)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              fontSize: '0.8rem',
-                              color: 'var(--fg-mute, #64748b)'
-                            }}
-                          >
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', margin: 0 }}>
-                              <input
-                                type="checkbox"
-                                onChange={() => {
-                                  toggleCompareProduct(p.id, p.title);
-                                  if (!compareList.includes(p.id)) {
-                                    toast.success('Đã thêm vào danh sách so sánh', { icon: '✨' });
-                                  } else {
-                                    toast('Đã gỡ khỏi danh sách so sánh', { icon: '🗑️' });
-                                  }
-                                }}
-                                style={{
-                                  cursor: 'pointer',
-                                  accentColor: 'var(--indigo, #4f46e5)',
-                                  width: '14px',
-                                  height: '14px'
-                                }}
-                              />
-                              <span style={{ fontWeight: 500 }}>So sánh</span>
-                            </label>
-                          </div>
-                          <Link to="/cart" className="btn" style={{ marginTop: '0.65rem' }}>Đặt ngay <ChevronRight size={16} /></Link>
-                        </article>
-                      );
-                    })}
+                            <div className="stock"><span className="dot"></span>Còn hàng · {stock} sản phẩm</div>
+                            <Link to={`/product/${p.id}`} className="name">{p.title}</Link>
+                            <div className="price">
+                              <span className="now">{displayPrice}</span>
+                              {displayOldPrice && <span className="was">{displayOldPrice}</span>}
+                            </div>
+                            <div className="stars">
+                              <div style={{ display: 'flex', gap: '2px', color: '#fbbf24' }}>
+                                {[...Array(5)].map((_, idx) => (
+                                  <Star key={idx} size={14} fill={idx < Math.round(rating) ? "#fbbf24" : "none"} />
+                                ))}
+                              </div>
+                              <span className="count">({ratingCount})</span>
+                            </div>
+                            <div
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }}
+                              style={{
+                                marginTop: '0.65rem',
+                                paddingTop: '0.65rem',
+                                borderTop: '1px dashed var(--rule, #eaeaea)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                fontSize: '0.8rem',
+                                color: 'var(--fg-mute, #64748b)'
+                              }}
+                            >
+                              <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', margin: 0 }}>
+                                <input
+                                  type="checkbox"
+                                  onChange={() => {
+                                    toggleCompareProduct(p.id, p.title);
+                                    if (!compareList.includes(p.id)) {
+                                      toast.success('Đã thêm vào danh sách so sánh', { icon: '✨' });
+                                    } else {
+                                      toast('Đã gỡ khỏi danh sách so sánh', { icon: '🗑️' });
+                                    }
+                                  }}
+                                  style={{
+                                    cursor: 'pointer',
+                                    accentColor: 'var(--indigo, #4f46e5)',
+                                    width: '14px',
+                                    height: '14px'
+                                  }}
+                                />
+                                <span style={{ fontWeight: 500 }}>So sánh</span>
+                              </label>
+                            </div>
+                            <Link to="/cart" className="btn" style={{ marginTop: '0.65rem' }}>Đặt ngay <ChevronRight size={16} /></Link>
+                          </article>
+                        );
+                      });
+                    })()}
                   </div>
                 ) : (
                   <div className="flex-center" style={{ minHeight: '400px', flexDirection: 'column', textAlign: 'center' }}>
