@@ -390,11 +390,79 @@
 }
 .form-control.is-invalid {
   border-color: var(--rose);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+.form-control.is-valid {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
 }
 .form-error {
   color: var(--rose);
   font-size: 0.8rem;
   margin-top: 0.3rem;
+}
+
+/* ===== INPUT ICON WRAP (for password fields) ===== */
+.input-icon-wrap {
+  position: relative;
+}
+.input-icon-wrap .bi,
+.input-icon-wrap i {
+  position: absolute;
+  left: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--fg-mute);
+  pointer-events: none;
+}
+.input-icon-wrap .form-control {
+  padding-left: 2.5rem;
+  padding-right: 2.5rem;
+}
+.input-icon-wrap .toggle-pw {
+  position: absolute;
+  right: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--fg-mute);
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  transition: color 150ms;
+}
+.input-icon-wrap .toggle-pw:hover {
+  color: var(--indigo);
+}
+
+/* ===== ALERTS (reusable) ===== */
+.alert {
+  border-radius: var(--r-sm);
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.alert-success {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+}
+.alert-danger {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+.alert-info {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 .form-row {
   display: grid;

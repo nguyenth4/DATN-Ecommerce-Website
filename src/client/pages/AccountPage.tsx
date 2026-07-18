@@ -12,7 +12,12 @@ import {
   LogOut, 
   CheckCircle, 
   Check,
-  Wallet
+  Wallet,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  Loader2,
+  Shield
 } from 'lucide-react';
 import { useProducts } from '../services/product.service';
 import { walletService } from '../services/wallet.service';
@@ -135,6 +140,109 @@ const AccountPage = () => {
   const [gender, setGender] = useState('Nam');
   const [dob, setDob] = useState('1998-05-15');
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Change password form state
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showOldPw, setShowOldPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwSuccess, setPwSuccess] = useState(false);
+  const [pwError, setPwError] = useState('');
+  const [pwFieldErrors, setPwFieldErrors] = useState<{ old?: string; new?: string; confirm?: string }>({});
+
+  // Password strength checker
+  const getPasswordStrength = (pwd: string): { score: number; label: string; color: string } => {
+    if (!pwd) return { score: 0, label: '', color: 'transparent' };
+    let score = 0;
+    if (pwd.length >= 8) score++;
+    if (pwd.length >= 12) score++;
+    if (/[A-Z]/.test(pwd)) score++;
+    if (/[0-9]/.test(pwd)) score++;
+    if (/[^A-Za-z0-9]/.test(pwd)) score++;
+    if (score <= 1) return { score, label: 'Rất yếu', color: 'var(--rose)' };
+    if (score === 2) return { score, label: 'Yếu', color: '#f97316' };
+    if (score === 3) return { score, label: 'Trung bình', color: '#eab308' };
+    if (score === 4) return { score, label: 'Mạnh', color: '#22c55e' };
+    return { score, label: 'Rất mạnh', color: '#10b981' };
+  };
+
+  const pwStrength = getPasswordStrength(newPassword);
+
+  const handleChangePassword = async () => {
+    setPwError('');
+    setPwSuccess(false);
+    const fieldErrors: { old?: string; new?: string; confirm?: string } = {};
+
+    if (!oldPassword) fieldErrors.old = 'Vui lòng nhập mật khẩu hiện tại';
+    if (!newPassword || newPassword.length < 8) fieldErrors.new = 'Mật khẩu mới phải có ít nhất 8 ký tự';
+    if (newPassword === oldPassword) fieldErrors.new = 'Mật khẩu mới phải khác mật khẩu hiện tại';
+    if (newPassword !== confirmNewPassword) fieldErrors.confirm = 'Mật khẩu xác nhận không khớp';
+
+    if (Object.keys(fieldErrors).length > 0) {
+      setPwFieldErrors(fieldErrors);
+      return;
+    }
+    setPwFieldErrors({});
+    setPwLoading(true);
+
+    try {
+      // Step 1: Re-authenticate with old password to verify it
+      const authRes = await fetch(`${MEDUSA_BACKEND_URL}/auth/customer/emailpass`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-publishable-api-key': (import.meta as any).env?.VITE_MEDUSA_PUBLISHABLE_KEY || 'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483',
+        },
+        body: JSON.stringify({ email, password: oldPassword }),
+      });
+
+      if (!authRes.ok) {
+        setPwFieldErrors({ old: 'Mật khẩu hiện tại không đúng' });
+        setPwLoading(false);
+        return;
+      }
+
+      const authData = await authRes.json();
+      const tempToken = authData?.token;
+      if (!tempToken) {
+        setPwError('Không thể xác thực. Vui lòng thử lại.');
+        setPwLoading(false);
+        return;
+      }
+
+      // Step 2: Update password using the auth token
+      const updateRes = await fetch(`${MEDUSA_BACKEND_URL}/auth/customer/emailpass/update`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-publishable-api-key': (import.meta as any).env?.VITE_MEDUSA_PUBLISHABLE_KEY || 'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483',
+          'Authorization': `Bearer ${tempToken}`,
+        },
+        body: JSON.stringify({ email, password: newPassword }),
+      });
+
+      if (!updateRes.ok) {
+        const body = await updateRes.json().catch(() => ({}));
+        setPwError(body?.message || 'Không thể cập nhật mật khẩu. Vui lòng thử lại.');
+        setPwLoading(false);
+        return;
+      }
+
+      // Step 3: Success — clear form
+      setPwSuccess(true);
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setTimeout(() => setPwSuccess(false), 5000);
+    } catch {
+      setPwError('Lỗi kết nối máy chủ. Vui lòng kiểm tra mạng và thử lại.');
+    } finally {
+      setPwLoading(false);
+    }
+  };
 
   // Fetch profile on mount
   useEffect(() => {
@@ -803,23 +911,160 @@ const AccountPage = () => {
               {activeTab === 'password' && (
                 <div className="tab-panel active">
                   <div style={{ background: 'white', borderRadius: 'var(--r-lg)', border: '1px solid var(--rule)', padding: '1.8rem', boxShadow: 'var(--shadow-sm)' }}>
-                    <div style={{ fontFamily: "var(--ff-display)", fontSize: '1.3rem', fontWeight: 700, marginBottom: '1.5rem', paddingBottom: '0.8rem', borderBottom: '1px solid var(--rule)' }}>
-                      Đổi mật khẩu
+                    
+                    {/* Header */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '1.5rem', paddingBottom: '0.8rem', borderBottom: '1px solid var(--rule)' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'linear-gradient(135deg, var(--indigo) 0%, #7c3aed 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', flexShrink: 0 }}>
+                        <Shield size={20} />
+                      </div>
+                      <div>
+                        <div style={{ fontFamily: 'var(--ff-display)', fontSize: '1.3rem', fontWeight: 700, lineHeight: 1.2 }}>Đổi mật khẩu</div>
+                        <div style={{ fontSize: '0.82rem', color: 'var(--fg-mute)', marginTop: '2px' }}>Cập nhật mật khẩu để bảo vệ tài khoản của bạn</div>
+                      </div>
                     </div>
-                    <div className="form-group">
-                      <label className="form-label">Mật khẩu hiện tại *</label>
-                      <input type="password" className="form-control" placeholder="Nhập mật khẩu hiện tại..." />
+
+                    {/* Security tips */}
+                    <div style={{ background: 'var(--indigo-soft, #eef2ff)', border: '1px solid var(--indigo-line, #c7d2fe)', borderRadius: 'var(--r)', padding: '1rem 1.2rem', marginBottom: '1.8rem', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                      <AlertCircle size={16} style={{ color: 'var(--indigo)', flexShrink: 0, marginTop: '2px' }} />
+                      <div style={{ fontSize: '0.82rem', color: 'var(--indigo-dark, #3730a3)', lineHeight: 1.6 }}>
+                        <strong>Lưu ý bảo mật:</strong> Mật khẩu nên có ít nhất 8 ký tự, bao gồm chữ hoa, số và ký tự đặc biệt. Không chia sẻ mật khẩu với bất kỳ ai.
+                      </div>
                     </div>
-                    <div className="form-group">
-                      <label className="form-label">Mật khẩu mới *</label>
-                      <input type="password" className="form-control" placeholder="Nhập mật khẩu mới..." />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Xác nhận mật khẩu mới *</label>
-                      <input type="password" className="form-control" placeholder="Nhập lại mật khẩu mới..." />
-                    </div>
-                    <div className="flex-center" style={{ justifyContent: 'flex-end', marginTop: '1.8rem' }}>
-                      <button className="btn btn--indigo"><i className="bi bi-shield-lock"></i> Cập nhật mật khẩu</button>
+
+                    {/* Error alert */}
+                    {pwError && (
+                      <div className="alert alert-danger" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '1.4rem' }}>
+                        <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+                        <span>{pwError}</span>
+                      </div>
+                    )}
+
+                    {/* Success alert */}
+                    {pwSuccess && (
+                      <div className="alert alert-success" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1.4rem' }}>
+                        <CheckCircle size={16} />
+                        <span>Đổi mật khẩu thành công! Hãy dùng mật khẩu mới cho lần đăng nhập tiếp theo.</span>
+                      </div>
+                    )}
+
+                    <div style={{ maxWidth: '480px' }}>
+                      {/* Old password */}
+                      <div className="form-group">
+                        <label className="form-label" htmlFor="old-pw">Mật khẩu hiện tại *</label>
+                        <div className="input-icon-wrap">
+                          <Lock size={17} className="bi" />
+                          <input
+                            id="old-pw"
+                            type={showOldPw ? 'text' : 'password'}
+                            className={`form-control ${pwFieldErrors.old ? 'is-invalid' : ''}`}
+                            placeholder="Nhập mật khẩu hiện tại..."
+                            value={oldPassword}
+                            onChange={(e) => { setOldPassword(e.target.value); setPwFieldErrors(p => ({ ...p, old: undefined })); setPwError(''); }}
+                            disabled={pwLoading || pwSuccess}
+                          />
+                          <button type="button" className="toggle-pw" onClick={() => setShowOldPw(v => !v)} tabIndex={-1}>
+                            {showOldPw ? <EyeOff size={17} /> : <Eye size={17} />}
+                          </button>
+                        </div>
+                        {pwFieldErrors.old && <div className="form-error" style={{ marginTop: '4px' }}>{pwFieldErrors.old}</div>}
+                      </div>
+
+                      {/* New password */}
+                      <div className="form-group">
+                        <label className="form-label" htmlFor="new-pw">Mật khẩu mới *</label>
+                        <div className="input-icon-wrap">
+                          <Lock size={17} className="bi" />
+                          <input
+                            id="new-pw"
+                            type={showNewPw ? 'text' : 'password'}
+                            className={`form-control ${pwFieldErrors.new ? 'is-invalid' : ''}`}
+                            placeholder="Nhập mật khẩu mới (tối thiểu 8 ký tự)..."
+                            value={newPassword}
+                            onChange={(e) => { setNewPassword(e.target.value); setPwFieldErrors(p => ({ ...p, new: undefined })); setPwError(''); }}
+                            disabled={pwLoading || pwSuccess}
+                          />
+                          <button type="button" className="toggle-pw" onClick={() => setShowNewPw(v => !v)} tabIndex={-1}>
+                            {showNewPw ? <EyeOff size={17} /> : <Eye size={17} />}
+                          </button>
+                        </div>
+                        {pwFieldErrors.new && <div className="form-error" style={{ marginTop: '4px' }}>{pwFieldErrors.new}</div>}
+
+                        {/* Password strength bar */}
+                        {newPassword && (
+                          <div style={{ marginTop: '8px' }}>
+                            <div style={{ display: 'flex', gap: '4px', marginBottom: '4px' }}>
+                              {[1, 2, 3, 4, 5].map(i => (
+                                <div key={i} style={{
+                                  flex: 1, height: '4px', borderRadius: '4px',
+                                  background: i <= pwStrength.score ? pwStrength.color : 'var(--rule)',
+                                  transition: 'background 0.3s'
+                                }} />
+                              ))}
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: pwStrength.color, fontWeight: 600 }}>
+                              Độ mạnh: {pwStrength.label}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Confirm new password */}
+                      <div className="form-group">
+                        <label className="form-label" htmlFor="confirm-pw">Xác nhận mật khẩu mới *</label>
+                        <div className="input-icon-wrap">
+                          <Lock size={17} className="bi" />
+                          <input
+                            id="confirm-pw"
+                            type={showConfirmPw ? 'text' : 'password'}
+                            className={`form-control ${
+                              pwFieldErrors.confirm
+                                ? 'is-invalid'
+                                : confirmNewPassword && confirmNewPassword === newPassword
+                                ? 'is-valid'
+                                : ''
+                            }`}
+                            placeholder="Nhập lại mật khẩu mới..."
+                            value={confirmNewPassword}
+                            onChange={(e) => { setConfirmNewPassword(e.target.value); setPwFieldErrors(p => ({ ...p, confirm: undefined })); }}
+                            disabled={pwLoading || pwSuccess}
+                          />
+                          <button type="button" className="toggle-pw" onClick={() => setShowConfirmPw(v => !v)} tabIndex={-1}>
+                            {showConfirmPw ? <EyeOff size={17} /> : <Eye size={17} />}
+                          </button>
+                        </div>
+                        {pwFieldErrors.confirm && <div className="form-error" style={{ marginTop: '4px' }}>{pwFieldErrors.confirm}</div>}
+                        {confirmNewPassword && confirmNewPassword === newPassword && !pwFieldErrors.confirm && (
+                          <div style={{ marginTop: '4px', fontSize: '0.78rem', color: 'var(--emerald)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <CheckCircle size={13} /> Mật khẩu khớp
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Submit */}
+                      <div className="flex-center" style={{ justifyContent: 'flex-end', gap: '0.8rem', marginTop: '2rem' }}>
+                        <button
+                          className="btn btn--ghost"
+                          onClick={() => { setOldPassword(''); setNewPassword(''); setConfirmNewPassword(''); setPwFieldErrors({}); setPwError(''); setPwSuccess(false); }}
+                          disabled={pwLoading}
+                        >
+                          Hủy
+                        </button>
+                        <button
+                          id="change-password-submit"
+                          className="btn btn--indigo"
+                          onClick={handleChangePassword}
+                          disabled={pwLoading || pwSuccess}
+                          style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '180px', justifyContent: 'center', opacity: pwLoading || pwSuccess ? 0.8 : 1 }}
+                        >
+                          {pwLoading ? (
+                            <><Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> Đang cập nhật...</>
+                          ) : pwSuccess ? (
+                            <><CheckCircle size={18} /> Đã cập nhật!</>
+                          ) : (
+                            <><Shield size={18} /> Cập nhật mật khẩu</>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
