@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { getCompareList, toggleCompareProduct } from '../utils/compare';
+import { getWishlist, toggleWishlistProduct } from '../utils/wishlist';
 import {
   Star,
   Heart,
@@ -18,7 +19,7 @@ import './ProductsPage.css';
 // ── Format tiền VND ──────────────────────────────────────────────────────────
 const fmtVND = (n: number) => {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1) + ' triệu';
-  if (n >= 1_000)     return (n / 1_000).toFixed(0) + 'K';
+  if (n >= 1_000) return (n / 1_000).toFixed(0) + 'K';
   return n.toLocaleString('vi-VN') + 'đ';
 };
 
@@ -26,6 +27,7 @@ const ProductsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [compareList, setCompareList] = useState(getCompareList());
+  const [wishlist, setWishlist] = useState(getWishlist());
 
   // Filter states
   const [search, setSearch] = useState(searchParams.get('q') || '');
@@ -60,13 +62,19 @@ const ProductsPage = () => {
   }, [boundsMin, boundsMax]);
 
   // Listen for compare list updates
+  // Listen for compare list & wishlist updates
   useEffect(() => {
     const handleUpdate = () => {
       setCompareList(getCompareList());
     };
+    const handleWishlistUpdate = () => {
+      setWishlist(getWishlist());
+    };
     window.addEventListener('compare-updated', handleUpdate);
+    window.addEventListener('wishlist-updated', handleWishlistUpdate);
     return () => {
       window.removeEventListener('compare-updated', handleUpdate);
+      window.removeEventListener('wishlist-updated', handleWishlistUpdate);
     };
   }, []);
 
@@ -95,8 +103,8 @@ const ProductsPage = () => {
 
   // ── Lọc giá trên products đã fetch ────────────────────────────────────────
   const rawProducts = productsData?.products || [];
-  const totalCount  = productsData?.count || 0;
-  const categories  = categoriesData || [];
+  const totalCount = productsData?.count || 0;
+  const categories = categoriesData || [];
 
   const getProductPrice = (p: any): number => {
     return p.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount
@@ -108,9 +116,9 @@ const ProductsPage = () => {
 
   const products = appliedPrice
     ? rawProducts.filter((p: any) => {
-        const price = getProductPrice(p);
-        return price >= appliedPrice[0] && price <= appliedPrice[1];
-      })
+      const price = getProductPrice(p);
+      return price >= appliedPrice[0] && price <= appliedPrice[1];
+    })
     : rawProducts;
 
   const getProductImage = (p: any) => {
@@ -151,9 +159,9 @@ const ProductsPage = () => {
   };
 
   // Tính % vị trí thumb trên track
-  const span   = boundsMax - boundsMin || 1;
+  const span = boundsMax - boundsMin || 1;
   const leftPc = ((priceRange[0] - boundsMin) / span) * 100;
-  const rightPc= 100 - ((priceRange[1] - boundsMin) / span) * 100;
+  const rightPc = 100 - ((priceRange[1] - boundsMin) / span) * 100;
 
   const isPriceFiltered = appliedPrice !== null
     && (appliedPrice[0] > boundsMin || appliedPrice[1] < boundsMax);
@@ -281,7 +289,7 @@ const ProductsPage = () => {
                     {/* Active track (highlight giữa 2 thumbs) */}
                     <div style={{
                       position: 'absolute',
-                      left:  `${leftPc}%`,
+                      left: `${leftPc}%`,
                       right: `${rightPc}%`,
                       height: '4px',
                       background: 'var(--indigo, #4f46e5)',
@@ -394,9 +402,9 @@ const ProductsPage = () => {
                       } else if (sortBy === 'popular') {
                         // Default popular sorting (combined score or just rating)
                         sortedProducts.sort((a, b) => {
-                           const scoreA = (Number(a.metadata?.rating || 5) * 10) + (Number(a.metadata?.view_count || 10));
-                           const scoreB = (Number(b.metadata?.rating || 5) * 10) + (Number(b.metadata?.view_count || 10));
-                           return scoreB - scoreA;
+                          const scoreA = (Number(a.metadata?.rating || 5) * 10) + (Number(a.metadata?.view_count || 10));
+                          const scoreB = (Number(b.metadata?.rating || 5) * 10) + (Number(b.metadata?.view_count || 10));
+                          return scoreB - scoreA;
                         });
                       } else if (sortBy === 'price_asc') {
                         sortedProducts.sort((a, b) => {
@@ -434,7 +442,21 @@ const ProductsPage = () => {
                           <article className="product-card" key={p.id}>
                             <div className="img-wrap">
                               {oldPrice && <span className="badge badge--sale">Giảm giá</span>}
-                              <button className="wishlist" aria-label="Add to wishlist"><Heart size={18} /></button>
+                              <button
+                                className="wishlist"
+                                aria-label="Add to wishlist"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  toggleWishlistProduct(p.id, p.title);
+                                }}
+                                style={{
+                                  opacity: wishlist.includes(p.id) ? 1 : undefined,
+                                  color: wishlist.includes(p.id) ? 'var(--rose)' : undefined,
+                                }}
+                              >
+                                <Heart size={18} fill={wishlist.includes(p.id) ? 'var(--rose)' : 'none'} stroke={wishlist.includes(p.id) ? 'var(--rose)' : 'currentColor'} />
+                              </button>
                               <img src={imgUrl} alt={p.title} style={{ objectFit: 'contain' }} />
                             </div>
                             <div className="stock"><span className="dot"></span>Còn hàng · {stock} sản phẩm</div>

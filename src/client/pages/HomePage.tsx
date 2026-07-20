@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getCompareList, toggleCompareProduct } from '../utils/compare';
+import { getWishlist, toggleWishlistProduct } from '../utils/wishlist';
 import { 
   Zap, 
   ArrowRight, 
@@ -13,6 +14,7 @@ import { useProducts } from '../services/product.service';
 const HomePage = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [compareList, setCompareList] = useState(getCompareList());
+  const [wishlist, setWishlist] = useState(getWishlist());
 
   // Fetch trending products from Medusa & Supabase
   const { data, isLoading } = useProducts({ limit: 12 });
@@ -22,9 +24,14 @@ const HomePage = () => {
     const handleUpdate = () => {
       setCompareList(getCompareList());
     };
+    const handleWishlistUpdate = () => {
+      setWishlist(getWishlist());
+    };
     window.addEventListener('compare-updated', handleUpdate);
+    window.addEventListener('wishlist-updated', handleWishlistUpdate);
     return () => {
       window.removeEventListener('compare-updated', handleUpdate);
+      window.removeEventListener('wishlist-updated', handleWishlistUpdate);
     };
   }, []);
 
@@ -179,7 +186,21 @@ const HomePage = () => {
                   <article key={p.id} className="product-card">
                     <div className="img-wrap">
                       {oldPrice && <span className="badge badge--sale">Giảm giá</span>}
-                      <button className="wishlist" aria-label="Wishlist"><Heart size={18} /></button>
+                      <button 
+                        className="wishlist" 
+                        aria-label="Wishlist" 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleWishlistProduct(p.id, p.title);
+                        }}
+                        style={{
+                          opacity: wishlist.includes(p.id) ? 1 : undefined,
+                          color: wishlist.includes(p.id) ? 'var(--rose)' : undefined,
+                        }}
+                      >
+                        <Heart size={18} fill={wishlist.includes(p.id) ? 'var(--rose)' : 'none'} stroke={wishlist.includes(p.id) ? 'var(--rose)' : 'currentColor'} />
+                      </button>
                       <img src={imgUrl} alt={p.title} style={{ objectFit: 'contain' }} />
                     </div>
                     <div className="stock"><span className="dot"></span>Còn hàng · {stock} sản phẩm</div>
