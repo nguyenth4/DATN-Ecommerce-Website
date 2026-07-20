@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import '../styles/account.css';
 import '../styles/order-tracking.css';
 import { 
@@ -248,45 +249,279 @@ const AccountPage = () => {
   };
 
   // Fetch profile on mount
+  // Address states
+  const [addresses, setAddresses] = useState<any[]>([]);
+  const [provinces, setProvinces] = useState<any[]>([]);
+  const [districts, setDistricts] = useState<any[]>([]);
+  const [wards, setWards] = useState<any[]>([]);
+
+  const [selectedProvince, setSelectedProvince] = useState<string>('');
+  const [selectedDistrict, setSelectedDistrict] = useState<string>('');
+  const [selectedWard, setSelectedWard] = useState<string>('');
+
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [editingAddress, setEditingAddress] = useState<any | null>(null);
+  const [addrFullName, setAddrFullName] = useState('');
+  const [addrPhone, setAddrPhone] = useState('');
+  const [addrDetail, setAddrDetail] = useState('');
+  const [addrCompany, setAddrCompany] = useState('Nhà riêng');
+  const [addrIsDefault, setAddrIsDefault] = useState(false);
+
+  // Fetch profile function
+  const fetchProfile = async () => {
+    try {
+      const res = await authService.authFetch(`${MEDUSA_BACKEND_URL}/store/customers/me?fields=*addresses`);
+      if (res.ok) {
+        const { customer } = await res.json();
+        if (customer) {
+          setCustomerId(customer.id);
+          setFirstName(customer.first_name || '');
+          setLastName(customer.last_name || '');
+          setEmail(customer.email || '');
+          setPhone(customer.phone || '');
+          setGender(customer.metadata?.gender || 'Nam');
+          setDob(customer.metadata?.dob || '1998-05-15');
+          setAvatarUrl(customer.metadata?.avatar_url || '');
+          setAddresses(customer.addresses || []);
+          
+          // cache user details
+          localStorage.setItem('customer_info', JSON.stringify({
+            id: customer.id,
+            email: customer.email,
+            first_name: customer.first_name,
+            last_name: customer.last_name,
+            phone: customer.phone,
+            avatar_url: customer.metadata?.avatar_url || '',
+            gender: customer.metadata?.gender || 'Nam',
+            dob: customer.metadata?.dob || '1998-05-15',
+          }));
+        }
+      } else if (res.status === 401) {
+        // Handled by authFetch logging out
+        navigate('/login', { state: { from: location } });
+      }
+    } catch (err) {
+      console.error("Fetch profile error:", err);
+    }
+  };
+
   useEffect(() => {
-    const fetchProfile = async () => {
+    fetchProfile();
+  }, [navigate]);
+
+  // Fetch Provinces on mount
+  useEffect(() => {
+    fetch('https://esgoo.net/api-tinhthanh/1/0.htm')
+      .then(res => res.json())
+      .then(data => {
+        if (data.error === 0) setProvinces(data.data);
+      })
+      .catch(err => console.error("Error fetching provinces:", err));
+  }, []);
+
+  // Fetch Districts when Province changes
+  useEffect(() => {
+    if (selectedProvince) {
+      fetch(`https://esgoo.net/api-tinhthanh/2/${selectedProvince}.htm`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.error === 0) setDistricts(data.data);
+          else setDistricts([]);
+          setWards([]);
+        })
+        .catch(err => {
+          console.error("Error fetching districts:", err);
+          setDistricts([]);
+        });
+    } else {
+      setDistricts([]);
+      setWards([]);
+    }
+  }, [selectedProvince]);
+
+  // Fetch Wards when District changes
+  useEffect(() => {
+    if (selectedDistrict) {
+      fetch(`https://esgoo.net/api-tinhthanh/3/${selectedDistrict}.htm`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.error === 0) setWards(data.data);
+          else setWards([]);
+        })
+        .catch(err => {
+          console.error("Error fetching wards:", err);
+          setWards([]);
+        });
+    } else {
+      setWards([]);
+    }
+  }, [selectedDistrict]);
+
+  const handleAddClick = () => {
+    setEditingAddress(null);
+    setAddrFullName('');
+    setAddrPhone('');
+    setAddrDetail('');
+    setAddrCompany('Nhà riêng');
+    setAddrIsDefault(addresses.length === 0);
+    setSelectedProvince('');
+    setSelectedDistrict('');
+    setSelectedWard('');
+    setDistricts([]);
+    setWards([]);
+    setShowAddressModal(true);
+  };
+
+  const handleEditClick = async (addr: any) => {
+    setEditingAddress(addr);
+    setAddrFullName(`${addr.first_name || ''} ${addr.last_name || ''}`.trim());
+    setAddrPhone(addr.phone || '');
+    setAddrDetail(addr.address_1 || '');
+    setAddrCompany(addr.company || 'Nhà riêng');
+    setAddrIsDefault(addr.is_default_shipping || false);
+
+    const provinceId = addr.metadata?.province_id || '';
+    const districtId = addr.metadata?.district_id || '';
+    const wardId = addr.metadata?.ward_id || '';
+
+    setSelectedProvince(provinceId);
+    
+    if (provinceId) {
       try {
-        const res = await authService.authFetch(`${MEDUSA_BACKEND_URL}/store/customers/me`);
-        if (res.ok) {
-          const { customer } = await res.json();
-          if (customer) {
-            setCustomerId(customer.id);
-            setFirstName(customer.first_name || '');
-            setLastName(customer.last_name || '');
-            setEmail(customer.email || '');
-            setPhone(customer.phone || '');
-            setGender(customer.metadata?.gender || 'Nam');
-            setDob(customer.metadata?.dob || '1998-05-15');
-            setAvatarUrl(customer.metadata?.avatar_url || '');
-            
-            // cache user details
-            localStorage.setItem('customer_info', JSON.stringify({
-              id: customer.id,
-              email: customer.email,
-              first_name: customer.first_name,
-              last_name: customer.last_name,
-              phone: customer.phone,
-              avatar_url: customer.metadata?.avatar_url || '',
-              gender: customer.metadata?.gender || 'Nam',
-              dob: customer.metadata?.dob || '1998-05-15',
-            }));
+        const distRes = await fetch(`https://esgoo.net/api-tinhthanh/2/${provinceId}.htm`);
+        const distData = await distRes.json();
+        if (distData.error === 0) {
+          setDistricts(distData.data);
+          setSelectedDistrict(districtId);
+          
+          if (districtId) {
+            const wardRes = await fetch(`https://esgoo.net/api-tinhthanh/3/${districtId}.htm`);
+            const wardData = await wardRes.json();
+            if (wardData.error === 0) {
+              setWards(wardData.data);
+              setSelectedWard(wardId);
+            }
           }
-        } else if (res.status === 401) {
-          // Handled by authFetch logging out
-          navigate('/login', { state: { from: location } });
         }
       } catch (err) {
-        console.error("Fetch profile error:", err);
+        console.error("Error populating location lists for edit:", err);
+      }
+    }
+    
+    setShowAddressModal(true);
+  };
+
+  const handleSaveAddress = async () => {
+    if (!addrFullName.trim() || !addrPhone.trim() || !addrDetail.trim() || !selectedProvince || !selectedDistrict || !selectedWard) {
+      alert("Vui lòng nhập đầy đủ các trường bắt buộc.");
+      return;
+    }
+
+    const provinceName = provinces.find(p => p.id === selectedProvince)?.name || '';
+    const districtName = districts.find(d => d.id === selectedDistrict)?.name || '';
+    const wardName = wards.find(w => w.id === selectedWard)?.name || '';
+
+    const nameParts = addrFullName.trim().split(' ');
+    const firstName = nameParts.slice(0, -1).join(' ') || nameParts[0] || '';
+    const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+
+    const addressPayload = {
+      address: {
+        first_name: firstName || addrFullName,
+        last_name: lastName || "",
+        phone: addrPhone,
+        address_1: addrDetail,
+        address_2: wardName,
+        city: districtName,
+        province: provinceName,
+        postal_code: "100000",
+        country_code: "vn",
+        company: addrCompany,
+        is_default_shipping: addrIsDefault,
+        metadata: {
+          province_id: selectedProvince,
+          district_id: selectedDistrict,
+          ward_id: selectedWard
+        }
       }
     };
 
-    fetchProfile();
-  }, [navigate]);
+    try {
+      let url = `${MEDUSA_BACKEND_URL}/store/customers/me/addresses`;
+      let method = 'POST';
+
+      if (editingAddress) {
+        url = `${MEDUSA_BACKEND_URL}/store/customers/me/addresses/${editingAddress.id}`;
+      }
+
+      const res = await authService.authFetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(addressPayload)
+      });
+
+      if (res.ok) {
+        setShowAddressModal(false);
+        fetchProfile();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.message || "Không thể lưu địa chỉ.");
+      }
+    } catch (err) {
+      console.error("Save address error:", err);
+      alert("Đã xảy ra lỗi kết nối với máy chủ.");
+    }
+  };
+
+  const handleDeleteAddress = async (addressId: string) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa địa chỉ này?")) {
+      return;
+    }
+
+    try {
+      const res = await authService.authFetch(`${MEDUSA_BACKEND_URL}/store/customers/me/addresses/${addressId}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        fetchProfile();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.message || "Không thể xóa địa chỉ.");
+      }
+    } catch (err) {
+      console.error("Delete address error:", err);
+      alert("Đã xảy ra lỗi kết nối với máy chủ.");
+    }
+  };
+
+  const handleSetDefaultAddress = async (addressId: string) => {
+    try {
+      const res = await authService.authFetch(`${MEDUSA_BACKEND_URL}/store/customers/me/addresses/${addressId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          address: {
+            is_default_shipping: true
+          }
+        })
+      });
+
+      if (res.ok) {
+        fetchProfile();
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.message || "Không thể đặt làm mặc định.");
+      }
+    } catch (err) {
+      console.error("Set default address error:", err);
+      alert("Đã xảy ra lỗi kết nối với máy chủ.");
+    }
+  };
 
   useEffect(() => {
     if (activeTab === 'wallet') {
@@ -886,36 +1121,70 @@ const AccountPage = () => {
                       Địa chỉ giao hàng
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.2rem' }}>
-                      <div className="address-card default">
-                        <div style={{ position: 'absolute', top: '1.2rem', right: '1.2rem' }}>
-                          <span className="status-badge badge-completed" style={{ fontSize: '0.65rem', padding: '0.15rem 0.5rem' }}>Mặc định</span>
+                      {addresses.length === 0 ? (
+                        <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem 1rem' }}>
+                          <div style={{ display: 'inline-flex', width: '60px', height: '60px', borderRadius: '50%', background: 'var(--indigo-soft, #e0e7ff)', alignItems: 'center', justifyContent: 'center', color: 'var(--indigo)', marginBottom: '1rem' }}>
+                            <MapPin size={28} />
+                          </div>
+                          <p style={{ margin: '0 0 1rem 0', color: 'var(--fg-soft)', fontSize: '0.95rem' }}>Bạn chưa lưu địa chỉ giao hàng nào.</p>
+                          <button className="btn btn-sm btn--indigo" onClick={handleAddClick} style={{ padding: '0.5rem 1.25rem', borderRadius: '20px' }}>Thêm địa chỉ đầu tiên</button>
                         </div>
-                        <h4 style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.5rem' }}>Nhà riêng</h4>
-                        <p style={{ fontSize: '0.85rem', lineHeight: 1.6, color: 'var(--fg-soft)' }}>
-                          <strong>Trần Ngọc</strong><br />
-                          0912 345 678<br />
-                          Số 123 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh
-                        </p>
-                        <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1rem', borderTop: '1px solid var(--rule)', paddingTop: '0.8rem' }}>
-                          <button style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--indigo)' }}><i className="bi bi-pencil"></i> Chỉnh sửa</button>
-                          <button style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--fg-mute)', cursor: 'not-allowed' }} disabled><i className="bi bi-trash"></i> Xóa</button>
-                        </div>
-                      </div>
-                      
-                      <div className="address-card">
-                        <h4 style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.5rem' }}>Văn phòng</h4>
-                        <p style={{ fontSize: '0.85rem', lineHeight: 1.6, color: 'var(--fg-soft)' }}>
-                          <strong>Trần Ngọc</strong><br />
-                          0912 345 678<br />
-                          Tầng 15, Tòa nhà Bitexco Financial, 2 Hải Triều, Bến Nghé, Quận 1, TP. Hồ Chí Minh
-                        </p>
-                        <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1rem', borderTop: '1px solid var(--rule)', paddingTop: '0.8rem' }}>
-                          <button style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--indigo)' }}><i className="bi bi-pencil"></i> Chỉnh sửa</button>
-                          <button style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--rose)' }}><i className="bi bi-trash"></i> Xóa</button>
-                        </div>
-                      </div>
+                      ) : (
+                        addresses.map((addr: any) => (
+                          <div key={addr.id} className={`address-card ${addr.is_default_shipping ? 'default' : ''}`} style={{ position: 'relative' }}>
+                            <div style={{ position: 'absolute', top: '1.2rem', right: '1.2rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                              {addr.is_default_shipping && (
+                                <span className="status-badge badge-completed" style={{ fontSize: '0.65rem', padding: '0.15rem 0.5rem' }}>Mặc định</span>
+                              )}
+                            </div>
+                            <h4 style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {addr.company === 'Văn phòng' ? (
+                                <i className="bi bi-briefcase text-muted"></i>
+                              ) : addr.company === 'Nhà riêng' ? (
+                                <i className="bi bi-house text-muted"></i>
+                              ) : (
+                                <i className="bi bi-geo-alt text-muted"></i>
+                              )}
+                              {addr.company || 'Địa chỉ'}
+                            </h4>
+                            <p style={{ fontSize: '0.85rem', lineHeight: 1.6, color: 'var(--fg-soft)' }}>
+                              <strong>{`${addr.first_name || ''} ${addr.last_name || ''}`.trim()}</strong><br />
+                              {addr.phone || 'Chưa có SĐT'}<br />
+                              {[addr.address_1, addr.address_2, addr.city, addr.province].filter(part => part && part.trim() !== '').join(', ')}
+                            </p>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', borderTop: '1px solid var(--rule)', paddingTop: '0.8rem' }}>
+                              <div style={{ display: 'flex', gap: '0.8rem' }}>
+                                <button 
+                                  onClick={() => handleEditClick(addr)}
+                                  style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--indigo)', background: 'none', border: 'none', cursor: 'pointer' }}
+                                >
+                                  <i className="bi bi-pencil"></i> Chỉnh sửa
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteAddress(addr.id)}
+                                  style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--rose)', background: 'none', border: 'none', cursor: 'pointer' }}
+                                >
+                                  <i className="bi bi-trash"></i> Xóa
+                                </button>
+                              </div>
+                              {!addr.is_default_shipping && (
+                                <button
+                                  onClick={() => handleSetDefaultAddress(addr.id)}
+                                  style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--fg-mute)', background: 'none', border: 'none', cursor: 'pointer' }}
+                                >
+                                  Đặt mặc định
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
-                    <button className="btn btn--indigo" style={{ marginTop: '1.5rem' }}><i className="bi bi-plus-lg"></i> Thêm địa chỉ mới</button>
+                    {addresses.length > 0 && (
+                      <button className="btn btn--indigo" onClick={handleAddClick} style={{ marginTop: '1.5rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <i className="bi bi-plus-lg"></i> Thêm địa chỉ mới
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -1224,6 +1493,146 @@ const AccountPage = () => {
           </div>
         </div>
       </section>
+
+      {/* ADDRESS MODAL */}
+      <AnimatePresence>
+        {showAddressModal && (
+          <div className="address-modal-overlay">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="address-modal-container"
+            >
+              <div className="address-modal-header">
+                <h3>{editingAddress ? 'Chỉnh sửa địa chỉ' : 'Thêm địa chỉ mới'}</h3>
+                <button className="close-btn" onClick={() => setShowAddressModal(false)}>
+                  <i className="bi bi-x-lg"></i>
+                </button>
+              </div>
+              <div className="address-modal-body">
+                <div className="form-row">
+                  <div className="form-group" style={{ marginBottom: '1.2rem' }}>
+                    <label className="form-label">Họ và tên người nhận *</label>
+                    <input 
+                      type="text" 
+                      className="form-control" 
+                      placeholder="Nguyễn Văn A" 
+                      value={addrFullName}
+                      onChange={(e) => setAddrFullName(e.target.value)}
+                    />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: '1.2rem' }}>
+                    <label className="form-label">Số điện thoại *</label>
+                    <input 
+                      type="tel" 
+                      className="form-control" 
+                      placeholder="09xx xxx xxx" 
+                      value={addrPhone}
+                      onChange={(e) => setAddrPhone(e.target.value)}
+                    />
+                  </div>
+                </div>
+                
+                <div className="form-row">
+                  <div className="form-group" style={{ marginBottom: '1.2rem' }}>
+                    <label className="form-label">Tỉnh / Thành phố *</label>
+                    <select 
+                      className="form-control" 
+                      value={selectedProvince}
+                      onChange={(e) => setSelectedProvince(e.target.value)}
+                    >
+                      <option value="">Chọn tỉnh/thành</option>
+                      {provinces.map((p: any) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ marginBottom: '1.2rem' }}>
+                    <label className="form-label">Quận / Huyện *</label>
+                    <select 
+                      className="form-control" 
+                      value={selectedDistrict}
+                      onChange={(e) => setSelectedDistrict(e.target.value)}
+                      disabled={!selectedProvince}
+                    >
+                      <option value="">Chọn quận/huyện</option>
+                      {districts.map((d: any) => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group" style={{ marginBottom: '1.2rem' }}>
+                    <label className="form-label">Phường / Xã *</label>
+                    <select 
+                      className="form-control" 
+                      value={selectedWard}
+                      onChange={(e) => setSelectedWard(e.target.value)}
+                      disabled={!selectedDistrict}
+                    >
+                      <option value="">Chọn phường/xã</option>
+                      {wards.map((w: any) => (
+                        <option key={w.id} value={w.id}>{w.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ marginBottom: '1.2rem' }}>
+                    <label className="form-label">Địa chỉ chi tiết *</label>
+                    <input 
+                      type="text" 
+                      className="form-control" 
+                      placeholder="Số nhà, tên đường..." 
+                      value={addrDetail}
+                      onChange={(e) => setAddrDetail(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '1.2rem' }}>
+                  <label className="form-label">Loại địa chỉ</label>
+                  <div style={{ display: 'flex', gap: '1rem', marginTop: '0.4rem' }}>
+                    {['Nhà riêng', 'Văn phòng', 'Khác'].map((label) => (
+                      <label key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', cursor: 'pointer', fontWeight: 500, color: 'var(--fg-soft)' }}>
+                        <input 
+                          type="radio" 
+                          name="addressType" 
+                          value={label}
+                          checked={addrCompany === label}
+                          onChange={() => setAddrCompany(label)}
+                          style={{ accentColor: 'var(--indigo)' }}
+                        />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {(!editingAddress || !editingAddress.is_default_shipping) && (
+                  <div className="form-group" style={{ marginBottom: '1.2rem' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.875rem', cursor: 'pointer', fontWeight: 500, color: 'var(--fg-soft)', marginTop: '0.8rem' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={addrIsDefault}
+                        onChange={(e) => setAddrIsDefault(e.target.checked)}
+                        style={{ accentColor: 'var(--indigo)' }}
+                      />
+                      Đặt làm địa chỉ mặc định
+                    </label>
+                  </div>
+                )}
+              </div>
+              <div className="address-modal-footer">
+                <button className="btn btn--ghost" onClick={() => setShowAddressModal(false)}>Hủy</button>
+                <button className="btn btn--indigo" onClick={handleSaveAddress}>Lưu địa chỉ</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </>
   );
 };

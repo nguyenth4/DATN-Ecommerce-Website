@@ -536,3 +536,78 @@
   font-weight: 700;
   color: var(--indigo);
 }
+
+/* ===== ADDRESS MODAL GLASSMORPHISM STYLE ===== */
+.address-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.address-modal-container {
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  border-radius: var(--r-lg);
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.address-modal-header {
+  padding: 1.2rem 1.5rem;
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.address-modal-header h3 {
+  font-family: var(--ff-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--ink);
+  margin: 0;
+}
+
+.address-modal-header .close-btn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: var(--fg-mute);
+  cursor: pointer;
+  transition: color 0.15s ease;
+  padding: 0.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.address-modal-header .close-btn:hover {
+  color: var(--rose);
+}
+
+.address-modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.address-modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--rule);
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.8rem;
+  background: rgba(250, 250, 250, 0.8);
+}
+
