@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
 import { Container, Heading, StatusBadge, Button } from "@medusajs/ui"
 
@@ -13,7 +13,7 @@ const statusColorMap: Record<string, "grey" | "orange" | "green" | "red" | "blue
 export const OrdersWidget = () => {
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
-  const [page, setPage] = useState(0)
+  const [page] = useState(0)
   const limit = 20
 
   const fetchOrders = async () => {

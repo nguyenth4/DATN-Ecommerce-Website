@@ -35,6 +35,15 @@
   width: 72px;
   height: 72px;
   margin: 0 auto 0.8rem;
+  transition: transform 0.2s ease;
+}
+.avatar-wrap:hover {
+  transform: scale(1.05);
+}
+.avatar-wrap:hover .avatar-edit {
+  background: var(--indigo);
+  color: white;
+  border-color: var(--indigo);
 }
 .avatar-img {
   width: 72px;
@@ -51,23 +60,35 @@
   letter-spacing: 1px;
   position: relative;
   z-index: 1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  transition: border-color 0.2s ease;
+}
+.avatar-wrap:hover .avatar-img {
+  border-color: var(--indigo);
 }
 .avatar-edit {
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   background: white;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   color: var(--ink);
   cursor: pointer;
   z-index: 2;
   border: 1.5px solid var(--rule);
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 .account-name {
   color: white;

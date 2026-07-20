@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import '../styles/account.css';
 import '../styles/order-tracking.css';
@@ -139,7 +139,10 @@ const AccountPage = () => {
   const [phone, setPhone] = useState('');
   const [gender, setGender] = useState('Nam');
   const [dob, setDob] = useState('1998-05-15');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Change password form state
   const [oldPassword, setOldPassword] = useState('');
@@ -257,6 +260,9 @@ const AccountPage = () => {
             setLastName(customer.last_name || '');
             setEmail(customer.email || '');
             setPhone(customer.phone || '');
+            setGender(customer.metadata?.gender || 'Nam');
+            setDob(customer.metadata?.dob || '1998-05-15');
+            setAvatarUrl(customer.metadata?.avatar_url || '');
             
             // cache user details
             localStorage.setItem('customer_info', JSON.stringify({
@@ -265,6 +271,9 @@ const AccountPage = () => {
               first_name: customer.first_name,
               last_name: customer.last_name,
               phone: customer.phone,
+              avatar_url: customer.metadata?.avatar_url || '',
+              gender: customer.metadata?.gender || 'Nam',
+              dob: customer.metadata?.dob || '1998-05-15',
             }));
           }
         } else if (res.status === 401) {
@@ -313,9 +322,72 @@ const AccountPage = () => {
       .filter(Boolean);
   }, [productsData, wishlistIds]);
 
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Kích thước tệp tin không được vượt quá 5MB.");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onloadend = async () => {
+        const base64Data = reader.result as string;
+
+        const res = await authService.authFetch(`${MEDUSA_BACKEND_URL}/store/custom/upload-avatar`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            avatar: base64Data
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.avatar_url) {
+            setAvatarUrl(data.avatar_url);
+            
+            const cached = localStorage.getItem('customer_info');
+            if (cached) {
+              const customer = JSON.parse(cached);
+              customer.avatar_url = data.avatar_url;
+              localStorage.setItem('customer_info', JSON.stringify(customer));
+            }
+            
+            window.dispatchEvent(new Event('customer-auth-change'));
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 3000);
+          }
+        } else {
+          const data = await res.json().catch(() => ({}));
+          alert(data?.message || "Tải lên ảnh thất bại.");
+        }
+        setUploading(false);
+      };
+      reader.onerror = () => {
+        alert("Có lỗi xảy ra khi đọc tệp tin.");
+        setUploading(false);
+      };
+    } catch (err) {
+      console.error(err);
+      alert("Lỗi khi kết nối với máy chủ.");
+      setUploading(false);
+    }
+  };
+
   const handleSaveProfile = async () => {
     try {
-      const res = await authService.authFetch(`${MEDUSA_BACKEND_URL}/store/customers/me`, {
+      const res = await authService.authFetch(`${MEDUSA_BACKEND_URL}/store/custom/profile`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -323,7 +395,10 @@ const AccountPage = () => {
         body: JSON.stringify({
           first_name: firstName,
           last_name: lastName,
-          phone: phone
+          phone: phone,
+          email: email,
+          gender: gender,
+          dob: dob
         })
       });
       if (res.ok) {
@@ -335,6 +410,9 @@ const AccountPage = () => {
           first_name: customer.first_name,
           last_name: customer.last_name,
           phone: customer.phone,
+          avatar_url: customer.metadata?.avatar_url || '',
+          gender: customer.metadata?.gender || 'Nam',
+          dob: customer.metadata?.dob || '1998-05-15',
         }));
         window.dispatchEvent(new Event('customer-auth-change'));
         setTimeout(() => setSaveSuccess(false), 3000);
@@ -356,6 +434,9 @@ const AccountPage = () => {
       setLastName(customer.last_name || '');
       setEmail(customer.email || '');
       setPhone(customer.phone || '');
+      setGender(customer.gender || 'Nam');
+      setDob(customer.dob || '1998-05-15');
+      setAvatarUrl(customer.avatar_url || '');
     }
   };
 
@@ -401,8 +482,31 @@ const AccountPage = () => {
             {/* SIDEBAR */}
             <div className="account-sidebar">
               <div className="account-profile-header">
-                <div className="avatar-wrap">
-                  <div className="avatar-img">{firstName.charAt(0)}{lastName.charAt(0)}</div>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleAvatarChange} 
+                  style={{ display: 'none' }} 
+                  accept="image/*" 
+                />
+                <div className="avatar-wrap" onClick={handleAvatarClick} style={{ cursor: 'pointer' }}>
+                  <div className="avatar-img" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {uploading ? (
+                      <div className="avatar-spinner" style={{ animation: 'spin 1s linear infinite', border: '3px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', width: '24px', height: '24px' }}></div>
+                    ) : avatarUrl ? (
+                      <img 
+                        src={avatarUrl.startsWith('/') ? `${avatarUrl}` : avatarUrl} 
+                        alt="Avatar" 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                      />
+                    ) : (
+                      (firstName || lastName) ? (
+                        `${firstName.charAt(0) || ''}${lastName.charAt(0) || ''}`
+                      ) : (
+                        <User size={28} />
+                      )
+                    )}
+                  </div>
                   <div className="avatar-edit"><Camera size={14} /></div>
                 </div>
                 <div className="account-name">{firstName} {lastName}</div>

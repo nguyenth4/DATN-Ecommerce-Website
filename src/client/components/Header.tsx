@@ -301,8 +301,16 @@ const Header = () => {
 
           <div className="icon-row">
             {customerInfo ? (
-              <Link to="/account" className="icon-btn" aria-label="Tài khoản" title={`Chào, ${customerInfo.first_name || 'bạn'}`} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <User size={20} />
+              <Link to="/account" className="icon-btn" aria-label="Tài khoản" title={`Chào, ${customerInfo.first_name || 'bạn'}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {customerInfo.avatar_url ? (
+                  <img 
+                    src={customerInfo.avatar_url} 
+                    alt="Avatar" 
+                    style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--rule)' }} 
+                  />
+                ) : (
+                  <User size={20} />
+                )}
                 <span className="text-xs font-semibold" style={{ fontSize: '0.8rem', fontWeight: 600, maxWidth: '70px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {customerInfo.first_name}
                 </span>
