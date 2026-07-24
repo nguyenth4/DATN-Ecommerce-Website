@@ -107,8 +107,34 @@ const CheckoutPage = () => {
   const [fullName, setFullName] = useState('Hỷ Huỳnh Trần Khang');
   const [phoneNumber, setPhoneNumber] = useState('(+84) 824 421 498');
   const [email, setEmail] = useState('');
+  const [email, setEmail] = useState('');
   const [detailAddress, setDetailAddress] = useState('');
   const [note, setNote] = useState('');
+  
+  // Saved Addresses State
+  const [savedAddresses, setSavedAddresses] = useState<any[]>([
+    {
+      id: 'addr_1',
+      name: 'Nhà riêng',
+      fullName: 'Hỷ Huỳnh Trần Khang',
+      phone: '(+84) 824 421 498',
+      mergedAddress: 'Số 123 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, Hồ Chí Minh',
+      isDefault: true
+    },
+    {
+      id: 'addr_2',
+      name: 'Văn phòng',
+      fullName: 'Trần Ngọc',
+      phone: '0912 345 678',
+      mergedAddress: 'Tầng 15, Tòa nhà Bitexco Financial, 2 Hải Triều, Bến Nghé, Quận 1, Hồ Chí Minh',
+      isDefault: false
+    }
+  ]);
+  const [addressMode, setAddressMode] = useState<'saved' | 'new'>('saved');
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string>('addr_1');
+  const [setAsDefault, setSetAsDefault] = useState(false);
+  const [addressValidationError, setAddressValidationError] = useState('');
+
   
   // Computed Merged Address
   const provinceName = provinces.find(p => p.id === selectedProvince)?.name || '';
@@ -118,6 +144,18 @@ const CheckoutPage = () => {
   const mergedAddress = [detailAddress, wardName, districtName, provinceName]
     .filter(part => part && part.trim() !== '')
     .join(', ');
+
+  const finalOrderAddress = addressMode === 'saved' 
+    ? savedAddresses.find(a => a.id === selectedSavedAddressId)?.mergedAddress 
+    : mergedAddress;
+  
+  const finalOrderFullName = addressMode === 'saved'
+    ? savedAddresses.find(a => a.id === selectedSavedAddressId)?.fullName
+    : fullName;
+    
+  const finalOrderPhone = addressMode === 'saved'
+    ? savedAddresses.find(a => a.id === selectedSavedAddressId)?.phone
+    : phoneNumber;
 
 
   // Fetch Provinces on mount
@@ -166,22 +204,32 @@ const CheckoutPage = () => {
   }, [selectedDistrict]);
 
   const handlePlaceOrder = async () => {
+    // Validate address if mode is 'new'
+    if (addressMode === 'new') {
+      if (!selectedProvince || !selectedDistrict || !selectedWard || !detailAddress.trim()) {
+        setAddressValidationError('Vui lòng chọn hoặc nhập đầy đủ thông tin Tỉnh/Thành, Quận/Huyện, Phường/Xã và Địa chỉ chi tiết.');
+        return;
+      }
+    }
+    setAddressValidationError('');
+
     // Show a premium success transition
     const orderData = {
         customer: {
-            fullName,
-            phoneNumber,
+            fullName: finalOrderFullName,
+            phoneNumber: finalOrderPhone,
             email,
         },
         paymentMethod,
         shippingMethod,
-        address: mergedAddress,
-        addressComponents: {
+        address: finalOrderAddress,
+        addressComponents: addressMode === 'new' ? {
             province: provinceName,
             district: districtName,
             ward: wardName,
             detail: detailAddress
-        },
+        } : undefined,
+        setAsDefault: addressMode === 'new' ? setAsDefault : false,
         note,
         items: cartItems,
     };
@@ -355,74 +403,154 @@ const CheckoutPage = () => {
               className="checkout-section"
             >
               <h2 className="section-title">
-                <MapPin size={22} /> Địa chỉ nhận hàng (Mới)
+                <MapPin size={22} /> Địa chỉ nhận hàng
               </h2>
-
-              <div className="form-grid">
-                <div className="form-group">
-                  <label className="form-label">Tỉnh / Thành phố *</label>
-                  <select 
-                    className="form-select" 
-                    value={selectedProvince} 
-                    onChange={(e) => setSelectedProvince(e.target.value)}
-                  >
-                    <option value="">Chọn tỉnh/thành</option>
-                    {provinces.map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Quận / Huyện *</label>
-                  <select 
-                    className="form-select" 
-                    value={selectedDistrict}
-                    onChange={(e) => setSelectedDistrict(e.target.value)}
-                    disabled={!selectedProvince}
-                  >
-                    <option value="">Chọn quận/huyện</option>
-                    {districts.map(d => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label className="form-label">Phường / Xã *</label>
-                  <select 
-                    className="form-select"
-                    value={selectedWard}
-                    onChange={(e) => setSelectedWard(e.target.value)}
-                    disabled={!selectedDistrict}
-                  >
-                    <option value="">Chọn phường/xã</option>
-                    {wards.map(w => (
-                      <option key={w.id} value={w.id}>{w.name}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Địa chỉ chi tiết *</label>
-                  <input 
-                    type="text" 
-                    className="form-input" 
-                    placeholder="Số nhà, tên đường..." 
-                    value={detailAddress}
-                    onChange={(e) => setDetailAddress(e.target.value)}
-                  />
-                </div>
-              </div>
               
-              {mergedAddress && (
-                <motion.div 
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="merged-address-preview"
+              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--rule)' }}>
+                <button 
+                  style={{ 
+                    padding: '0.8rem 1rem', 
+                    background: 'none', 
+                    border: 'none', 
+                    borderBottom: addressMode === 'saved' ? '2px solid var(--indigo)' : '2px solid transparent',
+                    color: addressMode === 'saved' ? 'var(--indigo)' : 'var(--fg-mute)',
+                    fontWeight: addressMode === 'saved' ? 700 : 500,
+                    cursor: 'pointer',
+                    fontSize: '1rem'
+                  }}
+                  onClick={() => setAddressMode('saved')}
                 >
-                  <div className="preview-label">Địa chỉ sáp nhập:</div>
-                  <div className="preview-content">{mergedAddress}</div>
-                </motion.div>
+                  Địa chỉ đã lưu
+                </button>
+                <button 
+                  style={{ 
+                    padding: '0.8rem 1rem', 
+                    background: 'none', 
+                    border: 'none', 
+                    borderBottom: addressMode === 'new' ? '2px solid var(--indigo)' : '2px solid transparent',
+                    color: addressMode === 'new' ? 'var(--indigo)' : 'var(--fg-mute)',
+                    fontWeight: addressMode === 'new' ? 700 : 500,
+                    cursor: 'pointer',
+                    fontSize: '1rem'
+                  }}
+                  onClick={() => setAddressMode('new')}
+                >
+                  Thêm địa chỉ mới
+                </button>
+              </div>
+
+              {addressMode === 'saved' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  {savedAddresses.map(addr => (
+                    <div 
+                      key={addr.id}
+                      onClick={() => setSelectedSavedAddressId(addr.id)}
+                      style={{
+                        padding: '1.2rem',
+                        border: selectedSavedAddressId === addr.id ? '2px solid var(--indigo)' : '1px solid var(--border)',
+                        borderRadius: 'var(--r)',
+                        cursor: 'pointer',
+                        background: selectedSavedAddressId === addr.id ? 'var(--indigo-soft, #EEF2FF)' : 'var(--paper)',
+                        position: 'relative'
+                      }}
+                    >
+                      {addr.isDefault && (
+                        <span style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'var(--emerald)', color: 'white', fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 600 }}>Mặc định</span>
+                      )}
+                      <div style={{ fontWeight: 700, marginBottom: '0.4rem', color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {selectedSavedAddressId === addr.id ? <CheckCircle2 size={16} color="var(--indigo)" /> : <div style={{width: 16, height: 16, border: '1px solid var(--border)', borderRadius: '50%'}}></div>}
+                        {addr.name}
+                      </div>
+                      <div style={{ fontSize: '0.9rem', color: 'var(--fg-soft)', paddingLeft: '24px' }}>
+                        <span style={{ fontWeight: 600 }}>{addr.fullName}</span> | {addr.phone}
+                        <br/>
+                        {addr.mergedAddress}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <>
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label className="form-label">Tỉnh / Thành phố *</label>
+                      <select 
+                        className="form-select" 
+                        value={selectedProvince} 
+                        onChange={(e) => setSelectedProvince(e.target.value)}
+                      >
+                        <option value="">Chọn tỉnh/thành</option>
+                        {provinces.map(p => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Quận / Huyện *</label>
+                      <select 
+                        className="form-select" 
+                        value={selectedDistrict}
+                        onChange={(e) => setSelectedDistrict(e.target.value)}
+                        disabled={!selectedProvince}
+                      >
+                        <option value="">Chọn quận/huyện</option>
+                        {districts.map(d => (
+                          <option key={d.id} value={d.id}>{d.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label className="form-label">Phường / Xã *</label>
+                      <select 
+                        className="form-select"
+                        value={selectedWard}
+                        onChange={(e) => setSelectedWard(e.target.value)}
+                        disabled={!selectedDistrict}
+                      >
+                        <option value="">Chọn phường/xã</option>
+                        {wards.map(w => (
+                          <option key={w.id} value={w.id}>{w.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Địa chỉ chi tiết *</label>
+                      <input 
+                        type="text" 
+                        className="form-input" 
+                        placeholder="Số nhà, tên đường..." 
+                        value={detailAddress}
+                        onChange={(e) => setDetailAddress(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  
+                  {mergedAddress && (
+                    <motion.div 
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="merged-address-preview"
+                    >
+                      <div className="preview-label">Địa chỉ sáp nhập (Tổng hợp):</div>
+                      <div className="preview-content">{mergedAddress}</div>
+                    </motion.div>
+                  )}
+                  
+                  <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '1rem' }}>
+                    <input 
+                      type="checkbox" 
+                      id="setDefault" 
+                      checked={setAsDefault} 
+                      onChange={(e) => setSetAsDefault(e.target.checked)}
+                      style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--indigo)' }}
+                    />
+                    <label htmlFor="setDefault" style={{ cursor: 'pointer', margin: 0, userSelect: 'none', fontWeight: 500 }}>
+                      Đặt làm địa chỉ mặc định
+                    </label>
+                  </div>
+                </>
               )}
 
               <div className="form-group mb-0">
@@ -591,6 +719,21 @@ const CheckoutPage = () => {
                   <ul style={{ paddingLeft: '15px', marginTop: '5px', listStyleType: 'disc' }}>
                     {validationErrors.map((err, idx) => <li key={idx}>{err}</li>)}
                   </ul>
+                </div>
+              )}
+
+              {addressValidationError && (
+                <div style={{
+                  padding: '12px',
+                  background: '#fffbeb',
+                  borderLeft: '4px solid #f59e0b',
+                  borderRadius: '6px',
+                  color: '#b45309',
+                  fontSize: '0.85rem',
+                  marginBottom: '15px'
+                }}>
+                  <strong>⚠️ Lỗi địa chỉ:</strong>
+                  <p style={{ marginTop: '5px' }}>{addressValidationError}</p>
                 </div>
               )}
 
