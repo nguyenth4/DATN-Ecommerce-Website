@@ -107,7 +107,6 @@ const CheckoutPage = () => {
   const [fullName, setFullName] = useState('Hỷ Huỳnh Trần Khang');
   const [phoneNumber, setPhoneNumber] = useState('(+84) 824 421 498');
   const [email, setEmail] = useState('');
-  const [email, setEmail] = useState('');
   const [detailAddress, setDetailAddress] = useState('');
   const [note, setNote] = useState('');
   
