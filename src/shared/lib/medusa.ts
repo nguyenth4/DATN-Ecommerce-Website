@@ -5,7 +5,7 @@ const MEDUSA_BACKEND_URL = import.meta.env.VITE_MEDUSA_BACKEND_URL || 'http://lo
 
 const token = typeof window !== 'undefined' ? localStorage.getItem('admin_token') : null;
 
-const publishableKey = import.meta.env.VITE_MEDUSA_PUBLISHABLE_KEY || 'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483';
+const publishableKey = import.meta.env.VITE_MEDUSA_PUBLISHABLE_KEY || 'pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d';
 
 export const medusa = new Medusa({
   baseUrl: MEDUSA_BACKEND_URL,

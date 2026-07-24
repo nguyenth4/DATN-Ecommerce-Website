@@ -81,7 +81,7 @@ module.exports = defineConfig({
     },
     // ── Custom Wallet Module ──────────────────────────────────────────────────
     "wallet": {
-      resolve: "./modules/wallet",
+      resolve: "./src/modules/wallet",
     },
   }
 })

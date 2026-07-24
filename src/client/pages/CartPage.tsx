@@ -99,27 +99,33 @@ const CartPage = () => {
   
   const [shippingFee, setShippingFee] = useState<number>(0);
 
-  // Fetch Provinces
+  // Fetch Provinces (Cas AddressKit API via proxy - 2025-07-01)
   useEffect(() => {
-    fetch('https://esgoo.net/api-tinhthanh/1/0.htm')
+    fetch('/api/cas/address-kit/2025-07-01/provinces')
       .then(res => res.json())
       .then(data => {
-        if (data.error === 0) setProvinces(data.data);
+        const list = data?.provinces || (Array.isArray(data) ? data : []);
+        setProvinces(list.map((p: any) => ({ id: p.code, name: p.name })));
       })
       .catch(console.error);
   }, []);
 
-  // Fetch Districts
+  // Fetch Communes (Cas AddressKit API via proxy - 2025-07-01)
   useEffect(() => {
     if (selectedProvince) {
-      fetch(`https://esgoo.net/api-tinhthanh/2/${selectedProvince}.htm`)
+      fetch(`/api/cas/address-kit/2025-07-01/provinces/${selectedProvince}/communes`)
         .then(res => res.json())
         .then(data => {
-          if (data.error === 0) setDistricts(data.data);
-          else setDistricts([]);
-          setWards([]);
-          setSelectedDistrict('');
-          setSelectedWard('');
+          const list = data?.communes || (Array.isArray(data) ? data : []);
+          if (list.length > 0) {
+            setWards(list.map((c: any) => ({ id: c.code, name: c.name })));
+            setDistricts([{ id: 'default', name: 'Toàn khu vực' }]);
+            setSelectedDistrict('default');
+            setSelectedWard('');
+          } else {
+            setWards([]);
+            setDistricts([]);
+          }
         })
         .catch(console.error);
     } else {
@@ -127,22 +133,6 @@ const CartPage = () => {
       setWards([]);
     }
   }, [selectedProvince]);
-
-  // Fetch Wards
-  useEffect(() => {
-    if (selectedDistrict) {
-      fetch(`https://esgoo.net/api-tinhthanh/3/${selectedDistrict}.htm`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.error === 0) setWards(data.data);
-          else setWards([]);
-          setSelectedWard('');
-        })
-        .catch(console.error);
-    } else {
-      setWards([]);
-    }
-  }, [selectedDistrict]);
 
   // Fetch Shipping Fee
   useEffect(() => {

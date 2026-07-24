@@ -202,4 +202,8 @@ export class FacebookAuthService extends AbstractAuthModuleProvider {
   }
 }
 
-export default FacebookAuthService;
+import { ModuleProvider } from "@medusajs/framework/utils";
+
+export default ModuleProvider("facebook", {
+  services: [FacebookAuthService],
+});

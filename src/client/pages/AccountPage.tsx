@@ -309,28 +309,36 @@ const AccountPage = () => {
     fetchProfile();
   }, [navigate]);
 
-  // Fetch Provinces on mount
+  // Fetch Provinces on mount (Cas AddressKit API via proxy - 2025-07-01)
   useEffect(() => {
-    fetch('https://esgoo.net/api-tinhthanh/1/0.htm')
+    fetch('/api/cas/address-kit/2025-07-01/provinces')
       .then(res => res.json())
       .then(data => {
-        if (data.error === 0) setProvinces(data.data);
+        const list = data?.provinces || (Array.isArray(data) ? data : []);
+        setProvinces(list.map((p: any) => ({ id: p.code, name: p.name })));
       })
-      .catch(err => console.error("Error fetching provinces:", err));
+      .catch(err => console.error("Error fetching provinces from AddressKit:", err));
   }, []);
 
-  // Fetch Districts when Province changes
+  // Fetch Wards/Communes when Province changes (Cas AddressKit API via proxy - 2025-07-01)
   useEffect(() => {
     if (selectedProvince) {
-      fetch(`https://esgoo.net/api-tinhthanh/2/${selectedProvince}.htm`)
+      fetch(`/api/cas/address-kit/2025-07-01/provinces/${selectedProvince}/communes`)
         .then(res => res.json())
         .then(data => {
-          if (data.error === 0) setDistricts(data.data);
-          else setDistricts([]);
-          setWards([]);
+          const list = data?.communes || (Array.isArray(data) ? data : []);
+          if (list.length > 0) {
+            setWards(list.map((c: any) => ({ id: c.code, name: c.name })));
+            setDistricts([{ id: 'default', name: 'Toàn khu vực' }]);
+            setSelectedDistrict('default');
+          } else {
+            setWards([]);
+            setDistricts([]);
+          }
         })
         .catch(err => {
-          console.error("Error fetching districts:", err);
+          console.error("Error fetching communes from AddressKit:", err);
+          setWards([]);
           setDistricts([]);
         });
     } else {
@@ -338,24 +346,6 @@ const AccountPage = () => {
       setWards([]);
     }
   }, [selectedProvince]);
-
-  // Fetch Wards when District changes
-  useEffect(() => {
-    if (selectedDistrict) {
-      fetch(`https://esgoo.net/api-tinhthanh/3/${selectedDistrict}.htm`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.error === 0) setWards(data.data);
-          else setWards([]);
-        })
-        .catch(err => {
-          console.error("Error fetching wards:", err);
-          setWards([]);
-        });
-    } else {
-      setWards([]);
-    }
-  }, [selectedDistrict]);
 
   const handleAddClick = () => {
     setEditingAddress(null);
@@ -381,27 +371,20 @@ const AccountPage = () => {
     setAddrIsDefault(addr.is_default_shipping || false);
 
     const provinceId = addr.metadata?.province_id || '';
-    const districtId = addr.metadata?.district_id || '';
     const wardId = addr.metadata?.ward_id || '';
 
     setSelectedProvince(provinceId);
     
     if (provinceId) {
       try {
-        const distRes = await fetch(`https://esgoo.net/api-tinhthanh/2/${provinceId}.htm`);
-        const distData = await distRes.json();
-        if (distData.error === 0) {
-          setDistricts(distData.data);
-          setSelectedDistrict(districtId);
-          
-          if (districtId) {
-            const wardRes = await fetch(`https://esgoo.net/api-tinhthanh/3/${districtId}.htm`);
-            const wardData = await wardRes.json();
-            if (wardData.error === 0) {
-              setWards(wardData.data);
-              setSelectedWard(wardId);
-            }
-          }
+        const wardRes = await fetch(`/api/cas/address-kit/2025-07-01/provinces/${provinceId}/communes`);
+        const wardData = await wardRes.json();
+        const list = wardData?.communes || (Array.isArray(wardData) ? wardData : []);
+        if (list.length > 0) {
+          setWards(list.map((c: any) => ({ id: c.code, name: c.name })));
+          setDistricts([{ id: 'default', name: 'Toàn khu vực' }]);
+          setSelectedDistrict('default');
+          setSelectedWard(wardId);
         }
       } catch (err) {
         console.error("Error populating location lists for edit:", err);

@@ -6,24 +6,23 @@ import { IOrderModuleService, IInventoryService } from "@medusajs/framework/type
 /**
  * List orders with optional pagination and status filter.
  */
-export async function listOrders({ limit = 20, offset = 0, status }: { limit: number; offset: number; status?: string }) {
-  const container = (global as any).container as MedusaContainer
-  const orderService: IOrderModuleService = container.resolve(Modules.ORDER)
-  const query: any = {
+export async function listOrders(scope: any, { limit = 20, offset = 0, status }: { limit: number; offset: number; status?: string }) {
+  const orderService: IOrderModuleService = scope.resolve(Modules.ORDER)
+  const filters: any = {}
+  if (status) filters.status = status
+  const config = {
     skip: offset,
     take: limit,
   }
-  if (status) query.status = status
-  const [orders, count] = await orderService.listAndCount(query)
-  return { orders, count }
+  const [orders, count] = await orderService.listAndCountOrders(filters, config)
+  return { orders, count, offset, limit }
 }
 
 /** Retrieve a single order by ID */
-export async function getOrder(id: string) {
-  const container = (global as any).container as MedusaContainer
-  const orderService: IOrderModuleService = container.resolve(Modules.ORDER)
+export async function getOrder(scope: any, id: string) {
+  const orderService: IOrderModuleService = scope.resolve(Modules.ORDER)
   const order = await orderService.retrieveOrder(id, { relations: ["items", "shipping_address", "billing_address"] })
-  return order
+  return { order }
 }
 
 /**
@@ -31,57 +30,54 @@ export async function getOrder(id: string) {
  * if the new status is "fulfilled" (or the enum value that represents fulfillment).
  */
 export async function updateOrderStatus(
+  scope: any,
   orderId: string,
   newStatus: string,
   shippingMethod?: string
 ) {
-  const container = (global as any).container as MedusaContainer
-  const manager = container.resolve("manager")
-  const orderService: IOrderModuleService = container.resolve(Modules.ORDER)
-  const inventoryService: IInventoryService = container.resolve(Modules.INVENTORY)
+  const orderService: IOrderModuleService = scope.resolve(Modules.ORDER)
+  const inventoryService: IInventoryService = scope.resolve(Modules.INVENTORY)
 
-  // Use a transaction to keep all steps atomic
-  return await manager.transaction(async (transactionManager: any) => {
-    // Load the order fresh inside the transaction
-    const order = await orderService.retrieveOrder(orderId, { relations: ["items"] })
+  // Load the order fresh
+  const order = await orderService.retrieveOrder(orderId, { relations: ["items"] })
 
-    // Update status
-    await orderService.update(orderId, { status: newStatus })
+  // Update status
+  await orderService.updateOrders(orderId, { status: newStatus as any })
 
-    // If the order is being fulfilled, handle inventory & shipping
-    if (newStatus === "fulfilled") {
-      // --- Inventory decrement (only if not already done) ---
-      if (order.fulfillment_status !== "fulfilled") {
-        for (const item of order.items) {
-          // Adjust inventory for the variant of each line item
-          await inventoryService.adjustQuantity(item.variant_id, -item.quantity)
-        }
-      }
-
-      // --- Shipping integration ---
-      if (shippingMethod) {
-        let shippingResult: any = null
-        if (shippingMethod.toLowerCase() === "ghn") {
-          const { createGhnShipping } = await import("../shipping/ghn/service")
-          shippingResult = await createGhnShipping(order)
-        } else if (shippingMethod.toLowerCase() === "ghtk") {
-          const { createGhtkShipping } = await import("../shipping/ghtk/service")
-          shippingResult = await createGhtkShipping(order)
-        }
-        if (shippingResult) {
-          // Store shipping metadata in order.metadata (do not create new columns)
-          const metadata = {
-            shipping_provider: shippingMethod.toLowerCase(),
-            shipping_order_id: shippingResult.orderId,
-            tracking_number: shippingResult.trackingNumber,
-            shipping_fee: shippingResult.fee,
-          }
-          await orderService.update(orderId, { metadata })
+  // If the order is being fulfilled, handle inventory & shipping
+  if (newStatus === "fulfilled") {
+    // --- Inventory decrement (only if not already done) ---
+    if ((order as any).fulfillment_status !== "fulfilled") {
+      for (const item of (order as any).items || []) {
+        if (item.variant_id) {
+          await inventoryService.adjustInventory(item.variant_id, "", -item.quantity)
         }
       }
     }
-    // Return the freshly updated order
-    const updated = await orderService.retrieveOrder(orderId, { relations: ["items"] })
-    return updated
-  })
+
+    // --- Shipping integration ---
+    if (shippingMethod) {
+      let shippingResult: any = null
+      if (shippingMethod.toLowerCase() === "ghn") {
+        const { createGhnShipping } = await import("../shipping/ghn/service")
+        shippingResult = await createGhnShipping(order)
+      } else if (shippingMethod.toLowerCase() === "ghtk") {
+        const { createGhtkShipping } = await import("../shipping/ghtk/service")
+        shippingResult = await createGhtkShipping(order)
+      }
+      if (shippingResult) {
+        // Store shipping metadata in order.metadata (do not create new columns)
+        const metadata = {
+          shipping_provider: shippingMethod.toLowerCase(),
+          shipping_order_id: shippingResult.orderId,
+          tracking_number: shippingResult.trackingNumber,
+          shipping_fee: shippingResult.fee,
+        }
+        await orderService.updateOrders(orderId, { metadata })
+      }
+    }
+  }
+  // Return the freshly updated order
+  const updated = await orderService.retrieveOrder(orderId, { relations: ["items"] })
+  return { order: updated }
 }

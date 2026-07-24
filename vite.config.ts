@@ -9,6 +9,11 @@ export default defineConfig({
       '/admin': {
         target: 'http://localhost:9000',
         changeOrigin: true,
+      },
+      '/api/cas': {
+        target: 'https://production.cas.so',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/cas/, ''),
       }
     }
   }

@@ -157,50 +157,44 @@ const CheckoutPage = () => {
     : phoneNumber;
 
 
-  // Fetch Provinces on mount
+  // Fetch Provinces on mount (Cas AddressKit API via proxy - 2025-07-01)
   useEffect(() => {
-    fetch('https://esgoo.net/api-tinhthanh/1/0.htm')
+    fetch('/api/cas/address-kit/2025-07-01/provinces')
       .then(res => res.json())
       .then(data => {
-        if (data.error === 0) setProvinces(data.data);
+        const list = data?.provinces || (Array.isArray(data) ? data : []);
+        setProvinces(list.map((p: any) => ({ id: p.code, name: p.name })));
       })
-      .catch(err => console.error("Error fetching provinces:", err));
+      .catch(err => console.error("Error fetching provinces from AddressKit:", err));
   }, []);
 
-  // Fetch Districts when Province changes
+  // Fetch Communes when Province changes (Cas AddressKit API via proxy - 2025-07-01)
   useEffect(() => {
     if (selectedProvince) {
-      fetch(`https://esgoo.net/api-tinhthanh/2/${selectedProvince}.htm`)
+      fetch(`/api/cas/address-kit/2025-07-01/provinces/${selectedProvince}/communes`)
         .then(res => res.json())
         .then(data => {
-          if (data.error === 0) setDistricts(data.data);
-          else setDistricts([]);
-          setWards([]);
-          setSelectedDistrict('');
-          setSelectedWard('');
+          const list = data?.communes || (Array.isArray(data) ? data : []);
+          if (list.length > 0) {
+            setWards(list.map((c: any) => ({ id: c.code, name: c.name })));
+            setDistricts([{ id: 'default', name: 'Toàn khu vực' }]);
+            setSelectedDistrict('default');
+            setSelectedWard('');
+          } else {
+            setWards([]);
+            setDistricts([]);
+          }
         })
-        .catch(err => console.error("Error fetching districts:", err));
+        .catch(err => {
+          console.error("Error fetching communes from AddressKit:", err);
+          setWards([]);
+          setDistricts([]);
+        });
     } else {
       setDistricts([]);
       setWards([]);
     }
   }, [selectedProvince]);
-
-  // Fetch Wards when District changes
-  useEffect(() => {
-    if (selectedDistrict) {
-      fetch(`https://esgoo.net/api-tinhthanh/3/${selectedDistrict}.htm`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.error === 0) setWards(data.data);
-          else setWards([]);
-          setSelectedWard('');
-        })
-        .catch(err => console.error("Error fetching wards:", err));
-    } else {
-      setWards([]);
-    }
-  }, [selectedDistrict]);
 
   const handlePlaceOrder = async () => {
     // Validate address if mode is 'new'

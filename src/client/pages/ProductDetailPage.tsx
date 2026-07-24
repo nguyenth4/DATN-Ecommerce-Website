@@ -45,7 +45,7 @@ const ProductDetailPage = () => {
     try {
       const res = await fetch(`http://localhost:9000/store/reviews?product_id=${id}`, {
         headers: {
-          'x-publishable-api-key': 'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483'
+          'x-publishable-api-key': 'pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d'
         }
       });
       if (res.ok) {
@@ -187,7 +187,7 @@ const ProductDetailPage = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-publishable-api-key': 'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483',
+          'x-publishable-api-key': 'pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d',
           'x-customer-id': customerId
         },
         body: JSON.stringify({
