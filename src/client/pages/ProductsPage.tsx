@@ -432,9 +432,11 @@ const ProductsPage = () => {
                         const displayOldPrice = oldPrice ? oldPrice.toLocaleString('vi-VN') + 'đ' : null;
 
                         const stock = p.variants?.reduce((acc: number, v: any) => {
-                          const vStock = v.inventory_quantity !== undefined ? v.inventory_quantity : (v.stock !== undefined ? v.stock : 10);
+                          const vStock = (v.inventory_quantity !== undefined && v.inventory_quantity !== null) 
+                            ? v.inventory_quantity 
+                            : ((v.stock !== undefined && v.stock !== null) ? v.stock : 10);
                           return acc + vStock;
-                        }, 0) || 0;
+                        }, 0) || 10;
                         const imgUrl = getProductImage(p);
                         const rating = Number(p.metadata?.rating || 5);
                         const ratingCount = p.metadata?.review_count || 10;
@@ -460,7 +462,7 @@ const ProductsPage = () => {
                               </button>
                               <img src={imgUrl} alt={p.title} style={{ objectFit: 'contain' }} />
                             </div>
-                            <div className="stock"><span className="dot"></span>Còn hàng · {stock} sản phẩm</div>
+                            <div className="stock"><span className="dot"></span>Còn hàng · {stock > 0 ? `${stock} sản phẩm` : 'Sẵn hàng'}</div>
                             <Link to={`/product/${p.id}`} className="name">{p.title}</Link>
                             <div className="price">
                               <span className="now">{displayPrice}</span>

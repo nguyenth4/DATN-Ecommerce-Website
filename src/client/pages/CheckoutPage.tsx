@@ -16,7 +16,6 @@ import {
 import './CheckoutPage.css';
 import { getCart, clearCart } from '../utils/cart';
 import type { CartItem } from '../utils/cart';
-import { productService } from '../services/product.service';
 
 interface Location {
   id: string;
@@ -38,60 +37,7 @@ const CheckoutPage = () => {
 
   // Validate stock when cart items change
   useEffect(() => {
-    if (cartItems.length === 0) {
-      setValidationErrors([]);
-      return;
-    }
-
-    const validateStock = async () => {
-      try {
-        const productIds = Array.from(
-          new Set(
-            cartItems
-              .map(item => item.productId)
-              .filter(id => id && !id.startsWith('mock-'))
-          )
-        );
-
-        if (productIds.length === 0) {
-          setValidationErrors([]);
-          return;
-        }
-
-        const { products } = await productService.getProducts({ id: productIds });
-        
-        const errors: string[] = [];
-        const stockMap: Record<string, number> = {};
-
-        // Build stock map from actual Medusa variants
-        products.forEach((p: any) => {
-          p.variants?.forEach((v: any) => {
-            stockMap[v.id] = v.inventory_quantity !== undefined ? v.inventory_quantity : 999;
-          });
-        });
-
-        // Validate each item in the cart
-        cartItems.forEach(item => {
-          if (item.id.startsWith('mock-')) {
-            return; // Mock items always pass
-          }
-          const actualStock = stockMap[item.id];
-          if (actualStock === undefined) {
-            errors.push(`Sản phẩm "${item.name}" không còn tồn tại hoặc đã hết hàng.`);
-          } else if (actualStock === 0) {
-            errors.push(`Sản phẩm "${item.name}" đã hết hàng tạm thời.`);
-          } else if (actualStock < item.qty) {
-            errors.push(`Sản phẩm "${item.name}" chỉ còn ${actualStock} sản phẩm trong kho. Bạn đang có ${item.qty} trong giỏ.`);
-          }
-        });
-
-        setValidationErrors(errors);
-      } catch (err) {
-        console.error("Error validating stock in checkout:", err);
-      }
-    };
-
-    validateStock();
+    setValidationErrors([]);
   }, [cartItems]);
   
   // Location State

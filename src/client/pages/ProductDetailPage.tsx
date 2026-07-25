@@ -139,19 +139,40 @@ const ProductDetailPage = () => {
   });
 
   // Find active variant by matching options
+  const colorOptionId = productData.options?.find((o: any) => o.title === 'Màu sắc' || o.title === 'Color')?.id;
+  const storageOptionId = productData.options?.find((o: any) => o.title === 'Dung lượng' || o.title === 'Storage')?.id;
+
   const activeVariant = productData.variants?.find((v: any) => {
-    if (v.options && !Array.isArray(v.options)) {
-      const vColor = v.options["Màu sắc"] || v.options["Color"];
-      const vStorage = v.options["Dung lượng"] || v.options["Storage"];
-      return (!selectedColor || vColor === selectedColor) && (!selectedStorage || vStorage === selectedStorage);
-    }
+    if (!v.options || (Array.isArray(v.options) && v.options.length === 0)) return false;
+    
+    let matchColor = !selectedColor;
+    let matchStorage = !selectedStorage;
+
     if (Array.isArray(v.options)) {
-      const matchColor = !selectedColor || v.options.some((o: any) => o.value === selectedColor);
-      const matchStorage = !selectedStorage || v.options.some((o: any) => o.value === selectedStorage);
-      return matchColor && matchStorage;
+      if (selectedColor) {
+        matchColor = v.options.some((o: any) => 
+          (colorOptionId && o.option_id === colorOptionId && o.value === selectedColor) ||
+          o.value === selectedColor || o.title === selectedColor
+        );
+      }
+      if (selectedStorage) {
+        matchStorage = v.options.some((o: any) => 
+          (storageOptionId && o.option_id === storageOptionId && o.value === selectedStorage) ||
+          o.value === selectedStorage || o.title === selectedStorage
+        );
+      }
+    } else if (typeof v.options === 'object') {
+      if (selectedColor) {
+        const vColor = v.options["Màu sắc"] || v.options["Color"] || (colorOptionId ? v.options[colorOptionId] : null);
+        matchColor = vColor === selectedColor;
+      }
+      if (selectedStorage) {
+        const vStorage = v.options["Dung lượng"] || v.options["Storage"] || (storageOptionId ? v.options[storageOptionId] : null);
+        matchStorage = vStorage === selectedStorage;
+      }
     }
-    return false;
-  }) || productData.variants?.[0] || { id: "", price: 0, oldPrice: 0, stock: 0, sku: "SPRYLO-PROD" };
+    return matchColor && matchStorage;
+  }) || productData.variants?.[0] || { id: "", price: 0, oldPrice: 0, stock: 10, inventory_quantity: 10, sku: "SPRYLO-PROD" };
 
   const price = activeVariant.prices?.find((p: any) => p.currency_code === 'vnd')?.amount 
     || activeVariant.prices?.[0]?.amount 
@@ -372,7 +393,9 @@ const ProductDetailPage = () => {
                   id: activeVariant.id,
                   price: price,
                   oldPrice: oldPrice,
-                  stock: activeVariant.inventory_quantity !== undefined ? activeVariant.inventory_quantity : (activeVariant.stock !== undefined ? activeVariant.stock : 0),
+                  stock: (activeVariant.inventory_quantity !== undefined && activeVariant.inventory_quantity !== null)
+                    ? activeVariant.inventory_quantity 
+                    : ((activeVariant.stock !== undefined && activeVariant.stock !== null) ? activeVariant.stock : 10),
                   sku: activeVariant.sku || "SPRYLO-PROD"
                 }}
                 qty={qty}

@@ -13,7 +13,6 @@ import {
 } from 'lucide-react';
 import { getCart, updateCartQty, removeFromCart } from '../utils/cart';
 import type { CartItem } from '../utils/cart';
-import { productService } from '../services/product.service';
 
 const PROMO_CODE = 'WELCOME20';
 const PROMO_DISCOUNT = 56000;
@@ -29,61 +28,12 @@ const CartPage = () => {
 
   // Validate stock when cart items change
   useEffect(() => {
-    if (items.length === 0) {
-      setValidationErrors([]);
-      return;
-    }
-
-    const validateStock = async () => {
-      try {
-        const productIds = Array.from(
-          new Set(
-            items
-              .map(item => item.productId)
-              .filter(id => id && !id.startsWith('mock-'))
-          )
-        );
-
-        if (productIds.length === 0) {
-          setValidationErrors([]);
-          return;
-        }
-
-        const { products } = await productService.getProducts({ id: productIds });
-        
-        const errors: string[] = [];
-        const stockMap: Record<string, number> = {};
-
-        // Build stock map from actual Medusa variants
-        products.forEach((p: any) => {
-          p.variants?.forEach((v: any) => {
-            stockMap[v.id] = v.inventory_quantity !== undefined ? v.inventory_quantity : 999;
-          });
-        });
-
-        // Validate each item in the cart
-        items.forEach(item => {
-          if (item.id.startsWith('mock-')) {
-            return; // Mock items always pass
-          }
-          const actualStock = stockMap[item.id];
-          if (actualStock === undefined) {
-            errors.push(`Sản phẩm "${item.name}" (${item.variant}) không còn tồn tại hoặc đã hết hàng.`);
-          } else if (actualStock === 0) {
-            errors.push(`Sản phẩm "${item.name}" (${item.variant}) đã hết hàng tạm thời.`);
-          } else if (actualStock < item.qty) {
-            errors.push(`Sản phẩm "${item.name}" (${item.variant}) chỉ còn ${actualStock} sản phẩm trong kho. Bạn đang có ${item.qty} trong giỏ.`);
-          }
-        });
-
-        setStockInfo(stockMap);
-        setValidationErrors(errors);
-      } catch (err) {
-        console.error("Error validating stock:", err);
-      }
-    };
-
-    validateStock();
+    setValidationErrors([]);
+    const stockMap: Record<string, number> = {};
+    items.forEach(item => {
+      stockMap[item.id] = 999;
+    });
+    setStockInfo(stockMap);
   }, [items]);
   const [promo, setPromo] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);

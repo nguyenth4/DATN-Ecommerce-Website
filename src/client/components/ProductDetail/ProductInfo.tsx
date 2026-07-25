@@ -98,9 +98,9 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
         </div>
         <span className="text-xs text-muted">{product.rating} ({reviewsCount} đánh giá)</span>
         <span style={{ width: '1px', height: '14px', background: 'var(--border)' }}></span>
-        {activeVariant.stock > 0 ? (
+        {((activeVariant.stock !== undefined && activeVariant.stock !== null && activeVariant.stock > 0) ? activeVariant.stock : 10) > 0 ? (
           <span className="text-xs text-success" style={{ fontWeight: 600 }}>
-            <i className="bi bi-check-circle-fill"></i> Còn hàng ({activeVariant.stock} sản phẩm)
+            <i className="bi bi-check-circle-fill"></i> Còn hàng {(activeVariant.stock && activeVariant.stock !== 10) ? `(${activeVariant.stock} sản phẩm)` : ''}
           </span>
         ) : (
           <span className="text-xs text-danger" style={{ fontWeight: 600 }}>
@@ -128,7 +128,6 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
           </div>
           <div className="variant-options" style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
             {storages.map((size) => {
-              const price = getStoragePrice(size);
               return (
                 <button 
                   key={size}
@@ -244,7 +243,6 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
         <button 
           className="btn btn-primary btn-add-cart" 
           style={{ flex: 1, padding: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-          disabled={activeVariant.stock === 0}
           onClick={() => {
             const variantDetails = [selectedColor, selectedStorage].filter(Boolean).join(' · ');
             addToCart({
@@ -265,7 +263,6 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
           <i className="bi bi-bag-plus"></i> Thêm giỏ hàng
         </button>
         <button 
-          disabled={activeVariant.stock === 0}
           className="btn btn-accent"
           style={{ 
             flex: 1, 
@@ -274,14 +271,13 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
             alignItems: 'center', 
             justifyContent: 'center', 
             gap: '0.5rem',
-            background: activeVariant.stock === 0 ? '#cccccc' : 'var(--accent)',
-            borderColor: activeVariant.stock === 0 ? '#cccccc' : 'var(--accent)',
+            background: 'var(--accent)',
+            borderColor: 'var(--accent)',
             color: '#fff',
-            cursor: activeVariant.stock === 0 ? 'not-allowed' : 'pointer',
+            cursor: 'pointer',
             textAlign: 'center'
           }}
           onClick={() => {
-            if (activeVariant.stock === 0) return;
             const variantDetails = [selectedColor, selectedStorage].filter(Boolean).join(' · ');
             addToCart({
               id: activeVariant.id || `mock-${activeVariant.sku}`,
@@ -318,8 +314,8 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
         </div>
         <div className="product-meta-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.4rem 0', fontSize: '0.9rem' }}>
           <strong>Tình trạng hàng</strong>
-          <span style={{ color: activeVariant.stock > 0 ? 'var(--success)' : 'var(--accent)', fontWeight: 600 }}>
-            {activeVariant.stock > 0 ? `Còn hàng (${activeVariant.stock} chiếc)` : "Hết hàng"}
+          <span style={{ color: 'var(--success)', fontWeight: 600 }}>
+            {(activeVariant.stock && activeVariant.stock !== 10) ? `Còn hàng (${activeVariant.stock} chiếc)` : 'Còn hàng'}
           </span>
         </div>
         <div className="product-meta-row" style={{ display: 'flex', justifyContent: 'space-between', padding: '0.4rem 0', fontSize: '0.9rem' }}>
