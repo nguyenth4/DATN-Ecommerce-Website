@@ -330,15 +330,15 @@ const Header = () => {
               <Heart size={20} />
               {wishlistCount > 0 && <span className="count">{wishlistCount}</span>}
             </Link>
-            <button 
+            <Link 
+              to="/cart"
               className="icon-btn icon-btn--cart" 
               aria-label="Giỏ hàng" 
-              onClick={() => setCartDrawerOpen(true)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', position: 'relative' }}
+              title="Giỏ hàng"
             >
               <ShoppingCart size={20} />
               {cartCount > 0 && <span className="count">{cartCount}</span>}
-            </button>
+            </Link>
             <button
               className="nav-toggle"
               aria-label="Mở menu"
