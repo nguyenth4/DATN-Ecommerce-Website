@@ -365,7 +365,6 @@ const Header = () => {
             <NavLink to="/checkout" className={({ isActive }) => isActive ? 'active' : ''}>Thanh toán</NavLink>
             <NavLink to="/contact" className={({ isActive }) => isActive ? 'active' : ''}>Liên hệ</NavLink>
           </div>
-          <span className="nav-cta">GIẢM ĐẾN <strong>60%</strong> TẤT CẢ SẢN PHẨM</span>
         </div>
       </nav>
 

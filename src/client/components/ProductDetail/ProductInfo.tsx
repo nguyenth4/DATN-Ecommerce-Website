@@ -151,11 +151,6 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
                   onClick={() => onStorageChange(size)}
                 >
                   <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>{size}</span>
-                  {price > 0 && (
-                    <span style={{ fontSize: '0.7rem', color: selectedStorage === size ? '#d70018' : '#555', fontWeight: 500 }}>
-                      {price.toLocaleString('vi-VN')}đ
-                    </span>
-                  )}
                 </button>
               );
             })}

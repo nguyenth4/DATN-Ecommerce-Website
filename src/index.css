@@ -405,7 +405,7 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 .bento-card--lg p { max-width: 32ch; font-size: var(--text-sm); }
 .bento-card--lg img.product {
-  right: -30px; bottom: -20px; top: auto; transform: none;
+  right: 0px; bottom: 0px; top: auto; transform: none;
   width: 50%; max-width: 440px;
   filter: drop-shadow(0 30px 50px rgba(0,0,0,0.45));
 }
@@ -656,7 +656,7 @@ input, select, textarea { font: inherit; color: inherit; }
 .discount-card .shop-now { color: var(--paper); align-self: flex-start; }
 .discount-card img.product {
   position: absolute;
-  right: -10px; bottom: -10px;
+  right: 0px; bottom: 0px;
   width: 50%; max-width: 240px;
   filter: drop-shadow(0 20px 30px rgba(0,0,0,0.4));
 }
@@ -784,7 +784,7 @@ input, select, textarea { font: inherit; color: inherit; }
   background-image:
     radial-gradient(circle at 80% 20%, rgba(255,255,255,0.18) 0, transparent 40%),
     radial-gradient(circle at 10% 80%, rgba(255,255,255,0.10) 0, transparent 50%);
-  pointer-events: none;
+  pointer-events: none; border-radius: var(--r-lg); border-radius: var(--r-lg);
 }
 .newsletter-grid {
   display: grid;
@@ -1409,3 +1409,4 @@ input, select, textarea { font: inherit; color: inherit; }
 #panelReview * {
   font-family: var(--ff-roboto) !important;
 }
+

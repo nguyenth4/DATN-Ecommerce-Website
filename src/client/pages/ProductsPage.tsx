@@ -431,9 +431,10 @@ const ProductsPage = () => {
                         const oldPrice = p.variants?.[0]?.oldPrice;
                         const displayOldPrice = oldPrice ? oldPrice.toLocaleString('vi-VN') + 'đ' : null;
 
-                        const stock = p.variants?.[0]?.inventory_quantity !== undefined
-                          ? p.variants[0].inventory_quantity
-                          : (p.variants?.[0]?.stock !== undefined ? p.variants[0].stock : 10);
+                        const stock = p.variants?.reduce((acc: number, v: any) => {
+                          const vStock = v.inventory_quantity !== undefined ? v.inventory_quantity : (v.stock !== undefined ? v.stock : 10);
+                          return acc + vStock;
+                        }, 0) || 0;
                         const imgUrl = getProductImage(p);
                         const rating = Number(p.metadata?.rating || 5);
                         const ratingCount = p.metadata?.review_count || 10;

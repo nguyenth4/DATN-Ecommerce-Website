@@ -177,7 +177,10 @@ const HomePage = () => {
                 const displayPrice = typeof pPrice === 'number' && pPrice > 0 ? pPrice.toLocaleString('vi-VN') + 'đ' : 'Liên hệ';
                 const oldPrice = p.variants?.[0]?.oldPrice;
                 const displayOldPrice = oldPrice ? oldPrice.toLocaleString('vi-VN') + 'đ' : null;
-                const stock = p.variants?.[0]?.stock !== undefined ? p.variants[0].stock : 10;
+                const stock = p.variants?.reduce((acc: number, v: any) => {
+                  const vStock = v.inventory_quantity !== undefined ? v.inventory_quantity : (v.stock !== undefined ? v.stock : 10);
+                  return acc + vStock;
+                }, 0) || 0;
                 const imgUrl = p.thumbnail || 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=500&q=80&auto=format&fit=crop';
                 const rating = Number(p.metadata?.rating || 5);
                 const ratingCount = p.metadata?.review_count || 10;
@@ -334,7 +337,10 @@ const HomePage = () => {
                   || 0;
                 
                 const displayPrice = typeof pPrice === 'number' && pPrice > 0 ? pPrice.toLocaleString('vi-VN') + 'đ' : 'Liên hệ';
-                const stock = p.variants?.[0]?.stock !== undefined ? p.variants[0].stock : 10;
+                const stock = p.variants?.reduce((acc: number, v: any) => {
+                  const vStock = v.inventory_quantity !== undefined ? v.inventory_quantity : (v.stock !== undefined ? v.stock : 10);
+                  return acc + vStock;
+                }, 0) || 0;
                 const imgUrl = p.thumbnail || 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=300&q=80&auto=format&fit=crop';
 
                 return (
