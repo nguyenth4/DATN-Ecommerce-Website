@@ -9,15 +9,19 @@ import {
   Heart, 
   Star
 } from 'lucide-react';
-import { useProducts } from '../services/product.service';
+import { useProducts, useCategories } from '../services/product.service';
 
 const HomePage = () => {
-  const [activeTab, setActiveTab] = useState(0);
+  const [selectedCatId, setSelectedCatId] = useState<string | null>(null);
   const [compareList, setCompareList] = useState(getCompareList());
   const [wishlist, setWishlist] = useState(getWishlist());
 
-  // Fetch trending products from Medusa & Supabase
-  const { data, isLoading } = useProducts({ limit: 12 });
+  // Fetch categories & products
+  const { data: categories = [] } = useCategories();
+  const { data, isLoading } = useProducts({ 
+    limit: 20,
+    ...(selectedCatId ? { category_id: [selectedCatId] } : {})
+  });
   const products = data?.products || [];
 
   useEffect(() => {
@@ -35,23 +39,8 @@ const HomePage = () => {
     };
   }, []);
 
-  // Filter products by active tab categories if they are mapped
-  // Since categories are fetched dynamically, let's map tab index to category names
-  const categoryTabs = ['Điện thoại', 'Đồng hồ', 'Máy ảnh', 'Phụ kiện', 'Loa'];
-  const filteredProducts = products.filter((p: any) => {
-    if (activeTab === 0) return true; // Show all by default
-    const targetCat = categoryTabs[activeTab].toLowerCase();
-    return p.categories?.some((cat: any) => 
-      cat.name.toLowerCase().includes(targetCat) || 
-      (targetCat === 'đồng hồ' && cat.name.toLowerCase().includes('watch')) ||
-      (targetCat === 'máy ảnh' && cat.name.toLowerCase().includes('camera')) ||
-      (targetCat === 'loa' && cat.name.toLowerCase().includes('speaker')) ||
-      (targetCat === 'phụ kiện' && cat.name.toLowerCase().includes('accessory'))
-    );
-  }).slice(0, 5);
-
-  const trendingProducts = filteredProducts.length > 0 ? filteredProducts : products.slice(0, 5);
-  const forYouProducts = products.slice(5, 9);
+  const trendingProducts = products.slice(0, 10);
+  const forYouProducts = products.length > 5 ? products.slice(5, 9) : products.slice(0, 4);
 
   return (
     <main id="main">
@@ -143,16 +132,24 @@ const HomePage = () => {
             </Link>
           </div>
 
-          <div className="tabs" role="tablist">
-            {categoryTabs.map((tab, i) => (
+          <div className="tabs" role="tablist" style={{ overflowX: 'auto', flexWrap: 'nowrap', paddingBottom: '4px' }}>
+            <button
+              className={`tab${selectedCatId === null ? ' is-active' : ''}`}
+              role="tab"
+              aria-selected={selectedCatId === null}
+              onClick={() => setSelectedCatId(null)}
+            >
+              Tất cả
+            </button>
+            {categories.map((cat: any) => (
               <button
-                key={tab}
-                className={`tab${activeTab === i ? ' is-active' : ''}`}
+                key={cat.id}
+                className={`tab${selectedCatId === cat.id ? ' is-active' : ''}`}
                 role="tab"
-                aria-selected={activeTab === i}
-                onClick={() => setActiveTab(i)}
+                aria-selected={selectedCatId === cat.id}
+                onClick={() => setSelectedCatId(cat.id)}
               >
-                {tab}
+                {cat.name}
               </button>
             ))}
           </div>
@@ -164,7 +161,7 @@ const HomePage = () => {
               </div>
             ) : trendingProducts.length === 0 ? (
               <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem 0', color: 'var(--fg-mute)' }}>
-                Chưa có sản phẩm nào.
+                Chưa có sản phẩm nào trong danh mục này.
               </div>
             ) : (
               trendingProducts.map((p: any) => {
@@ -293,19 +290,40 @@ const HomePage = () => {
             </Link>
           </div>
           <div className="cats-grid">
-            {[
-              { img: 'photo-1523275335684-37898b6baf30', name: 'Đồng hồ', count: 28 },
-              { img: 'photo-1502920917128-1aa500764cbd', name: 'Máy ảnh', count: 42 },
-              { img: 'photo-1511707171634-5f897ff02aa9', name: 'Điện thoại', count: 76 },
-              { img: 'photo-1592840496694-26d035b52b48', name: 'Phụ kiện', count: 112 },
-              { img: 'photo-1606220945770-b5b6c2c55bf1', name: 'Tai nghe', count: 35 },
-            ].map((c, i) => (
-              <Link key={i} to="/products" className="cat-tile">
-                <div className="pic"><img src={`https://images.unsplash.com/${c.img}?w=300&q=80&auto=format&fit=crop`} alt="" /></div>
-                <div className="name">{c.name}</div>
-                <div className="count">{c.count} Sản phẩm</div>
-              </Link>
-            ))}
+            {categories.length > 0 ? (
+              categories.slice(0, 5).map((c: any) => (
+                <div 
+                  key={c.id} 
+                  className={`cat-tile${selectedCatId === c.id ? ' is-active' : ''}`}
+                  style={{ cursor: 'pointer', border: selectedCatId === c.id ? '2px solid var(--indigo)' : undefined }}
+                  onClick={() => {
+                    setSelectedCatId(c.id);
+                    const el = document.querySelector('.tabs');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                >
+                  <div className="pic">
+                    <img src={c.metadata?.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&q=80&auto=format&fit=crop'} alt={c.name} />
+                  </div>
+                  <div className="name">{c.name}</div>
+                  <div className="count">Khám phá ngay</div>
+                </div>
+              ))
+            ) : (
+              [
+                { img: 'photo-1523275335684-37898b6baf30', name: 'Đồng hồ', count: 28 },
+                { img: 'photo-1502920917128-1aa500764cbd', name: 'Máy ảnh', count: 42 },
+                { img: 'photo-1511707171634-5f897ff02aa9', name: 'Điện thoại', count: 76 },
+                { img: 'photo-1592840496694-26d035b52b48', name: 'Phụ kiện', count: 112 },
+                { img: 'photo-1606220945770-b5b6c2c55bf1', name: 'Tai nghe', count: 35 },
+              ].map((c, i) => (
+                <Link key={i} to="/products" className="cat-tile">
+                  <div className="pic"><img src={`https://images.unsplash.com/${c.img}?w=300&q=80&auto=format&fit=crop`} alt="" /></div>
+                  <div className="name">{c.name}</div>
+                  <div className="count">{c.count} Sản phẩm</div>
+                </Link>
+              ))
+            )}
           </div>
         </div>
       </section>
