@@ -62,8 +62,8 @@ export async function POST(
     }
 
     // 3. Resolve path to frontend public folder
-    // process.cwd() is expected to be medusa-backend/apps/backend
-    const clientPublicDir = path.resolve(process.cwd(), "../../../public");
+    // process.cwd() is expected to be medusa-backend/backend/apps/backend
+    const clientPublicDir = path.resolve(process.cwd(), "../../../../public");
     const uploadDir = path.join(clientPublicDir, "uploads", "avatars");
 
     // Ensure upload directory exists

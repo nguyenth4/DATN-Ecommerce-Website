@@ -727,7 +727,7 @@ const AccountPage = () => {
                   </div>
                   <div className="avatar-edit"><Camera size={14} /></div>
                 </div>
-                <div className="account-name">{firstName} {lastName}</div>
+                <div className="account-name">{lastName} {firstName}</div>
                 <div className="account-email">{email}</div>
               </div>
               <div style={{ padding: '0.5rem 0' }}>
@@ -818,8 +818,8 @@ const AccountPage = () => {
                         <input 
                           type="text" 
                           className="form-control" 
-                          value={firstName} 
-                          onChange={(e) => setFirstName(e.target.value)} 
+                          value={lastName} 
+                          onChange={(e) => setLastName(e.target.value)} 
                         />
                       </div>
                       <div className="form-group">
@@ -827,8 +827,8 @@ const AccountPage = () => {
                         <input 
                           type="text" 
                           className="form-control" 
-                          value={lastName} 
-                          onChange={(e) => setLastName(e.target.value)} 
+                          value={firstName} 
+                          onChange={(e) => setFirstName(e.target.value)} 
                         />
                       </div>
                     </div>
@@ -1224,7 +1224,7 @@ const AccountPage = () => {
                          <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
                            <div>
                              <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>Chủ tài khoản</div>
-                             <div style={{ fontWeight: 600, letterSpacing: '1px' }}>{firstName.toUpperCase()} {lastName.toUpperCase()}</div>
+                             <div style={{ fontWeight: 600, letterSpacing: '1px' }}>{lastName.toUpperCase()} {firstName.toUpperCase()}</div>
                            </div>
                            <Wallet size={36} style={{ opacity: 0.5 }} />
                          </div>
