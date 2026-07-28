@@ -86,7 +86,7 @@ const CheckoutPage = () => {
   const districtName = districts.find(d => d.id === selectedDistrict)?.name || '';
   const wardName = wards.find(w => w.id === selectedWard)?.name || '';
   
-  const mergedAddress = [detailAddress, wardName, districtName, provinceName]
+  const mergedAddress = [detailAddress, wardName, districtName !== 'Toàn khu vực' ? districtName : '', provinceName]
     .filter(part => part && part.trim() !== '')
     .join(', ');
 
@@ -145,8 +145,8 @@ const CheckoutPage = () => {
   const handlePlaceOrder = async () => {
     // Validate address if mode is 'new'
     if (addressMode === 'new') {
-      if (!selectedProvince || !selectedDistrict || !selectedWard || !detailAddress.trim()) {
-        setAddressValidationError('Vui lòng chọn hoặc nhập đầy đủ thông tin Tỉnh/Thành, Quận/Huyện, Phường/Xã và Địa chỉ chi tiết.');
+      if (!selectedProvince || !selectedWard || !detailAddress.trim()) {
+        setAddressValidationError('Vui lòng chọn hoặc nhập đầy đủ thông tin Tỉnh/Thành, Phường/Xã và Địa chỉ chi tiết.');
         return;
       }
     }
@@ -410,34 +410,18 @@ const CheckoutPage = () => {
                 </div>
               ) : (
                 <>
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label className="form-label">Tỉnh / Thành phố *</label>
-                      <select 
-                        className="form-select" 
-                        value={selectedProvince} 
-                        onChange={(e) => setSelectedProvince(e.target.value)}
-                      >
-                        <option value="">Chọn tỉnh/thành</option>
-                        {provinces.map(p => (
-                          <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Quận / Huyện *</label>
-                      <select 
-                        className="form-select" 
-                        value={selectedDistrict}
-                        onChange={(e) => setSelectedDistrict(e.target.value)}
-                        disabled={!selectedProvince}
-                      >
-                        <option value="">Chọn quận/huyện</option>
-                        {districts.map(d => (
-                          <option key={d.id} value={d.id}>{d.name}</option>
-                        ))}
-                      </select>
-                    </div>
+                  <div className="form-group">
+                    <label className="form-label">Tỉnh / Thành phố *</label>
+                    <select 
+                      className="form-select" 
+                      value={selectedProvince} 
+                      onChange={(e) => setSelectedProvince(e.target.value)}
+                    >
+                      <option value="">Chọn tỉnh/thành</option>
+                      {provinces.map(p => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
                   </div>
                   <div className="form-grid">
                     <div className="form-group">
@@ -446,7 +430,7 @@ const CheckoutPage = () => {
                         className="form-select"
                         value={selectedWard}
                         onChange={(e) => setSelectedWard(e.target.value)}
-                        disabled={!selectedDistrict}
+                        disabled={!selectedProvince}
                       >
                         <option value="">Chọn phường/xã</option>
                         {wards.map(w => (

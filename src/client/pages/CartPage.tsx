@@ -300,17 +300,9 @@ const CartPage = () => {
                     {provinces.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                   <select 
-                    style={{ width: '100%', padding: '10px', marginBottom: '8px', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '14px', background: 'var(--bg)' }}
-                    value={selectedDistrict} onChange={e => setSelectedDistrict(e.target.value)}
-                    disabled={!selectedProvince}
-                  >
-                    <option value="">Chọn Quận/Huyện</option>
-                    {districts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                  </select>
-                  <select 
                     style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '14px', background: 'var(--bg)' }}
                     value={selectedWard} onChange={e => setSelectedWard(e.target.value)}
-                    disabled={!selectedDistrict}
+                    disabled={!selectedProvince}
                   >
                     <option value="">Chọn Phường/Xã</option>
                     {wards.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}

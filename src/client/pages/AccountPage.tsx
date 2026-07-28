@@ -395,7 +395,7 @@ const AccountPage = () => {
   };
 
   const handleSaveAddress = async () => {
-    if (!addrFullName.trim() || !addrPhone.trim() || !addrDetail.trim() || !selectedProvince || !selectedDistrict || !selectedWard) {
+    if (!addrFullName.trim() || !addrPhone.trim() || !addrDetail.trim() || !selectedProvince || !selectedWard) {
       alert("Vui lòng nhập đầy đủ các trường bắt buộc.");
       return;
     }
@@ -409,23 +409,21 @@ const AccountPage = () => {
     const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
 
     const addressPayload = {
-      address: {
-        first_name: firstName || addrFullName,
-        last_name: lastName || "",
-        phone: addrPhone,
-        address_1: addrDetail,
-        address_2: wardName,
-        city: districtName,
-        province: provinceName,
-        postal_code: "100000",
-        country_code: "vn",
-        company: addrCompany,
-        is_default_shipping: addrIsDefault,
-        metadata: {
-          province_id: selectedProvince,
-          district_id: selectedDistrict,
-          ward_id: selectedWard
-        }
+      first_name: firstName || addrFullName,
+      last_name: lastName || "",
+      phone: addrPhone,
+      address_1: addrDetail,
+      address_2: wardName,
+      city: districtName,
+      province: provinceName,
+      postal_code: "100000",
+      country_code: "vn",
+      company: addrCompany,
+      is_default_shipping: addrIsDefault,
+      metadata: {
+        province_id: selectedProvince,
+        district_id: selectedDistrict,
+        ward_id: selectedWard
       }
     };
 
@@ -488,9 +486,7 @@ const AccountPage = () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          address: {
-            is_default_shipping: true
-          }
+          is_default_shipping: true
         })
       });
 
@@ -1133,7 +1129,7 @@ const AccountPage = () => {
                             <p style={{ fontSize: '0.85rem', lineHeight: 1.6, color: 'var(--fg-soft)' }}>
                               <strong>{`${addr.first_name || ''} ${addr.last_name || ''}`.trim()}</strong><br />
                               {addr.phone || 'Chưa có SĐT'}<br />
-                              {[addr.address_1, addr.address_2, addr.city, addr.province].filter(part => part && part.trim() !== '').join(', ')}
+                              {[addr.address_1, addr.address_2, addr.city !== 'Toàn khu vực' ? addr.city : null, addr.province].filter(part => part && part.trim() !== '').join(', ')}
                             </p>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', borderTop: '1px solid var(--rule)', paddingTop: '0.8rem' }}>
                               <div style={{ display: 'flex', gap: '0.8rem' }}>
@@ -1533,29 +1529,12 @@ const AccountPage = () => {
                     </select>
                   </div>
                   <div className="form-group" style={{ marginBottom: '1.2rem' }}>
-                    <label className="form-label">Quận / Huyện *</label>
-                    <select 
-                      className="form-control" 
-                      value={selectedDistrict}
-                      onChange={(e) => setSelectedDistrict(e.target.value)}
-                      disabled={!selectedProvince}
-                    >
-                      <option value="">Chọn quận/huyện</option>
-                      {districts.map((d: any) => (
-                        <option key={d.id} value={d.id}>{d.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group" style={{ marginBottom: '1.2rem' }}>
                     <label className="form-label">Phường / Xã *</label>
                     <select 
                       className="form-control" 
                       value={selectedWard}
                       onChange={(e) => setSelectedWard(e.target.value)}
-                      disabled={!selectedDistrict}
+                      disabled={!selectedProvince}
                     >
                       <option value="">Chọn phường/xã</option>
                       {wards.map((w: any) => (
@@ -1563,16 +1542,17 @@ const AccountPage = () => {
                       ))}
                     </select>
                   </div>
-                  <div className="form-group" style={{ marginBottom: '1.2rem' }}>
-                    <label className="form-label">Địa chỉ chi tiết *</label>
-                    <input 
-                      type="text" 
-                      className="form-control" 
-                      placeholder="Số nhà, tên đường..." 
-                      value={addrDetail}
-                      onChange={(e) => setAddrDetail(e.target.value)}
-                    />
-                  </div>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '1.2rem' }}>
+                  <label className="form-label">Địa chỉ chi tiết *</label>
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    placeholder="Số nhà, tên đường..." 
+                    value={addrDetail}
+                    onChange={(e) => setAddrDetail(e.target.value)}
+                  />
                 </div>
 
                 <div className="form-group" style={{ marginBottom: '1.2rem' }}>
