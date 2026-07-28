@@ -132,7 +132,7 @@ const HomePage = () => {
             </Link>
           </div>
 
-          <div className="tabs" role="tablist" style={{ overflowX: 'auto', flexWrap: 'nowrap', paddingBottom: '4px' }}>
+          <div className="tabs" role="tablist" style={{ overflow: 'visible', flexWrap: 'wrap', paddingBottom: '4px', position: 'relative', zIndex: 30 }}>
             <button
               className={`tab${selectedCatId === null ? ' is-active' : ''}`}
               role="tab"
@@ -141,17 +141,50 @@ const HomePage = () => {
             >
               Tất cả
             </button>
-            {categories.map((cat: any) => (
-              <button
-                key={cat.id}
-                className={`tab${selectedCatId === cat.id ? ' is-active' : ''}`}
-                role="tab"
-                aria-selected={selectedCatId === cat.id}
-                onClick={() => setSelectedCatId(cat.id)}
-              >
-                {cat.name}
-              </button>
-            ))}
+            {categories.filter((cat: any) => !cat.parent_category_id).map((cat: any) => {
+              const hasChildren = cat.category_children && cat.category_children.length > 0;
+              const isCatOrChildActive = selectedCatId === cat.id || cat.category_children?.some((c: any) => c.id === selectedCatId);
+
+              if (!hasChildren) {
+                return (
+                  <button
+                    key={cat.id}
+                    className={`tab${selectedCatId === cat.id ? ' is-active' : ''}`}
+                    role="tab"
+                    aria-selected={selectedCatId === cat.id}
+                    onClick={() => setSelectedCatId(cat.id)}
+                  >
+                    {cat.name}
+                  </button>
+                );
+              }
+
+              return (
+                <div key={cat.id} className="tab-dropdown-wrap" style={{ position: 'relative', display: 'inline-block' }}>
+                  <button
+                    className={`tab${isCatOrChildActive ? ' is-active' : ''}`}
+                    role="tab"
+                    onClick={() => setSelectedCatId(cat.id)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    {cat.name}
+                    <ChevronRight size={14} style={{ transform: 'rotate(90deg)', transition: 'transform 0.2s' }} />
+                  </button>
+
+                  <div className="tab-dropdown-menu">
+                    {cat.category_children.map((child: any) => (
+                      <button
+                        key={child.id}
+                        className={`tab-dropdown-item${selectedCatId === child.id ? ' is-selected' : ''}`}
+                        onClick={() => setSelectedCatId(child.id)}
+                      >
+                        {child.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
           <div className="products">

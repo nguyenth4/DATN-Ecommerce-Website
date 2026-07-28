@@ -513,6 +513,52 @@ input, select, textarea { font: inherit; color: inherit; }
   height: 2px; background: var(--indigo); border-radius: 2px;
 }
 
+/* Tab Dropdown Menu */
+.tab-dropdown-wrap {
+  position: relative;
+  display: inline-block;
+}
+.tab-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 150px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.12), 0 8px 10px -6px rgba(0,0,0,0.05);
+  border: 1px solid var(--border, #e2e8f0);
+  padding: 8px 0;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 50;
+}
+.tab-dropdown-wrap:hover .tab-dropdown-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+.tab-dropdown-item {
+  width: 100%;
+  text-align: left;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #334155;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: block;
+  transition: all 0.15s ease;
+}
+.tab-dropdown-item:hover,
+.tab-dropdown-item.is-selected {
+  background: #f1f5f9;
+  color: var(--indigo, #4f46e5);
+  font-weight: 600;
+}
+
 /* ---------- Product card ---------- */
 .products {
   display: grid;

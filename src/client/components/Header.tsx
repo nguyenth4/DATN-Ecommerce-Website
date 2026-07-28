@@ -5,6 +5,7 @@ import { Menu, X, ShoppingCart, User, Heart, Search, ChevronRight, Plus, Minus, 
 import { getCompareList } from '../utils/compare';
 import { getWishlist } from '../utils/wishlist';
 import { useCart, useUpdateLineItem, useRemoveLineItem } from '../services/cart.service';
+import { useCategories } from '../services/product.service';
 import toast from 'react-hot-toast';
 
 const headerStyles = `
@@ -186,6 +187,46 @@ const headerStyles = `
   .cart-drawer-btn--primary:hover {
     background: #1d4ed8;
   }
+  .nav-dropdown-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    height: 100%;
+  }
+  .nav-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 170px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
+    padding: 8px 0;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 100;
+  }
+  .nav-dropdown-wrapper:hover .nav-dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+  .nav-dropdown-menu a {
+    display: block !important;
+    padding: 8px 16px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: #334155 !important;
+    transition: all 0.15s ease !important;
+  }
+  .nav-dropdown-menu a:hover {
+    background: #eef2ff !important;
+    color: #4f46e5 !important;
+    padding-left: 20px !important;
+  }
 `;
 
 const Header = () => {
@@ -196,6 +237,7 @@ const Header = () => {
   const [wishlistCount, setWishlistCount] = useState(getWishlist().length);
   const [customerInfo, setCustomerInfo] = useState<any>(null);
   
+  const { data: categories = [] } = useCategories();
   const { data: cart } = useCart();
   const updateLineItem = useUpdateLineItem();
   const removeLineItem = useRemoveLineItem();
