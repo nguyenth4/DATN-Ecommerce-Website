@@ -11,15 +11,56 @@ import {
   ShoppingBag, 
   CheckCircle2,
   Lock,
-  User
+  User,
+  AlertCircle,
+  Loader2,
+  LogIn,
+  UserPlus,
+  Wallet
 } from 'lucide-react';
 import './CheckoutPage.css';
 import { getCart, clearCart } from '../utils/cart';
 import type { CartItem } from '../utils/cart';
+import { authService } from '../services/auth.service';
+import { walletService } from '../services/wallet.service';
+
+const validateEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
+const validatePhone = (v: string) => /^(0|\+84)[0-9]{8,10}$/.test(v.replace(/\s/g, ''));
 
 interface Location {
   id: string;
   name: string;
+}
+
+interface MedusaAddress {
+  id: string;
+  company?: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  address_1?: string;
+  address_2?: string;
+  city?: string;
+  province?: string;
+  is_default_shipping?: boolean;
+}
+
+interface MedusaCustomer {
+  id: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  addresses?: MedusaAddress[];
+}
+
+interface SavedAddress {
+  id: string;
+  name: string;
+  fullName: string;
+  phone: string;
+  mergedAddress: string;
+  isDefault: boolean;
 }
 
 const CheckoutPage = () => {
@@ -28,17 +69,42 @@ const CheckoutPage = () => {
   const [shippingMethod, setShippingMethod] = useState('ghn');
 
   // Cart & Stock State
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [cartItems] = useState<CartItem[]>(() => getCart());
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
-
-  useEffect(() => {
-    setCartItems(getCart());
-  }, []);
 
   // Validate stock when cart items change
   useEffect(() => {
-    setValidationErrors([]);
-  }, [cartItems]);
+    if (validationErrors.length > 0) {
+      setTimeout(() => {
+        setValidationErrors([]);
+      }, 0);
+    }
+  }, [cartItems, validationErrors.length]);
+
+  // Auth & Guest States
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isGuestCheckout, setIsGuestCheckout] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [customer, setCustomer] = useState<MedusaCustomer | null>(null);
+  const [useWallet, setUseWallet] = useState(false);
+  const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [authTab, setAuthTab] = useState<'login' | 'register' | 'guest'>('login');
+
+  // Inline Login Form State
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState('');
+
+  // Inline Register Form State
+  const [regLastName, setRegLastName] = useState('');
+  const [regFirstName, setRegFirstName] = useState('');
+  const [regEmail, setRegEmail] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirm, setRegConfirm] = useState('');
+  const [regLoading, setRegLoading] = useState(false);
+  const [regError, setRegError] = useState('');
   
   // Location State
   const [provinces, setProvinces] = useState<Location[]>([]);
@@ -50,36 +116,277 @@ const CheckoutPage = () => {
   const [selectedWard, setSelectedWard] = useState<string>('');
   
   // Customer & Address State
-  const [fullName, setFullName] = useState('Hỷ Huỳnh Trần Khang');
-  const [phoneNumber, setPhoneNumber] = useState('(+84) 824 421 498');
+  const [fullName, setFullName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [detailAddress, setDetailAddress] = useState('');
   const [note, setNote] = useState('');
   
   // Saved Addresses State
-  const [savedAddresses, setSavedAddresses] = useState<any[]>([
-    {
-      id: 'addr_1',
-      name: 'Nhà riêng',
-      fullName: 'Hỷ Huỳnh Trần Khang',
-      phone: '(+84) 824 421 498',
-      mergedAddress: 'Số 123 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, Hồ Chí Minh',
-      isDefault: true
-    },
-    {
-      id: 'addr_2',
-      name: 'Văn phòng',
-      fullName: 'Trần Ngọc',
-      phone: '0912 345 678',
-      mergedAddress: 'Tầng 15, Tòa nhà Bitexco Financial, 2 Hải Triều, Bến Nghé, Quận 1, Hồ Chí Minh',
-      isDefault: false
-    }
-  ]);
-  const [addressMode, setAddressMode] = useState<'saved' | 'new'>('saved');
-  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string>('addr_1');
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [addressMode, setAddressMode] = useState<'saved' | 'new'>('new');
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<string>('');
   const [setAsDefault, setSetAsDefault] = useState(false);
   const [addressValidationError, setAddressValidationError] = useState('');
 
+  // Fetch customer profile & load saved addresses
+  const fetchCustomerProfile = async () => {
+    try {
+      const res = await authService.authFetch('http://localhost:9000/store/customers/me?fields=*addresses');
+      if (res.ok) {
+        const { customer } = await res.json();
+        if (customer) {
+          setIsLoggedIn(true);
+          setCustomer(customer);
+          setFullName(`${customer.first_name || ''} ${customer.last_name || ''}`.trim());
+          setPhoneNumber(customer.phone || '');
+          setEmail(customer.email || '');
+          
+          if (customer.addresses && customer.addresses.length > 0) {
+            const mapped = customer.addresses.map((addr: MedusaAddress) => {
+              const provinceStr = addr.province || '';
+              const districtStr = addr.city && addr.city !== 'Toàn khu vực' ? addr.city : '';
+              const wardStr = addr.address_2 || '';
+              const detailStr = addr.address_1 || '';
+              const merged = [detailStr, wardStr, districtStr, provinceStr]
+                .filter(p => p && p.trim() !== '')
+                .join(', ');
+              
+              return {
+                id: addr.id,
+                name: addr.company || 'Địa chỉ',
+                fullName: `${addr.first_name || ''} ${addr.last_name || ''}`.trim(),
+                phone: addr.phone || '',
+                mergedAddress: merged,
+                isDefault: addr.is_default_shipping || false
+              };
+            });
+            setSavedAddresses(mapped);
+            setAddressMode('saved');
+            const defaultAddr = mapped.find((a: SavedAddress) => a.isDefault);
+            if (defaultAddr) {
+              setSelectedSavedAddressId(defaultAddr.id);
+            } else {
+              setSelectedSavedAddressId(mapped[0].id);
+            }
+          } else {
+            setSavedAddresses([]);
+            setAddressMode('new');
+          }
+
+          try {
+            const wData = await walletService.getWallet(customer.id);
+            if (wData?.wallet) {
+              setWalletBalance(Number(wData.wallet.balance) || 0);
+            }
+          } catch (wErr) {
+            console.error("Error loading wallet balance:", wErr);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching customer profile:", err);
+    }
+  };
+
+  useEffect(() => {
+    const checkAuthAndProfile = async () => {
+      setIsLoadingProfile(true);
+      const token = await authService.getValidToken();
+      if (token) {
+        await fetchCustomerProfile();
+      } else {
+        setIsLoggedIn(false);
+      }
+      setIsLoadingProfile(false);
+    };
+    checkAuthAndProfile();
+  }, []);
+
+  // Inline Login Handler
+  const handleInlineLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+    if (!loginEmail.trim() || !validateEmail(loginEmail)) {
+      setLoginError('Email không hợp lệ.');
+      return;
+    }
+    if (!loginPassword) {
+      setLoginError('Vui lòng nhập mật khẩu.');
+      return;
+    }
+
+    setLoginLoading(true);
+    try {
+      const res = await fetch(`http://localhost:9000/auth/customer/emailpass`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-publishable-api-key': 'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483',
+        },
+        body: JSON.stringify({ email: loginEmail.trim(), password: loginPassword }),
+      });
+
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 400) {
+          setLoginError('Email hoặc mật khẩu không chính xác.');
+        } else {
+          setLoginError('Đăng nhập thất bại. Vui lòng thử lại.');
+        }
+        setLoginLoading(false);
+        return;
+      }
+
+      const { token } = await res.json();
+      localStorage.setItem('customer_token', token);
+
+      // Fetch customer profile & details
+      const meRes = await fetch(`http://localhost:9000/store/customers/me`, {
+        headers: {
+          'x-publishable-api-key': 'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (meRes.ok) {
+        const { customer } = await meRes.json();
+        if (customer) {
+          localStorage.setItem('customer_info', JSON.stringify({
+            id: customer.id,
+            email: customer.email,
+            first_name: customer.first_name,
+            last_name: customer.last_name,
+            phone: customer.phone,
+          }));
+        }
+      }
+      
+      window.dispatchEvent(new Event('customer-auth-change'));
+      await fetchCustomerProfile();
+      setIsLoggedIn(true);
+    } catch (err) {
+      console.error(err);
+      setLoginError('Lỗi kết nối máy chủ.');
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  // Inline Register Handler
+  const handleInlineRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRegError('');
+    if (!regLastName.trim() || !regFirstName.trim()) {
+      setRegError('Vui lòng nhập đầy đủ họ và tên.');
+      return;
+    }
+    if (!validateEmail(regEmail)) {
+      setRegError('Email không hợp lệ.');
+      return;
+    }
+    if (!validatePhone(regPhone)) {
+      setRegError('Số điện thoại không hợp lệ.');
+      return;
+    }
+    if (regPassword.length < 8) {
+      setRegError('Mật khẩu tối thiểu 8 ký tự.');
+      return;
+    }
+    if (regPassword !== regConfirm) {
+      setRegError('Mật khẩu xác nhận không khớp.');
+      return;
+    }
+
+    setRegLoading(true);
+    try {
+      const regRes = await fetch(`http://localhost:9000/auth/customer/emailpass/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-publishable-api-key': 'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483',
+        },
+        body: JSON.stringify({ email: regEmail.trim(), password: regPassword }),
+      });
+
+      if (!regRes.ok) {
+        const errData = await regRes.json().catch(() => ({}));
+        let msg = errData?.message || '';
+        if (msg.includes('Identity with email already exists') || regRes.status === 409) {
+          msg = 'Email này đã được đăng ký. Vui lòng đăng nhập.';
+        } else if (!msg) {
+          msg = 'Đăng ký thất bại. Vui lòng thử lại.';
+        }
+        setRegError(msg);
+        setRegLoading(false);
+        return;
+      }
+
+      const { token } = await regRes.json();
+
+      const customerRes = await fetch(`http://localhost:9000/store/customers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-publishable-api-key': 'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          first_name: regFirstName.trim(),
+          last_name: regLastName.trim(),
+          email: regEmail.trim(),
+          phone: regPhone.replace(/\s/g, ''),
+        }),
+      });
+
+      if (!customerRes.ok) {
+        setRegError('Tạo hồ sơ khách hàng thất bại. Vui lòng thử lại.');
+        setRegLoading(false);
+        return;
+      }
+
+      // Auto login
+      localStorage.setItem('customer_token', token);
+      localStorage.setItem('customer_info', JSON.stringify({
+        email: regEmail.trim(),
+        first_name: regFirstName.trim(),
+        last_name: regLastName.trim(),
+        phone: regPhone.replace(/\s/g, ''),
+      }));
+      window.dispatchEvent(new Event('customer-auth-change'));
+      await fetchCustomerProfile();
+      setIsLoggedIn(true);
+    } catch (err) {
+      console.error(err);
+      setRegError('Lỗi kết nối máy chủ.');
+    } finally {
+      setRegLoading(false);
+    }
+  };
+
+  // Inline Social Login
+  const handleSocialLogin = (provider: 'google' | 'facebook') => {
+    localStorage.setItem('oauth_return_to', '/checkout');
+    const callbackUrl = `${window.location.origin}/auth/callback?_type=${provider}`;
+
+    fetch(`http://localhost:9000/auth/customer/${provider}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-publishable-api-key': 'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483',
+      },
+      body: JSON.stringify({ callback_url: callbackUrl }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.location) {
+          window.location.href = data.location;
+        } else {
+          setLoginError(`Không thể kết nối đến ${provider === 'google' ? 'Google' : 'Facebook'}.`);
+        }
+      })
+      .catch(() => {
+        setLoginError('Không thể kết nối đến máy chủ.');
+      });
+  };
   
   // Computed Merged Address
   const provinceName = provinces.find(p => p.id === selectedProvince)?.name || '';
@@ -109,7 +416,7 @@ const CheckoutPage = () => {
       .then(res => res.json())
       .then(data => {
         const list = data?.provinces || (Array.isArray(data) ? data : []);
-        setProvinces(list.map((p: any) => ({ id: p.code, name: p.name })));
+        setProvinces(list.map((p: { code: string; name: string }) => ({ id: p.code, name: p.name })));
       })
       .catch(err => console.error("Error fetching provinces from AddressKit:", err));
   }, []);
@@ -122,7 +429,7 @@ const CheckoutPage = () => {
         .then(data => {
           const list = data?.communes || (Array.isArray(data) ? data : []);
           if (list.length > 0) {
-            setWards(list.map((c: any) => ({ id: c.code, name: c.name })));
+            setWards(list.map((c: { code: string; name: string }) => ({ id: c.code, name: c.name })));
             setDistricts([{ id: 'default', name: 'Toàn khu vực' }]);
             setSelectedDistrict('default');
             setSelectedWard('');
@@ -137,12 +444,22 @@ const CheckoutPage = () => {
           setDistricts([]);
         });
     } else {
-      setDistricts([]);
-      setWards([]);
+      setTimeout(() => {
+        setDistricts([]);
+        setWards([]);
+      }, 0);
     }
   }, [selectedProvince]);
 
   const handlePlaceOrder = async () => {
+    // Validate email & phone if guest checkout
+    if (isGuestCheckout && !isLoggedIn) {
+      if (!fullName.trim() || !validateEmail(email) || !validatePhone(phoneNumber)) {
+        setAddressValidationError('Vui lòng điền đầy đủ và chính xác thông tin cá nhân (Họ tên, Email và Số điện thoại hợp lệ).');
+        return;
+      }
+    }
+
     // Validate address if mode is 'new'
     if (addressMode === 'new') {
       if (!selectedProvince || !selectedWard || !detailAddress.trim()) {
@@ -152,14 +469,49 @@ const CheckoutPage = () => {
     }
     setAddressValidationError('');
 
-    // Show a premium success transition
+    // Save address if logged in, new address, and setAsDefault is checked
+    if (isLoggedIn && addressMode === 'new' && setAsDefault) {
+      const nameParts = fullName.trim().split(' ');
+      const firstName = nameParts.slice(0, -1).join(' ') || nameParts[0] || '';
+      const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
+
+      const addressPayload = {
+        first_name: firstName,
+        last_name: lastName,
+        phone: phoneNumber,
+        address_1: detailAddress,
+        address_2: wardName,
+        city: districtName,
+        province: provinceName,
+        postal_code: "100000",
+        country_code: "vn",
+        company: "Địa chỉ mới",
+        is_default_shipping: true,
+        metadata: {
+          province_id: selectedProvince,
+          district_id: selectedDistrict,
+          ward_id: selectedWard
+        }
+      };
+
+      try {
+        await authService.authFetch('http://localhost:9000/store/customers/me/addresses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(addressPayload)
+        });
+      } catch (err) {
+        console.error("Error saving new address:", err);
+      }
+    }
+
     const orderData = {
         customer: {
             fullName: finalOrderFullName,
             phoneNumber: finalOrderPhone,
-            email,
+            email: isLoggedIn ? (customer?.email || email) : email,
         },
-        paymentMethod,
+        paymentMethod: (useWallet && walletBalance >= (subtotal + shippingFee)) ? 'wallet' : paymentMethod,
         shippingMethod,
         address: finalOrderAddress,
         addressComponents: addressMode === 'new' ? {
@@ -171,6 +523,8 @@ const CheckoutPage = () => {
         setAsDefault: addressMode === 'new' ? setAsDefault : false,
         note,
         items: cartItems,
+        use_wallet: useWallet,
+        customer_id: customer?.id || undefined,
     };
 
     console.log("Placing order...", orderData);
@@ -246,11 +600,15 @@ const CheckoutPage = () => {
       });
     } else {
       // Default initial prices before location is selected
-      setShippingFee(0);
+      setTimeout(() => {
+        setShippingFee(0);
+      }, 0);
     }
   }, [selectedDistrict, selectedWard, shippingMethod, totalHeight, maxLength, totalWeight, maxWidth, insuranceValue]);
 
   const total = subtotal + shippingFee;
+  const walletDeduction = useWallet ? Math.min(walletBalance, total) : 0;
+  const remainingTotal = total - walletDeduction;
 
   return (
     <div className="checkout-page">
@@ -290,292 +648,581 @@ const CheckoutPage = () => {
         <div className="checkout-grid">
           {/* LEFT: INFORMATION FORM */}
           <div className="checkout-main">
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="checkout-section"
-            >
-              <h2 className="section-title">
-                <User size={22} /> Thông tin khách hàng
-              </h2>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label className="form-label">Họ và tên *</label>
-                  <div style={{ position: 'relative' }}>
-                    <input 
-                      type="text" 
-                      className="form-input" 
-                      placeholder="Nguyễn Văn A" 
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                    />
-                  </div>
+            {isLoadingProfile ? (
+              <div className="auth-gate-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
+                <Loader2 size={40} className="spinner" style={{ color: 'var(--checkout-accent)', marginBottom: '1rem', animation: 'spin 1s linear infinite' }} />
+                <p style={{ color: 'var(--checkout-text-soft)', fontWeight: 500 }}>Đang kiểm tra thông tin tài khoản...</p>
+              </div>
+            ) : !isLoggedIn && !isGuestCheckout ? (
+              <motion.div 
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="auth-gate-card"
+              >
+                <div className="auth-gate-header">
+                  <h3>Xác thực thông tin</h3>
+                  <p>Đăng nhập thành viên để sử dụng địa chỉ giao hàng đã lưu, thanh toán qua ví và tích luỹ điểm thưởng.</p>
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Số điện thoại *</label>
-                  <input 
-                    type="tel" 
-                    className="form-input" 
-                    placeholder="09xx xxx xxx" 
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                  />
+                
+                <div className="auth-gate-tabs">
+                  <button 
+                    className={`auth-gate-tab ${authTab === 'login' ? 'active' : ''}`}
+                    onClick={() => { setAuthTab('login'); setLoginError(''); }}
+                  >
+                    <LogIn size={16} /> Đăng nhập
+                  </button>
+                  <button 
+                    className={`auth-gate-tab ${authTab === 'register' ? 'active' : ''}`}
+                    onClick={() => { setAuthTab('register'); setRegError(''); }}
+                  >
+                    <UserPlus size={16} /> Đăng ký
+                  </button>
+                  <button 
+                    className={`auth-gate-tab ${authTab === 'guest' ? 'active' : ''}`}
+                    onClick={() => setAuthTab('guest')}
+                  >
+                    <ShieldCheck size={16} /> Mua dạng khách
+                  </button>
                 </div>
-              </div>
-              <div className="form-group">
-                <label className="form-label">Email (nhận vận đơn)</label>
-                <input 
-                  type="email" 
-                  className="form-input" 
-                  placeholder="name@example.com" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
-
-            </motion.div>
-
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="checkout-section"
-            >
-              <h2 className="section-title">
-                <MapPin size={22} /> Địa chỉ nhận hàng
-              </h2>
-              
-              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--rule)' }}>
-                <button 
-                  style={{ 
-                    padding: '0.8rem 1rem', 
-                    background: 'none', 
-                    border: 'none', 
-                    borderBottom: addressMode === 'saved' ? '2px solid var(--indigo)' : '2px solid transparent',
-                    color: addressMode === 'saved' ? 'var(--indigo)' : 'var(--fg-mute)',
-                    fontWeight: addressMode === 'saved' ? 700 : 500,
-                    cursor: 'pointer',
-                    fontSize: '1rem'
-                  }}
-                  onClick={() => setAddressMode('saved')}
-                >
-                  Địa chỉ đã lưu
-                </button>
-                <button 
-                  style={{ 
-                    padding: '0.8rem 1rem', 
-                    background: 'none', 
-                    border: 'none', 
-                    borderBottom: addressMode === 'new' ? '2px solid var(--indigo)' : '2px solid transparent',
-                    color: addressMode === 'new' ? 'var(--indigo)' : 'var(--fg-mute)',
-                    fontWeight: addressMode === 'new' ? 700 : 500,
-                    cursor: 'pointer',
-                    fontSize: '1rem'
-                  }}
-                  onClick={() => setAddressMode('new')}
-                >
-                  Thêm địa chỉ mới
-                </button>
-              </div>
-
-              {addressMode === 'saved' ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  {savedAddresses.map(addr => (
-                    <div 
-                      key={addr.id}
-                      onClick={() => setSelectedSavedAddressId(addr.id)}
-                      style={{
-                        padding: '1.2rem',
-                        border: selectedSavedAddressId === addr.id ? '2px solid var(--indigo)' : '1px solid var(--border)',
-                        borderRadius: 'var(--r)',
-                        cursor: 'pointer',
-                        background: selectedSavedAddressId === addr.id ? 'var(--indigo-soft, #EEF2FF)' : 'var(--paper)',
-                        position: 'relative'
-                      }}
-                    >
-                      {addr.isDefault && (
-                        <span style={{ position: 'absolute', top: '1rem', right: '1rem', background: 'var(--emerald)', color: 'white', fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 600 }}>Mặc định</span>
+                
+                <div className="auth-gate-content">
+                  {authTab === 'login' && (
+                    <form onSubmit={handleInlineLogin} noValidate>
+                      {loginError && (
+                        <div className="auth-error-banner">
+                          <AlertCircle size={16} />
+                          <span>{loginError}</span>
+                        </div>
                       )}
-                      <div style={{ fontWeight: 700, marginBottom: '0.4rem', color: 'var(--ink)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        {selectedSavedAddressId === addr.id ? <CheckCircle2 size={16} color="var(--indigo)" /> : <div style={{width: 16, height: 16, border: '1px solid var(--border)', borderRadius: '50%'}}></div>}
-                        {addr.name}
+                      
+                      <div className="form-group">
+                        <label className="form-label">Email *</label>
+                        <input 
+                          type="email" 
+                          className="form-input" 
+                          placeholder="email@example.com"
+                          value={loginEmail}
+                          onChange={(e) => setLoginEmail(e.target.value)}
+                          required
+                        />
                       </div>
-                      <div style={{ fontSize: '0.9rem', color: 'var(--fg-soft)', paddingLeft: '24px' }}>
-                        <span style={{ fontWeight: 600 }}>{addr.fullName}</span> | {addr.phone}
-                        <br/>
-                        {addr.mergedAddress}
+                      
+                      <div className="form-group">
+                        <label className="form-label">Mật khẩu *</label>
+                        <input 
+                          type="password" 
+                          className="form-input" 
+                          placeholder="Nhập mật khẩu"
+                          value={loginPassword}
+                          onChange={(e) => setLoginPassword(e.target.value)}
+                          required
+                        />
                       </div>
+                      
+                      <button 
+                        type="submit" 
+                        className="auth-submit-btn"
+                        disabled={loginLoading}
+                      >
+                        {loginLoading ? (
+                          <>
+                            <Loader2 size={18} className="spinner" style={{ animation: 'spin 1s linear infinite' }} />
+                            Đang xác thực...
+                          </>
+                        ) : 'ĐĂNG NHẬP & TIẾP TỤC'}
+                      </button>
+
+                      <div className="auth-divider">hoặc đăng nhập với</div>
+                      
+                      <div className="auth-social-row">
+                        <button 
+                          type="button" 
+                          className="auth-social-btn"
+                          onClick={() => handleSocialLogin('google')}
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                          </svg>
+                          Google
+                        </button>
+                        <button 
+                          type="button" 
+                          className="auth-social-btn"
+                          onClick={() => handleSocialLogin('facebook')}
+                        >
+                          <svg width="18" height="18" fill="#1877F2" viewBox="0 0 24 24">
+                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                          </svg>
+                          Facebook
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                  
+                  {authTab === 'register' && (
+                    <form onSubmit={handleInlineRegister} noValidate>
+                      {regError && (
+                        <div className="auth-error-banner">
+                          <AlertCircle size={16} />
+                          <span>{regError}</span>
+                        </div>
+                      )}
+                      
+                      <div className="form-grid">
+                        <div className="form-group">
+                          <label className="form-label">Họ *</label>
+                          <input 
+                            type="text" 
+                            className="form-input" 
+                            placeholder="Nguyễn"
+                            value={regLastName}
+                            onChange={(e) => setRegLastName(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Tên *</label>
+                          <input 
+                            type="text" 
+                            className="form-input" 
+                            placeholder="Văn A"
+                            value={regFirstName}
+                            onChange={(e) => setRegFirstName(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="form-group">
+                        <label className="form-label">Email *</label>
+                        <input 
+                          type="email" 
+                          className="form-input" 
+                          placeholder="email@example.com"
+                          value={regEmail}
+                          onChange={(e) => setRegEmail(e.target.value)}
+                          required
+                        />
+                      </div>
+                      
+                      <div className="form-group">
+                        <label className="form-label">Số điện thoại *</label>
+                        <input 
+                          type="tel" 
+                          className="form-input" 
+                          placeholder="09xxxxxxxx"
+                          value={regPhone}
+                          onChange={(e) => setRegPhone(e.target.value)}
+                          required
+                        />
+                      </div>
+                      
+                      <div className="form-grid">
+                        <div className="form-group">
+                          <label className="form-label">Mật khẩu *</label>
+                          <input 
+                            type="password" 
+                            className="form-input" 
+                            placeholder="Tối thiểu 8 ký tự"
+                            value={regPassword}
+                            onChange={(e) => setRegPassword(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Xác nhận mật khẩu *</label>
+                          <input 
+                            type="password" 
+                            className="form-input" 
+                            placeholder="Nhập lại mật khẩu"
+                            value={regConfirm}
+                            onChange={(e) => setRegConfirm(e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
+                      
+                      <button 
+                        type="submit" 
+                        className="auth-submit-btn"
+                        disabled={regLoading}
+                      >
+                        {regLoading ? (
+                          <>
+                            <Loader2 size={18} className="spinner" style={{ animation: 'spin 1s linear infinite' }} />
+                            Đang tạo tài khoản...
+                          </>
+                        ) : 'ĐĂNG KÝ & TIẾP TỤC'}
+                      </button>
+                    </form>
+                  )}
+                  
+                  {authTab === 'guest' && (
+                    <div className="guest-gate-box">
+                      <div className="guest-info-desc">
+                        <ShieldCheck size={32} style={{ color: 'var(--checkout-accent)', marginBottom: '0.5rem' }} />
+                        <h4>Thanh toán không cần tài khoản</h4>
+                        <p>Bạn có thể hoàn tất mua sắm nhanh chóng mà không cần đăng ký. Chúng tôi chỉ sử dụng thông tin của bạn để xử lý giao hàng và gửi hóa đơn điện tử.</p>
+                      </div>
+                      <button 
+                        type="button" 
+                        className="guest-bypass-btn"
+                        onClick={() => {
+                          setIsGuestCheckout(true);
+                          setAddressMode('new');
+                        }}
+                      >
+                        TIẾP TỤC DƯỚI VAI TRÒ KHÁCH <ChevronRight size={16} />
+                      </button>
                     </div>
-                  ))}
+                  )}
                 </div>
-              ) : (
-                <>
-                  <div className="form-group">
-                    <label className="form-label">Tỉnh / Thành phố *</label>
-                    <select 
-                      className="form-select" 
-                      value={selectedProvince} 
-                      onChange={(e) => setSelectedProvince(e.target.value)}
-                    >
-                      <option value="">Chọn tỉnh/thành</option>
-                      {provinces.map(p => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
-                    </select>
+              </motion.div>
+            ) : (
+              <>
+                {isLoggedIn && customer && (
+                  <div className="auth-status-bar">
+                    <div className="auth-status-info">
+                      <User size={16} />
+                      <span>Thành viên: <strong>{customer.email}</strong> ({customer.first_name} {customer.last_name})</span>
+                    </div>
+                    <button className="auth-status-logout" onClick={() => {
+                      authService.logout();
+                      setIsLoggedIn(false);
+                      setIsGuestCheckout(false);
+                      setFullName('');
+                      setPhoneNumber('');
+                      setEmail('');
+                      setSavedAddresses([]);
+                      setAddressMode('new');
+                    }}>
+                      Đăng xuất
+                    </button>
                   </div>
+                )}
+
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="checkout-section"
+                >
+                  <h2 className="section-title">
+                    <User size={22} /> Thông tin khách hàng
+                  </h2>
                   <div className="form-grid">
                     <div className="form-group">
-                      <label className="form-label">Phường / Xã *</label>
-                      <select 
-                        className="form-select"
-                        value={selectedWard}
-                        onChange={(e) => setSelectedWard(e.target.value)}
-                        disabled={!selectedProvince}
-                      >
-                        <option value="">Chọn phường/xã</option>
-                        {wards.map(w => (
-                          <option key={w.id} value={w.id}>{w.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">Địa chỉ chi tiết *</label>
+                      <label className="form-label">Họ và tên *</label>
                       <input 
                         type="text" 
                         className="form-input" 
-                        placeholder="Số nhà, tên đường..." 
-                        value={detailAddress}
-                        onChange={(e) => setDetailAddress(e.target.value)}
+                        placeholder="Nguyễn Văn A" 
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        disabled={isLoggedIn && addressMode === 'saved'}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Số điện thoại *</label>
+                      <input 
+                        type="tel" 
+                        className="form-input" 
+                        placeholder="09xx xxx xxx" 
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        disabled={isLoggedIn && addressMode === 'saved'}
                       />
                     </div>
                   </div>
-                  
-                  {mergedAddress && (
-                    <motion.div 
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      className="merged-address-preview"
-                    >
-                      <div className="preview-label">Địa chỉ sáp nhập (Tổng hợp):</div>
-                      <div className="preview-content">{mergedAddress}</div>
-                    </motion.div>
-                  )}
-                  
-                  <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '1rem' }}>
+                  <div className="form-group">
+                    <label className="form-label">Email (nhận vận đơn) *</label>
                     <input 
-                      type="checkbox" 
-                      id="setDefault" 
-                      checked={setAsDefault} 
-                      onChange={(e) => setSetAsDefault(e.target.checked)}
-                      style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--indigo)' }}
+                      type="email" 
+                      className="form-input" 
+                      placeholder="name@example.com" 
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={isLoggedIn}
                     />
-                    <label htmlFor="setDefault" style={{ cursor: 'pointer', margin: 0, userSelect: 'none', fontWeight: 500 }}>
-                      Đặt làm địa chỉ mặc định
-                    </label>
                   </div>
-                </>
-              )}
+                </motion.div>
 
-              <div className="form-group mb-0">
-                <label className="form-label">Ghi chú (tùy chọn)</label>
-                <textarea 
-                  className="form-input" 
-                  rows={2} 
-                  placeholder="Giao giờ hành chính, gọi trước khi đến..."
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                ></textarea>
-              </div>
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="checkout-section"
+                >
+                  <h2 className="section-title">
+                    <MapPin size={22} /> Địa chỉ nhận hàng
+                  </h2>
+                  
+                  {isLoggedIn && savedAddresses.length > 0 && (
+                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--checkout-border)' }}>
+                      <button 
+                        style={{ 
+                          padding: '0.8rem 1rem', 
+                          background: 'none', 
+                          border: 'none', 
+                          borderBottom: addressMode === 'saved' ? '2px solid var(--checkout-accent)' : '2px solid transparent',
+                          color: addressMode === 'saved' ? 'var(--checkout-accent)' : 'var(--checkout-text-soft)',
+                          fontWeight: addressMode === 'saved' ? 700 : 500,
+                          cursor: 'pointer',
+                          fontSize: '1rem'
+                        }}
+                        onClick={() => setAddressMode('saved')}
+                      >
+                        Địa chỉ đã lưu
+                      </button>
+                      <button 
+                        style={{ 
+                          padding: '0.8rem 1rem', 
+                          background: 'none', 
+                          border: 'none', 
+                          borderBottom: addressMode === 'new' ? '2px solid var(--checkout-accent)' : '2px solid transparent',
+                          color: addressMode === 'new' ? 'var(--checkout-accent)' : 'var(--checkout-text-soft)',
+                          fontWeight: addressMode === 'new' ? 700 : 500,
+                          cursor: 'pointer',
+                          fontSize: '1rem'
+                        }}
+                        onClick={() => setAddressMode('new')}
+                      >
+                        Thêm địa chỉ mới
+                      </button>
+                    </div>
+                  )}
 
-            </motion.div>
+                  {isLoggedIn && addressMode === 'saved' && savedAddresses.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      {savedAddresses.map(addr => (
+                        <div 
+                          key={addr.id}
+                          onClick={() => setSelectedSavedAddressId(addr.id)}
+                          style={{
+                            padding: '1.2rem',
+                            border: selectedSavedAddressId === addr.id ? '2px solid var(--checkout-accent)' : '1px solid var(--checkout-border)',
+                            borderRadius: 'var(--checkout-radius)',
+                            cursor: 'pointer',
+                            background: selectedSavedAddressId === addr.id ? 'var(--checkout-accent-soft)' : 'white',
+                            position: 'relative'
+                          }}
+                        >
+                          {addr.isDefault && (
+                            <span style={{ position: 'absolute', top: '1rem', right: '1rem', background: '#10b981', color: 'white', fontSize: '0.7rem', padding: '0.2rem 0.5rem', borderRadius: '4px', fontWeight: 600 }}>Mặc định</span>
+                          )}
+                          <div style={{ fontWeight: 700, marginBottom: '0.4rem', color: 'var(--checkout-text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            {selectedSavedAddressId === addr.id ? <CheckCircle2 size={16} color="var(--checkout-accent)" /> : <div style={{width: 16, height: 16, border: '1px solid var(--checkout-border)', borderRadius: '50%'}}></div>}
+                            {addr.name}
+                          </div>
+                          <div style={{ fontSize: '0.9rem', color: 'var(--checkout-text-soft)', paddingLeft: '24px' }}>
+                            <span style={{ fontWeight: 600 }}>{addr.fullName}</span> | {addr.phone}
+                            <br/>
+                            {addr.mergedAddress}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <>
+                      <div className="form-group">
+                        <label className="form-label">Tỉnh / Thành phố *</label>
+                        <select 
+                          className="form-select" 
+                          value={selectedProvince} 
+                          onChange={(e) => setSelectedProvince(e.target.value)}
+                        >
+                          <option value="">Chọn tỉnh/thành</option>
+                          {provinces.map(p => (
+                            <option key={p.id} value={p.id}>{p.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="form-grid">
+                        <div className="form-group">
+                          <label className="form-label">Phường / Xã *</label>
+                          <select 
+                            className="form-select"
+                            value={selectedWard}
+                            onChange={(e) => setSelectedWard(e.target.value)}
+                            disabled={!selectedProvince}
+                          >
+                            <option value="">Chọn phường/xã</option>
+                            {wards.map(w => (
+                              <option key={w.id} value={w.id}>{w.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label">Địa chỉ chi tiết *</label>
+                          <input 
+                            type="text" 
+                            className="form-input" 
+                            placeholder="Số nhà, tên đường..." 
+                            value={detailAddress}
+                            onChange={(e) => setDetailAddress(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      
+                      {mergedAddress && (
+                        <motion.div 
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          className="merged-address-preview"
+                        >
+                          <div className="preview-label">Địa chỉ tổng hợp:</div>
+                          <div className="preview-content">{mergedAddress}</div>
+                        </motion.div>
+                      )}
+                      
+                      {isLoggedIn && (
+                        <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginTop: '1rem' }}>
+                          <input 
+                            type="checkbox" 
+                            id="setDefault" 
+                            checked={setAsDefault} 
+                            onChange={(e) => setSetAsDefault(e.target.checked)}
+                            style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: 'var(--checkout-accent)' }}
+                          />
+                          <label htmlFor="setDefault" style={{ cursor: 'pointer', margin: 0, userSelect: 'none', fontWeight: 500 }}>
+                            Đặt làm địa chỉ mặc định
+                          </label>
+                        </div>
+                      )}
+                    </>
+                  )}
 
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="checkout-section"
-            >
-              <h2 className="section-title">
-                <Truck size={22} /> Đơn vị vận chuyển
-              </h2>
-              <div className="option-grid">
-                <div 
-                  className={`option-card ${shippingMethod === 'ghn' ? 'selected' : ''}`}
-                  onClick={() => setShippingMethod('ghn')}
-                >
-                  <div className="option-card-header">
-                    <span className="option-name">Giao hàng Nhanh</span>
-                    <span className="option-price">{shippingMethod === 'ghn' && shippingFee > 0 ? `${shippingFee.toLocaleString('vi-VN')}đ` : 'Chưa tính'}</span>
+                  <div className="form-group mb-0" style={{ marginTop: '1.25rem' }}>
+                    <label className="form-label">Ghi chú (tùy chọn)</label>
+                    <textarea 
+                      className="form-input" 
+                      rows={2} 
+                      placeholder="Giao giờ hành chính, gọi trước khi đến..."
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                    ></textarea>
                   </div>
-                  <span className="option-desc">Giao tốc hành 1-2 ngày</span>
-                  {shippingMethod === 'ghn' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
-                </div>
-                <div 
-                  className={`option-card ${shippingMethod === 'ghtk' ? 'selected' : ''}`}
-                  onClick={() => setShippingMethod('ghtk')}
-                >
-                  <div className="option-card-header">
-                    <span className="option-name">Giao hàng Tiết kiệm</span>
-                    <span className="option-price">{shippingMethod === 'ghtk' && shippingFee > 0 ? `${shippingFee.toLocaleString('vi-VN')}đ` : 'Chưa tính'}</span>
-                  </div>
-                  <span className="option-desc">Giao tiêu chuẩn 3-4 ngày</span>
-                  {shippingMethod === 'ghtk' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
-                </div>
-              </div>
-            </motion.div>
+                </motion.div>
 
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="checkout-section"
-            >
-              <h2 className="section-title">
-                <CreditCard size={22} /> Phương thức thanh toán
-              </h2>
-              <div className="option-grid">
-                <div 
-                  className={`option-card ${paymentMethod === 'vnpay' ? 'selected' : ''}`}
-                  onClick={() => setPaymentMethod('vnpay')}
+                {isLoggedIn && walletBalance > 0 && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="checkout-section wallet-section"
+                    style={{ border: '1px solid #c7d2fe', background: 'linear-gradient(135deg, #f5f3ff 0%, #e0e7ff 100%)' }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ background: 'var(--checkout-accent)', color: 'white', padding: '10px', borderRadius: '10px' }}>
+                          <Wallet size={20} />
+                        </div>
+                        <div>
+                          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--checkout-text)' }}>Sử dụng Ví Sprylo</h3>
+                          <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--checkout-text-soft)' }}>Số dư hiện tại: <strong style={{ color: 'var(--checkout-accent)' }}>{walletBalance.toLocaleString('vi-VN')}đ</strong></p>
+                        </div>
+                      </div>
+                      <div 
+                        className={`custom-toggle ${useWallet ? 'active' : ''}`}
+                        onClick={() => setUseWallet(!useWallet)}
+                      >
+                        <div className="toggle-knob" />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="checkout-section"
                 >
-                  <div className="option-card-header">
-                    <span className="option-name">VNPay</span>
+                  <h2 className="section-title">
+                    <Truck size={22} /> Đơn vị vận chuyển
+                  </h2>
+                  <div className="option-grid">
+                    <div 
+                      className={`option-card ${shippingMethod === 'ghn' ? 'selected' : ''}`}
+                      onClick={() => setShippingMethod('ghn')}
+                    >
+                      <div className="option-card-header">
+                        <span className="option-name">Giao hàng Nhanh</span>
+                        <span className="option-price">{shippingMethod === 'ghn' && shippingFee > 0 ? `${shippingFee.toLocaleString('vi-VN')}đ` : 'Chưa tính'}</span>
+                      </div>
+                      <span className="option-desc">Giao tốc hành 1-2 ngày</span>
+                      {shippingMethod === 'ghn' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
+                    </div>
+                    <div 
+                      className={`option-card ${shippingMethod === 'ghtk' ? 'selected' : ''}`}
+                      onClick={() => setShippingMethod('ghtk')}
+                    >
+                      <div className="option-card-header">
+                        <span className="option-name">Giao hàng Tiết kiệm</span>
+                        <span className="option-price">{shippingMethod === 'ghtk' && shippingFee > 0 ? `${shippingFee.toLocaleString('vi-VN')}đ` : 'Chưa tính'}</span>
+                      </div>
+                      <span className="option-desc">Giao tiêu chuẩn 3-4 ngày</span>
+                      {shippingMethod === 'ghtk' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
+                    </div>
                   </div>
-                  <span className="option-desc">Thẻ ATM/QR Code/Visa</span>
-                  {paymentMethod === 'vnpay' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
-                </div>
-                <div 
-                  className={`option-card ${paymentMethod === 'momo' ? 'selected' : ''}`}
-                  onClick={() => setPaymentMethod('momo')}
+                </motion.div>
+
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="checkout-section"
+                  style={{ opacity: (useWallet && walletBalance >= (subtotal + shippingFee)) ? 0.5 : 1, pointerEvents: (useWallet && walletBalance >= (subtotal + shippingFee)) ? 'none' : 'auto' }}
                 >
-                  <div className="option-card-header">
-                    <span className="option-name">Ví MoMo</span>
+                  <h2 className="section-title">
+                    <CreditCard size={22} /> Phương thức thanh toán
+                  </h2>
+                  <div className="option-grid">
+                    <div 
+                      className={`option-card ${paymentMethod === 'vnpay' ? 'selected' : ''}`}
+                      onClick={() => setPaymentMethod('vnpay')}
+                    >
+                      <div className="option-card-header">
+                        <span className="option-name">VNPay</span>
+                      </div>
+                      <span className="option-desc">Thẻ ATM/QR Code/Visa</span>
+                      {paymentMethod === 'vnpay' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
+                    </div>
+                    <div 
+                      className={`option-card ${paymentMethod === 'momo' ? 'selected' : ''}`}
+                      onClick={() => setPaymentMethod('momo')}
+                    >
+                      <div className="option-card-header">
+                        <span className="option-name">Ví MoMo</span>
+                      </div>
+                      <span className="option-desc">Thanh toán qua ví MoMo</span>
+                      {paymentMethod === 'momo' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
+                    </div>
+                    <div 
+                      className={`option-card ${paymentMethod === 'zalopay' ? 'selected' : ''}`}
+                      onClick={() => setPaymentMethod('zalopay')}
+                    >
+                      <div className="option-card-header">
+                        <span className="option-name">ZaloPay</span>
+                      </div>
+                      <span className="option-desc">Ví ZaloPay tiện lợi</span>
+                      {paymentMethod === 'zalopay' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
+                    </div>
+                    <div 
+                      className={`option-card ${paymentMethod === 'cod' ? 'selected' : ''}`}
+                      onClick={() => setPaymentMethod('cod')}
+                    >
+                      <div className="option-card-header">
+                        <span className="option-name">COD</span>
+                      </div>
+                      <span className="option-desc">Thanh toán khi nhận hàng</span>
+                      {paymentMethod === 'cod' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
+                    </div>
                   </div>
-                  <span className="option-desc">Thanh toán qua ví MoMo</span>
-                  {paymentMethod === 'momo' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
-                </div>
-                <div 
-                  className={`option-card ${paymentMethod === 'zalopay' ? 'selected' : ''}`}
-                  onClick={() => setPaymentMethod('zalopay')}
-                >
-                  <div className="option-card-header">
-                    <span className="option-name">ZaloPay</span>
-                  </div>
-                  <span className="option-desc">Ví ZaloPay tiện lợi</span>
-                  {paymentMethod === 'zalopay' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
-                </div>
-                <div 
-                  className={`option-card ${paymentMethod === 'cod' ? 'selected' : ''}`}
-                  onClick={() => setPaymentMethod('cod')}
-                >
-                  <div className="option-card-header">
-                    <span className="option-name">COD</span>
-                  </div>
-                  <span className="option-desc">Thanh toán khi nhận hàng</span>
-                  {paymentMethod === 'cod' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
-                </div>
-              </div>
-            </motion.div>
+                </motion.div>
+              </>
+            )}
           </div>
 
           {/* RIGHT: ORDER SUMMARY */}
@@ -613,10 +1260,16 @@ const CheckoutPage = () => {
                 {shippingFee > 0 ? (
                   <span>{shippingFee.toLocaleString('vi-VN')}đ</span>
                 ) : (
-                  <span style={{ color: 'var(--emerald)', fontWeight: 600 }}>Chưa tính</span>
+                  <span style={{ color: '#a5f3fc', fontWeight: 600 }}>Chưa tính</span>
                 )}
               </div>
 
+              {useWallet && walletDeduction > 0 && (
+                <div className="summary-row" style={{ color: '#a5f3fc', fontWeight: 600 }}>
+                  <span>Khấu trừ từ Ví Sprylo</span>
+                  <span>-{walletDeduction.toLocaleString('vi-VN')}đ</span>
+                </div>
+              )}
 
               <div className="summary-row">
                 <span>Giảm giá</span>
@@ -625,8 +1278,14 @@ const CheckoutPage = () => {
 
               <div className="summary-total">
                 <span>Tổng cộng</span>
-                <span>{total.toLocaleString('vi-VN')}đ</span>
+                <span>{remainingTotal.toLocaleString('vi-VN')}đ</span>
               </div>
+
+              {remainingTotal === 0 && useWallet && (
+                <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '0.85rem', color: '#a5f3fc', fontWeight: 700 }}>
+                  🎉 Thanh toán toàn bộ bằng Ví Sprylo!
+                </div>
+              )}
 
               {validationErrors.length > 0 && (
                 <div style={{
@@ -655,7 +1314,7 @@ const CheckoutPage = () => {
                   fontSize: '0.85rem',
                   marginBottom: '15px'
                 }}>
-                  <strong>⚠️ Lỗi địa chỉ:</strong>
+                  <strong>⚠️ Lỗi thông tin:</strong>
                   <p style={{ marginTop: '5px' }}>{addressValidationError}</p>
                 </div>
               )}
@@ -673,7 +1332,6 @@ const CheckoutPage = () => {
                 {validationErrors.length > 0 ? 'LỖI TỒN KHO - KHÔNG THỂ THANH TOÁN' : 'HOÀN THÀNH ĐẶT HÀNG'}
                 <ChevronRight size={20} />
               </button>
-
 
               <div className="trust-badges">
                 <div className="trust-badge">

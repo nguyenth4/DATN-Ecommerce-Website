@@ -418,3 +418,250 @@
 .pointer-events-none {
   pointer-events: none;
 }
+
+/* Inline Auth Gate Styles */
+.auth-gate-card {
+  background: white;
+  border: 1px solid var(--checkout-border);
+  border-radius: var(--checkout-radius);
+  padding: 2.5rem 2rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--checkout-shadow);
+}
+
+.auth-gate-header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.auth-gate-header h3 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  color: var(--checkout-text);
+}
+
+.auth-gate-header p {
+  font-size: 0.9375rem;
+  color: var(--checkout-text-soft);
+  line-height: 1.5;
+}
+
+.auth-gate-tabs {
+  display: flex;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  gap: 4px;
+}
+
+.auth-gate-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  background: none;
+  padding: 0.75rem 1rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--checkout-text-soft);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.auth-gate-tab:hover {
+  color: var(--checkout-text);
+}
+
+.auth-gate-tab.active {
+  background: white;
+  color: var(--checkout-accent);
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+}
+
+.auth-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fef2f2;
+  border-left: 4px solid #ef4444;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  color: #991b1b;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 1.25rem;
+}
+
+.auth-submit-btn {
+  width: 100%;
+  background: var(--checkout-accent);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 1rem;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 0.5rem;
+}
+
+.auth-submit-btn:hover {
+  background: #4338ca;
+  transform: translateY(-1px);
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: var(--checkout-text-soft);
+  font-size: 0.8125rem;
+  margin: 1.5rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.auth-divider::before, .auth-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--checkout-border);
+}
+
+.auth-divider:not(:empty)::before {
+  margin-right: .75em;
+}
+
+.auth-divider:not(:empty)::after {
+  margin-left: .75em;
+}
+
+.auth-social-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.auth-social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: white;
+  border: 1px solid var(--checkout-border);
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--checkout-text);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.auth-social-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.guest-gate-box {
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+.guest-info-desc {
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.guest-info-desc h4 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--checkout-text);
+  margin: 0.5rem 0;
+}
+
+.guest-info-desc p {
+  font-size: 0.875rem;
+  color: var(--checkout-text-soft);
+  max-width: 440px;
+  line-height: 1.6;
+}
+
+.guest-bypass-btn {
+  background: white;
+  border: 2px solid var(--checkout-accent);
+  color: var(--checkout-accent);
+  border-radius: 10px;
+  padding: 1rem 2rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.guest-bypass-btn:hover {
+  background: var(--checkout-accent-soft);
+  transform: translateY(-1px);
+}
+
+/* Logged In Status Bar */
+.auth-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #e0f2fe;
+  border: 1px solid #bae6fd;
+  color: #0369a1;
+  padding: 0.75rem 1.25rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  font-size: 0.9375rem;
+}
+
+.auth-status-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth-status-logout {
+  background: none;
+  border: none;
+  color: #0284c7;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.auth-status-logout:hover {
+  color: #0369a1;
+}
+
+/* Spinner Animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
