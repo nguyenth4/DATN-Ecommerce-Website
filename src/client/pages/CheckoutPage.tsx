@@ -27,6 +27,12 @@ import { walletService } from '../services/wallet.service';
 const validateEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 const validatePhone = (v: string) => /^(0|\+84)[0-9]{8,10}$/.test(v.replace(/\s/g, ''));
 
+const MEDUSA_BACKEND_URL =
+  (import.meta as any).env?.VITE_MEDUSA_BACKEND_URL || 'http://localhost:9000';
+const PUBLISHABLE_KEY =
+  (import.meta as any).env?.VITE_MEDUSA_PUBLISHABLE_KEY ||
+  'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483';
+
 interface Location {
   id: string;
   name: string;
@@ -132,7 +138,7 @@ const CheckoutPage = () => {
   // Fetch customer profile & load saved addresses
   const fetchCustomerProfile = async () => {
     try {
-      const res = await authService.authFetch('http://localhost:9000/store/customers/me?fields=*addresses');
+      const res = await authService.authFetch(`${MEDUSA_BACKEND_URL}/store/customers/me?fields=*addresses`);
       if (res.ok) {
         const { customer } = await res.json();
         if (customer) {
@@ -141,6 +147,16 @@ const CheckoutPage = () => {
           setFullName(`${customer.first_name || ''} ${customer.last_name || ''}`.trim());
           setPhoneNumber(customer.phone || '');
           setEmail(customer.email || '');
+          
+          // Save customer info to localStorage to keep global header in sync
+          localStorage.setItem('customer_info', JSON.stringify({
+            id: customer.id,
+            email: customer.email,
+            first_name: customer.first_name,
+            last_name: customer.last_name,
+            phone: customer.phone,
+          }));
+          window.dispatchEvent(new Event('customer-auth-change'));
           
           if (customer.addresses && customer.addresses.length > 0) {
             const mapped = customer.addresses.map((addr: MedusaAddress) => {
@@ -218,11 +234,11 @@ const CheckoutPage = () => {
 
     setLoginLoading(true);
     try {
-      const res = await fetch(`http://localhost:9000/auth/customer/emailpass`, {
+      const res = await fetch(`${MEDUSA_BACKEND_URL}/auth/customer/emailpass`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-publishable-api-key': 'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483',
+          'x-publishable-api-key': PUBLISHABLE_KEY,
         },
         body: JSON.stringify({ email: loginEmail.trim(), password: loginPassword }),
       });
@@ -241,9 +257,9 @@ const CheckoutPage = () => {
       localStorage.setItem('customer_token', token);
 
       // Fetch customer profile & details
-      const meRes = await fetch(`http://localhost:9000/store/customers/me`, {
+      const meRes = await fetch(`${MEDUSA_BACKEND_URL}/store/customers/me`, {
         headers: {
-          'x-publishable-api-key': 'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483',
+          'x-publishable-api-key': PUBLISHABLE_KEY,
           Authorization: `Bearer ${token}`,
         },
       });
@@ -298,11 +314,11 @@ const CheckoutPage = () => {
 
     setRegLoading(true);
     try {
-      const regRes = await fetch(`http://localhost:9000/auth/customer/emailpass/register`, {
+      const regRes = await fetch(`${MEDUSA_BACKEND_URL}/auth/customer/emailpass/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-publishable-api-key': 'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483',
+          'x-publishable-api-key': PUBLISHABLE_KEY,
         },
         body: JSON.stringify({ email: regEmail.trim(), password: regPassword }),
       });
@@ -322,11 +338,11 @@ const CheckoutPage = () => {
 
       const { token } = await regRes.json();
 
-      const customerRes = await fetch(`http://localhost:9000/store/customers`, {
+      const customerRes = await fetch(`${MEDUSA_BACKEND_URL}/store/customers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-publishable-api-key': 'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483',
+          'x-publishable-api-key': PUBLISHABLE_KEY,
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -367,11 +383,11 @@ const CheckoutPage = () => {
     localStorage.setItem('oauth_return_to', '/checkout');
     const callbackUrl = `${window.location.origin}/auth/callback?_type=${provider}`;
 
-    fetch(`http://localhost:9000/auth/customer/${provider}`, {
+    fetch(`${MEDUSA_BACKEND_URL}/auth/customer/${provider}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-publishable-api-key': 'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483',
+        'x-publishable-api-key': PUBLISHABLE_KEY,
       },
       body: JSON.stringify({ callback_url: callbackUrl }),
     })
@@ -495,7 +511,7 @@ const CheckoutPage = () => {
       };
 
       try {
-        await authService.authFetch('http://localhost:9000/store/customers/me/addresses', {
+        await authService.authFetch(`${MEDUSA_BACKEND_URL}/store/customers/me/addresses`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(addressPayload)
@@ -530,7 +546,7 @@ const CheckoutPage = () => {
     console.log("Placing order...", orderData);
     
     try {
-      const response = await fetch('http://localhost:9000/store/checkout', {
+      const response = await fetch(`${MEDUSA_BACKEND_URL}/store/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderData)
@@ -568,7 +584,7 @@ const CheckoutPage = () => {
       // 2: Nhanh (Express), 5: Tiết kiệm (Economy - using GHN API as proxy for economy rates)
       const serviceTypeId = shippingMethod === 'ghn' ? 2 : 5;
 
-      fetch('http://localhost:9000/store/ghn/fee', {
+      fetch(`${MEDUSA_BACKEND_URL}/store/ghn/fee`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -263,17 +263,24 @@ const Header = () => {
       const info = localStorage.getItem('customer_info');
       setCustomerInfo(info ? JSON.parse(info) : null);
     };
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'customer_info' || e.key === 'customer_token') {
+        handleAuthChange();
+      }
+    };
     
     handleAuthChange();
     
     window.addEventListener('compare-updated', handleCompareUpdate);
     window.addEventListener('wishlist-updated', handleWishlistUpdate);
     window.addEventListener('customer-auth-change', handleAuthChange);
+    window.addEventListener('storage', handleStorageChange);
     
     return () => {
       window.removeEventListener('compare-updated', handleCompareUpdate);
       window.removeEventListener('wishlist-updated', handleWishlistUpdate);
       window.removeEventListener('customer-auth-change', handleAuthChange);
+      window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
 
