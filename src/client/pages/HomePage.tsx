@@ -11,6 +11,22 @@ import {
 } from 'lucide-react';
 import { useProducts, useCategories } from '../services/product.service';
 
+const getCategoryFallbackImage = (name: string) => {
+  if (!name) return 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&q=80&auto=format&fit=crop';
+  const n = name.toLowerCase();
+  
+  if (n.includes('laptop') || n.includes('máy tính')) return 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=300&q=80&auto=format&fit=crop';
+  if (n.includes('iphone') || n.includes('apple')) return 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=300&q=80&auto=format&fit=crop';
+  if (n.includes('samsung') || n.includes('galaxy')) return 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=300&q=80&auto=format&fit=crop';
+  if (n.includes('oppo') || n.includes('vivo') || n.includes('xiaomi')) return 'https://images.unsplash.com/photo-1598327105666-5b893c0bcce0?w=300&q=80&auto=format&fit=crop';
+  if (n.includes('điện thoại') || n.includes('phone')) return 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&q=80&auto=format&fit=crop';
+  if (n.includes('tai nghe') || n.includes('headphone') || n.includes('audio')) return 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&q=80&auto=format&fit=crop';
+  if (n.includes('đồng hồ') || n.includes('watch')) return 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&q=80&auto=format&fit=crop';
+  if (n.includes('máy ảnh') || n.includes('camera')) return 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300&q=80&auto=format&fit=crop';
+  
+  return 'https://images.unsplash.com/photo-1592840496694-26d035b52b48?w=300&q=80&auto=format&fit=crop';
+};
+
 const HomePage = () => {
   const [selectedCatId, setSelectedCatId] = useState<string | null>(null);
   const [compareList, setCompareList] = useState(getCompareList());
@@ -94,7 +110,7 @@ const HomePage = () => {
                 <Link to="/products" className="shop-now">Mua ngay
                   <ChevronRight size={14} />
                 </Link>
-                <img className="product" src="https://images.unsplash.com/photo-1606983340126-99ab4feaa64a?w=500&q=80&auto=format&fit=crop" alt="Camera" />
+                <img className="product" src="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=500&q=80&auto=format&fit=crop" alt="Camera" />
               </article>
 
               <article className="bento-card bento-card--green">
@@ -327,22 +343,17 @@ const HomePage = () => {
           <div className="cats-grid">
             {categories.length > 0 ? (
               categories.slice(0, 5).map((c: any) => (
-                <div 
+                <Link 
                   key={c.id} 
-                  className={`cat-tile${selectedCatId === c.id ? ' is-active' : ''}`}
-                  style={{ cursor: 'pointer', border: selectedCatId === c.id ? '2px solid var(--indigo)' : undefined }}
-                  onClick={() => {
-                    setSelectedCatId(c.id);
-                    const el = document.querySelector('.tabs');
-                    if (el) el.scrollIntoView({ behavior: 'smooth' });
-                  }}
+                  to="/products"
+                  className="cat-tile"
                 >
                   <div className="pic">
-                    <img src={c.metadata?.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&q=80&auto=format&fit=crop'} alt={c.name} />
+                    <img src={c.metadata?.image || getCategoryFallbackImage(c.name)} alt={c.name} />
                   </div>
                   <div className="name">{c.name}</div>
                   <div className="count">Khám phá ngay</div>
-                </div>
+                </Link>
               ))
             ) : (
               [
@@ -363,68 +374,7 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* COMPACT ROW */}
-      <section className="section" style={{ paddingTop: 0 }}>
-        <div className="container">
-          <div className="section-head">
-            <h2>Dành cho bạn</h2>
-            <Link to="/products" className="view-all">Nhiều lựa chọn hơn
-              <ChevronRight size={16} />
-            </Link>
-          </div>
-          <div className="compact-row">
-            {isLoading ? (
-              <div style={{ textAlign: 'center', width: '100%', padding: '2rem 0', color: 'var(--fg-mute)' }}>
-                Đang tải...
-              </div>
-            ) : forYouProducts.length === 0 ? (
-              <div style={{ textAlign: 'center', width: '100%', padding: '2rem 0', color: 'var(--fg-mute)' }}>
-                Chưa có sản phẩm gợi ý.
-              </div>
-            ) : (
-              forYouProducts.map((p: any) => {
-                const pPrice = p.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount 
-                  || p.variants?.[0]?.prices?.[0]?.amount 
-                  || p.variants?.[0]?.price 
-                  || p.price 
-                  || 0;
-                
-                const displayPrice = typeof pPrice === 'number' && pPrice > 0 ? pPrice.toLocaleString('vi-VN') + 'đ' : 'Liên hệ';
-                const stock = p.variants?.reduce((acc: number, v: any) => {
-                  const vStock = (v.inventory_quantity !== undefined && v.inventory_quantity !== null)
-                    ? v.inventory_quantity
-                    : ((v.stock !== undefined && v.stock !== null) ? v.stock : 10);
-                  return acc + vStock;
-                }, 0) || 10;
-                const imgUrl = p.thumbnail || 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=300&q=80&auto=format&fit=crop';
 
-                return (
-                  <article key={p.id} className="compact-card">
-                    <div className="pic"><img src={imgUrl} alt={p.title} style={{ objectFit: 'contain' }} /></div>
-                    <div>
-                      <div className="stock">CÒN HÀNG · {stock}</div>
-                      <div className="name">{p.title}</div>
-                      <div className="price">{displayPrice}</div>
-                      <Link to={`/product/${p.id}`} className="btn">Đặt Ngay</Link>
-                    </div>
-                  </article>
-                );
-              })
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* BRANDS */}
-      <section className="brands">
-        <div className="container">
-          <div className="brand-row">
-            {['HP', 'Huawei', 'Nokia', 'Samsung', 'Canon', 'Sony'].map((b) => (
-              <a key={b} href="#" className="brand-logo">{b}</a>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* NEWSLETTER */}
       <section style={{ background: 'var(--paper)' }}>

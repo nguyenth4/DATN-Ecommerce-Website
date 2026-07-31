@@ -1,4 +1,4 @@
-$basePath = "d:\DATN\DATN-Ecommerce-Website\medusa-backend\backend\node_modules"
+$basePath = "$PSScriptRoot\node_modules"
 
 $targetDirs = @(
     "$basePath\react-aria",
