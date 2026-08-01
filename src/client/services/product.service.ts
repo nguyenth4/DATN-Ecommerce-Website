@@ -105,6 +105,7 @@ export const useCategories = () => {
   });
 };
 
+
 export const useProduct = (id: string) => {
   return useQuery({
     queryKey: ['store_product', id],

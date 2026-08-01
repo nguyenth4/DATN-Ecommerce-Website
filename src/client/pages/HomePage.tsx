@@ -7,7 +7,12 @@ import {
   ArrowRight, 
   ChevronRight, 
   Heart, 
-  Star
+  Star,
+  Watch,
+  Camera,
+  Smartphone,
+  Headphones,
+  Laptop
 } from 'lucide-react';
 import { useProducts, useCategories } from '../services/product.service';
 
@@ -341,34 +346,98 @@ const HomePage = () => {
             </Link>
           </div>
           <div className="cats-grid">
-            {categories.length > 0 ? (
-              categories.slice(0, 5).map((c: any) => (
-                <Link 
-                  key={c.id} 
-                  to="/products"
-                  className="cat-tile"
-                >
-                  <div className="pic">
-                    <img src={c.metadata?.image || getCategoryFallbackImage(c.name)} alt={c.name} />
-                  </div>
-                  <div className="name">{c.name}</div>
-                  <div className="count">Khám phá ngay</div>
-                </Link>
-              ))
+            {[
+              { icon: <Watch size={36} color="var(--indigo)" strokeWidth={1.5} />, name: 'Đồng hồ', count: 28 },
+              { icon: <Camera size={36} color="var(--indigo)" strokeWidth={1.5} />, name: 'Máy ảnh', count: 42 },
+              { icon: <Smartphone size={36} color="var(--indigo)" strokeWidth={1.5} />, name: 'Điện thoại', count: 76 },
+              { icon: <Laptop size={36} color="var(--indigo)" strokeWidth={1.5} />, name: 'Phụ kiện', count: 112 },
+              { icon: <Headphones size={36} color="var(--indigo)" strokeWidth={1.5} />, name: 'Tai nghe', count: 35 },
+            ].map((c, i) => (
+              <Link key={i} to="/products" className="cat-tile" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ marginBottom: '16px', background: 'var(--indigo-soft)', padding: '16px', borderRadius: '50%' }}>
+                  {c.icon}
+                </div>
+                <div className="name" style={{ fontSize: '16px' }}>{c.name}</div>
+                <div className="count">{c.count} Sản phẩm</div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* COMPACT ROW */}
+      <section className="section" style={{ paddingTop: 0 }}>
+        <div className="container">
+          <div className="section-head">
+            <h2>Dành cho bạn</h2>
+            <Link to="/products" className="view-all">Nhiều lựa chọn hơn
+              <ChevronRight size={16} />
+            </Link>
+          </div>
+          <div className="products" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+            {isLoading ? (
+              <div style={{ gridColumn: '1 / -1', textAlign: 'center', width: '100%', padding: '2rem 0', color: 'var(--fg-mute)' }}>
+                Đang tải...
+              </div>
+            ) : forYouProducts.length === 0 ? (
+              <div style={{ gridColumn: '1 / -1', textAlign: 'center', width: '100%', padding: '2rem 0', color: 'var(--fg-mute)' }}>
+                Chưa có sản phẩm gợi ý.
+              </div>
             ) : (
-              [
-                { img: 'photo-1523275335684-37898b6baf30', name: 'Đồng hồ', count: 28 },
-                { img: 'photo-1502920917128-1aa500764cbd', name: 'Máy ảnh', count: 42 },
-                { img: 'photo-1511707171634-5f897ff02aa9', name: 'Điện thoại', count: 76 },
-                { img: 'photo-1592840496694-26d035b52b48', name: 'Phụ kiện', count: 112 },
-                { img: 'photo-1606220945770-b5b6c2c55bf1', name: 'Tai nghe', count: 35 },
-              ].map((c, i) => (
-                <Link key={i} to="/products" className="cat-tile">
-                  <div className="pic"><img src={`https://images.unsplash.com/${c.img}?w=300&q=80&auto=format&fit=crop`} alt="" /></div>
-                  <div className="name">{c.name}</div>
-                  <div className="count">{c.count} Sản phẩm</div>
-                </Link>
-              ))
+              forYouProducts.map((p: any) => {
+                const pPrice = p.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount 
+                  || p.variants?.[0]?.prices?.[0]?.amount 
+                  || p.variants?.[0]?.price 
+                  || p.price 
+                  || 0;
+                
+                const displayPrice = typeof pPrice === 'number' && pPrice > 0 ? pPrice.toLocaleString('vi-VN') + 'đ' : 'Liên hệ';
+                const oldPrice = p.variants?.[0]?.oldPrice;
+                const displayOldPrice = oldPrice ? oldPrice.toLocaleString('vi-VN') + 'đ' : null;
+                const stock = p.variants?.[0]?.stock !== undefined ? p.variants[0].stock : 10;
+                const imgUrl = p.thumbnail || 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=300&q=80&auto=format&fit=crop';
+                const rating = Number(p.metadata?.rating || 5);
+                const ratingCount = p.metadata?.review_count || 10;
+
+                return (
+                  <article key={p.id} className="product-card">
+                    <div className="img-wrap">
+                      {oldPrice && <span className="badge badge--sale">Giảm giá</span>}
+                      <button 
+                        className="wishlist" 
+                        aria-label="Wishlist" 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleWishlistProduct(p.id, p.title);
+                        }}
+                        style={{
+                          opacity: wishlist.includes(p.id) ? 1 : undefined,
+                          color: wishlist.includes(p.id) ? 'var(--rose)' : undefined,
+                        }}
+                      >
+                        <Heart size={18} fill={wishlist.includes(p.id) ? 'var(--rose)' : 'none'} stroke={wishlist.includes(p.id) ? 'var(--rose)' : 'currentColor'} />
+                      </button>
+                      <img src={imgUrl} alt={p.title} style={{ objectFit: 'contain' }} />
+                    </div>
+                    <div className="stock"><span className="dot"></span>Còn hàng · {stock} sản phẩm</div>
+                    <Link to={`/product/${p.id}`} className="name" style={{ fontSize: '15px' }}>{p.title}</Link>
+                    <div className="price">
+                      <span className="now">{displayPrice}</span>
+                      {displayOldPrice && <span className="was">{displayOldPrice}</span>}
+                    </div>
+                    <div className="stars">
+                      <div style={{ display: 'flex', gap: '2px', color: '#fbbf24' }}>
+                        {[...Array(5)].map((_, idx) => (
+                          <Star key={idx} size={14} fill={idx < Math.round(rating) ? "#fbbf24" : "none"} />
+                        ))}
+                      </div>
+                      <span className="count">({ratingCount})</span>
+                    </div>
+                    <Link to={`/product/${p.id}`} className="btn" style={{ marginTop: '0.65rem' }}>Đặt ngay <ChevronRight size={16} /></Link>
+                  </article>
+                );
+              })
             )}
           </div>
         </div>

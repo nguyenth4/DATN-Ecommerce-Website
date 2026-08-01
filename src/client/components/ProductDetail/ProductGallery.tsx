@@ -1,4 +1,5 @@
 import React from 'react';
+import { PlayCircle } from 'lucide-react';
 
 interface ProductGalleryProps {
   activeImage: string;
@@ -46,12 +47,13 @@ const ProductGallery: React.FC<ProductGalleryProps> = ({
           display: 'flex', 
           justifyContent: 'center', 
           alignItems: 'center', 
-          background: '#fff', 
-          borderRadius: 'var(--radius)', 
+          background: 'var(--bg, #f1f5f9)', 
+          borderRadius: '24px', 
+          padding: '2rem',
           overflow: 'hidden', 
-          minHeight: '400px', 
-          border: '1px solid var(--border)',
-          position: 'relative'
+          minHeight: '450px', 
+          position: 'relative',
+          transition: 'background-color 0.3s ease'
         }}
       >
         {isVideoActive && finalVideoUrl ? (
@@ -89,23 +91,24 @@ const ProductGallery: React.FC<ProductGalleryProps> = ({
           <div 
             className={`thumb ${isVideoActive ? 'active' : ''}`} 
             style={{
-              width: '70px',
-              height: '70px',
-              border: isVideoActive ? '2px solid var(--accent)' : '1px solid var(--border)',
-              borderRadius: '8px',
+              width: '76px',
+              height: '76px',
+              border: isVideoActive ? '2px solid var(--indigo, #4f46e5)' : '1px solid var(--border, #e2e8f0)',
+              borderRadius: '12px',
               cursor: 'pointer',
               overflow: 'hidden',
-              background: '#f8f9fa',
+              background: '#f8fafc',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              boxShadow: isVideoActive ? '0 0 0 2px rgba(79,70,229,0.2)' : 'none'
             }}
             onClick={() => onImageClick('video')}
           >
-            <i className="bi bi-play-circle-fill" style={{ fontSize: '1.6rem', color: 'var(--accent)' }}></i>
-            <span style={{ fontSize: '0.65rem', fontWeight: 700, marginTop: '2px', color: 'var(--dark)' }}>VIDEO</span>
+            <PlayCircle size={28} color="var(--indigo, #4f46e5)" strokeWidth={1.5} />
+            <span style={{ fontSize: '0.65rem', fontWeight: 700, marginTop: '4px', color: 'var(--indigo, #4f46e5)' }}>VIDEO</span>
           </div>
         )}
 
@@ -115,20 +118,23 @@ const ProductGallery: React.FC<ProductGalleryProps> = ({
             key={idx} 
             className={`thumb ${activeImage === img ? 'active' : ''}`} 
             style={{
-              width: '70px',
-              height: '70px',
-              border: activeImage === img ? '2px solid var(--dark)' : '1px solid var(--border)',
-              borderRadius: '8px',
+              width: '76px',
+              height: '76px',
+              border: activeImage === img ? '2px solid var(--indigo, #4f46e5)' : '1px solid var(--border, #e2e8f0)',
+              borderRadius: '12px',
               cursor: 'pointer',
               overflow: 'hidden',
               background: '#fff',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+              boxShadow: activeImage === img ? '0 0 0 2px rgba(79,70,229,0.2)' : 'none',
+              padding: '6px'
             }}
             onClick={() => onImageClick(img)}
           >
-            <img src={img} alt="" style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} />
+            <img src={img} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
           </div>
         ))}
       </div>
