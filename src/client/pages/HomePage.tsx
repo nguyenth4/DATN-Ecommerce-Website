@@ -15,6 +15,7 @@ import {
   Laptop
 } from 'lucide-react';
 import { useProducts, useCategories } from '../services/product.service';
+import { HomePageProductCard } from '../components/HomePageProductCard';
 
 const getCategoryFallbackImage = (name: string) => {
   if (!name) return 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&q=80&auto=format&fit=crop';
@@ -218,95 +219,9 @@ const HomePage = () => {
                 Chưa có sản phẩm nào trong danh mục này.
               </div>
             ) : (
-              trendingProducts.map((p: any) => {
-                const pPrice = p.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount 
-                  || p.variants?.[0]?.prices?.[0]?.amount 
-                  || p.variants?.[0]?.price 
-                  || p.price 
-                  || 0;
-                
-                const displayPrice = typeof pPrice === 'number' && pPrice > 0 ? pPrice.toLocaleString('vi-VN') + 'đ' : 'Liên hệ';
-                const oldPrice = p.variants?.[0]?.oldPrice;
-                const displayOldPrice = oldPrice ? oldPrice.toLocaleString('vi-VN') + 'đ' : null;
-                const stock = p.variants?.reduce((acc: number, v: any) => {
-                  const vStock = (v.inventory_quantity !== undefined && v.inventory_quantity !== null)
-                    ? v.inventory_quantity
-                    : ((v.stock !== undefined && v.stock !== null) ? v.stock : 10);
-                  return acc + vStock;
-                }, 0) || 10;
-                const imgUrl = p.thumbnail || 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=500&q=80&auto=format&fit=crop';
-                const rating = Number(p.metadata?.rating || 5);
-                const ratingCount = p.metadata?.review_count || 10;
-
-                return (
-                  <article key={p.id} className="product-card">
-                    <div className="img-wrap">
-                      {oldPrice && <span className="badge badge--sale">Giảm giá</span>}
-                      <button 
-                        className="wishlist" 
-                        aria-label="Wishlist" 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          toggleWishlistProduct(p.id, p.title);
-                        }}
-                        style={{
-                          opacity: wishlist.includes(p.id) ? 1 : undefined,
-                          color: wishlist.includes(p.id) ? 'var(--rose)' : undefined,
-                        }}
-                      >
-                        <Heart size={18} fill={wishlist.includes(p.id) ? 'var(--rose)' : 'none'} stroke={wishlist.includes(p.id) ? 'var(--rose)' : 'currentColor'} />
-                      </button>
-                      <img src={imgUrl} alt={p.title} style={{ objectFit: 'contain' }} />
-                    </div>
-                    <div className="stock"><span className="dot"></span>Còn hàng · {stock > 0 ? `${stock} sản phẩm` : 'Sẵn hàng'}</div>
-                    <Link to={`/product/${p.id}`} className="name">{p.title}</Link>
-                    <div className="price">
-                      <span className="now">{displayPrice}</span>
-                      {displayOldPrice && <span className="was">{displayOldPrice}</span>}
-                    </div>
-                    <div className="stars">
-                      <div style={{ display: 'flex', gap: '2px', color: '#fbbf24' }}>
-                        {[...Array(5)].map((_, idx) => (
-                          <Star key={idx} size={14} fill={idx < Math.round(rating) ? "#fbbf24" : "none"} />
-                        ))}
-                      </div>
-                      <span className="count">({ratingCount})</span>
-                    </div>
-                    <div 
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }}
-                      style={{
-                        marginTop: '0.65rem',
-                        paddingTop: '0.65rem',
-                        borderTop: '1px dashed var(--rule, #eaeaea)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        fontSize: '0.8rem',
-                        color: 'var(--fg-mute, #64748b)'
-                      }}
-                    >
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', margin: 0 }}>
-                        <input 
-                          type="checkbox" 
-                          checked={compareList.includes(p.id)}
-                          onChange={() => toggleCompareProduct(p.id, p.title)}
-                          style={{ 
-                            cursor: 'pointer', 
-                            accentColor: 'var(--indigo, #4f46e5)',
-                            width: '14px',
-                            height: '14px'
-                          }}
-                        />
-                        <span style={{ fontWeight: 500 }}>So sánh</span>
-                      </label>
-                    </div>
-                    <Link to="/cart" className="btn" style={{ marginTop: '0.65rem' }}>Đặt ngay <ChevronRight size={16} /></Link>
-                  </article>
-                );
-              })
+              trendingProducts.map((p: any) => (
+                <HomePageProductCard key={p.id} p={p} compareList={compareList} wishlist={wishlist} />
+              ))
             )}
           </div>
         </div>
@@ -384,60 +299,9 @@ const HomePage = () => {
                 Chưa có sản phẩm gợi ý.
               </div>
             ) : (
-              forYouProducts.map((p: any) => {
-                const pPrice = p.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount 
-                  || p.variants?.[0]?.prices?.[0]?.amount 
-                  || p.variants?.[0]?.price 
-                  || p.price 
-                  || 0;
-                
-                const displayPrice = typeof pPrice === 'number' && pPrice > 0 ? pPrice.toLocaleString('vi-VN') + 'đ' : 'Liên hệ';
-                const oldPrice = p.variants?.[0]?.oldPrice;
-                const displayOldPrice = oldPrice ? oldPrice.toLocaleString('vi-VN') + 'đ' : null;
-                const stock = p.variants?.[0]?.stock !== undefined ? p.variants[0].stock : 10;
-                const imgUrl = p.thumbnail || 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=300&q=80&auto=format&fit=crop';
-                const rating = Number(p.metadata?.rating || 5);
-                const ratingCount = p.metadata?.review_count || 10;
-
-                return (
-                  <article key={p.id} className="product-card">
-                    <div className="img-wrap">
-                      {oldPrice && <span className="badge badge--sale">Giảm giá</span>}
-                      <button 
-                        className="wishlist" 
-                        aria-label="Wishlist" 
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          toggleWishlistProduct(p.id, p.title);
-                        }}
-                        style={{
-                          opacity: wishlist.includes(p.id) ? 1 : undefined,
-                          color: wishlist.includes(p.id) ? 'var(--rose)' : undefined,
-                        }}
-                      >
-                        <Heart size={18} fill={wishlist.includes(p.id) ? 'var(--rose)' : 'none'} stroke={wishlist.includes(p.id) ? 'var(--rose)' : 'currentColor'} />
-                      </button>
-                      <img src={imgUrl} alt={p.title} style={{ objectFit: 'contain' }} />
-                    </div>
-                    <div className="stock"><span className="dot"></span>Còn hàng · {stock} sản phẩm</div>
-                    <Link to={`/product/${p.id}`} className="name" style={{ fontSize: '15px' }}>{p.title}</Link>
-                    <div className="price">
-                      <span className="now">{displayPrice}</span>
-                      {displayOldPrice && <span className="was">{displayOldPrice}</span>}
-                    </div>
-                    <div className="stars">
-                      <div style={{ display: 'flex', gap: '2px', color: '#fbbf24' }}>
-                        {[...Array(5)].map((_, idx) => (
-                          <Star key={idx} size={14} fill={idx < Math.round(rating) ? "#fbbf24" : "none"} />
-                        ))}
-                      </div>
-                      <span className="count">({ratingCount})</span>
-                    </div>
-                    <Link to={`/product/${p.id}`} className="btn" style={{ marginTop: '0.65rem' }}>Đặt ngay <ChevronRight size={16} /></Link>
-                  </article>
-                );
-              })
+              forYouProducts.map((p: any) => (
+                <HomePageProductCard key={p.id} p={p} compareList={compareList} wishlist={wishlist} />
+              ))
             )}
           </div>
         </div>
