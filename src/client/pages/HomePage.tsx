@@ -66,9 +66,30 @@ const HomePage = () => {
 
   return (
     <main id="main">
+      {/* CATEGORIES */}
+      <section className="section" style={{ paddingTop: 'var(--s5)', paddingBottom: 'var(--s5)' }}>
+        <div className="container">
+          <div className="cats-grid">
+            {[
+              { icon: <Watch size={36} color="var(--indigo)" strokeWidth={1.5} />, name: 'Đồng hồ', count: 28 },
+              { icon: <Camera size={36} color="var(--indigo)" strokeWidth={1.5} />, name: 'Máy ảnh', count: 42 },
+              { icon: <Smartphone size={36} color="var(--indigo)" strokeWidth={1.5} />, name: 'Điện thoại', count: 76 },
+              { icon: <Laptop size={36} color="var(--indigo)" strokeWidth={1.5} />, name: 'Phụ kiện', count: 112 },
+              { icon: <Headphones size={36} color="var(--indigo)" strokeWidth={1.5} />, name: 'Tai nghe', count: 35 },
+            ].map((c, i) => (
+              <Link key={i} to="/products" className="cat-tile" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ marginBottom: '16px', background: 'var(--indigo-soft)', padding: '16px', borderRadius: '50%' }}>
+                  {c.icon}
+                </div>
+                <div className="name" style={{ fontSize: '16px' }}>{c.name}</div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* HERO: bento grid */}
-      <section className="hero">
+      <section className="hero" style={{ paddingTop: 'var(--s4)' }}>
         <div className="container">
           <div className="bento">
 
@@ -247,35 +268,6 @@ const HomePage = () => {
               </Link>
               <img className="product" src="https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=500&q=80&auto=format&fit=crop" alt="Earbuds" />
             </article>
-          </div>
-        </div>
-      </section>
-
-      {/* CATEGORIES */}
-      <section className="section" style={{ paddingTop: 'var(--s5)' }}>
-        <div className="container">
-          <div className="section-head">
-            <h2>Mua sắm theo danh mục</h2>
-            <Link to="/products" className="view-all">Xem tất cả sản phẩm
-              <ChevronRight size={16} />
-            </Link>
-          </div>
-          <div className="cats-grid">
-            {[
-              { icon: <Watch size={36} color="var(--indigo)" strokeWidth={1.5} />, name: 'Đồng hồ', count: 28 },
-              { icon: <Camera size={36} color="var(--indigo)" strokeWidth={1.5} />, name: 'Máy ảnh', count: 42 },
-              { icon: <Smartphone size={36} color="var(--indigo)" strokeWidth={1.5} />, name: 'Điện thoại', count: 76 },
-              { icon: <Laptop size={36} color="var(--indigo)" strokeWidth={1.5} />, name: 'Phụ kiện', count: 112 },
-              { icon: <Headphones size={36} color="var(--indigo)" strokeWidth={1.5} />, name: 'Tai nghe', count: 35 },
-            ].map((c, i) => (
-              <Link key={i} to="/products" className="cat-tile" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ marginBottom: '16px', background: 'var(--indigo-soft)', padding: '16px', borderRadius: '50%' }}>
-                  {c.icon}
-                </div>
-                <div className="name" style={{ fontSize: '16px' }}>{c.name}</div>
-                <div className="count">{c.count} Sản phẩm</div>
-              </Link>
-            ))}
           </div>
         </div>
       </section>

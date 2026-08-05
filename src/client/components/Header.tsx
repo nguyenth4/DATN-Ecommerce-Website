@@ -312,21 +312,6 @@ const Header = () => {
     <>
       <style>{headerStyles}</style>
 
-      {/* Utility bar */}
-      <div className="utility">
-        <div className="container">
-          <span className="promo">
-            <span className="tag">GIẢM GIÁ</span>
-            Miễn phí vận chuyển cho đơn hàng trên 1.200.000đ · 30 ngày đổi trả
-          </span>
-          <span className="links">
-            <Link to="/order-tracking">Theo dõi đơn hàng</Link>
-            <Link to="#">Trợ giúp</Link>
-            <Link to="#">VN · VND</Link>
-          </span>
-        </div>
-      </div>
-
       {/* Header */}
       <header className="site-header">
         <div className="container">
