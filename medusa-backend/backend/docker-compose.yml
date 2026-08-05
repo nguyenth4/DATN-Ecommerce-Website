@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  medusa-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: medusa_dev
+    ports:
+      - "9000:9000"
+      - "7001:7001"
+    volumes:
+      - ./apps/backend:/app/apps/backend
+      # Giữ node_modules của container độc lập với máy Host Windows
+      - /app/node_modules
+      - /app/apps/backend/node_modules
+    env_file:
+      - apps/backend/.env
+    environment:
+      - HOST=0.0.0.0
+      - PORT=9000
+    command: npm run dev

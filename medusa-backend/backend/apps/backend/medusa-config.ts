@@ -83,6 +83,17 @@ module.exports = defineConfig({
     "wallet": {
       resolve: "./src/modules/wallet",
     },
+    fulfillment: {
+      resolve: "@medusajs/medusa/fulfillment",
+      options: {
+        providers: [
+          {
+            resolve: "./src/modules/ghn-fulfillment",
+            id: "ghn",
+          },
+        ],
+      },
+    },
   }
 })
 

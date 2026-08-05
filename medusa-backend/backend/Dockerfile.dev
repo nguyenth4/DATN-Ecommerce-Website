@@ -1,0 +1,28 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copy lockfile và package.json gốc
+COPY package*.json ./
+COPY apps/backend/package*.json ./apps/backend/
+
+# Xóa lockfile hỏng (do Node 25 tạo) để cài đặt sạch trong container
+RUN rm -f package-lock.json apps/backend/package-lock.json
+
+# Tăng timeout để tránh ETIMEDOUT khi mạng chậm
+RUN npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set fetch-timeout 600000 && \
+    npm config set fetch-retries 5
+
+RUN npm install --legacy-peer-deps
+
+COPY . .
+
+WORKDIR /app/apps/backend
+
+# Medusa chạy cổng 9000
+EXPOSE 9000
+
+# Chạy ở chế độ watch
+CMD ["npm", "run", "dev"]
