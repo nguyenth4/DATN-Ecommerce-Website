@@ -627,6 +627,9 @@ input, select, textarea { font: inherit; color: inherit; }
   box-shadow: var(--shadow-sm);
   color: var(--fg-mute);
   opacity: 0.7; transition: opacity 200ms var(--ease), color 180ms var(--ease), transform 150ms var(--ease);
+  z-index: 10;
+  cursor: pointer;
+  border: none;
 }
 .product-card:hover .wishlist { opacity: 1; transform: scale(1.05); }
 .product-card .wishlist:hover { color: var(--rose); opacity: 1; }

@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { addToCart } from '../../utils/cart';
+import { getWishlist, toggleWishlistProduct } from '../../utils/wishlist';
 
 interface ProductInfoProps {
   product: {
@@ -41,6 +43,18 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
   onQtyChange,
 }) => {
   const navigate = useNavigate();
+  const [wishlist, setWishlist] = useState<string[]>(getWishlist());
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setWishlist(getWishlist());
+    };
+    window.addEventListener('wishlist-updated', handleUpdate);
+    return () => {
+      window.removeEventListener('wishlist-updated', handleUpdate);
+    };
+  }, []);
+
   const discountPercent = Math.round(
     ((activeVariant.oldPrice - activeVariant.price) / activeVariant.oldPrice) * 100
   );
@@ -303,8 +317,30 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
         >
           <i className="bi bi-lightning-charge"></i> Mua ngay
         </button>
-        <button className="btn-icon" style={{ width: '48px', height: '48px', border: '1.5px solid var(--border)', borderRadius: 'var(--radius)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', background: 'white' }}>
-          <i className="bi bi-heart"></i>
+        <button 
+          type="button"
+          onClick={() => {
+            const pId = product.rawProduct?.id;
+            if (pId) {
+              toggleWishlistProduct(pId, product.title);
+            }
+          }}
+          className="btn-icon" 
+          style={{ 
+            width: '48px', 
+            height: '48px', 
+            border: '1.5px solid var(--border)', 
+            borderRadius: 'var(--radius)', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            cursor: 'pointer', 
+            background: 'white',
+            color: wishlist.includes(product.rawProduct?.id) ? '#ef4444' : 'inherit'
+          }}
+          title={wishlist.includes(product.rawProduct?.id) ? "Xóa khỏi danh sách yêu thích" : "Thêm vào danh sách yêu thích"}
+        >
+          <i className={wishlist.includes(product.rawProduct?.id) ? "bi bi-heart-fill" : "bi bi-heart"}></i>
         </button>
       </div>
 

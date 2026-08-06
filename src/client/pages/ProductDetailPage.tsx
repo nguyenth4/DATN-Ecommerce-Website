@@ -1,11 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
-  Star, 
-  Heart, 
   Check, 
-  ChevronRight, 
-  ArrowRight
+  ChevronRight
 } from 'lucide-react';
 import { useProduct, useProducts } from '../services/product.service';
 import ProductGallery from '../components/ProductDetail/ProductGallery';
@@ -13,6 +10,7 @@ import ProductInfo from '../components/ProductDetail/ProductInfo';
 import ProductSpecsTable from '../components/ProductDetail/ProductSpecsTable';
 import ProductReviewsTab from '../components/ProductDetail/ProductReviewsTab';
 import { ProductDetailSkeleton } from '../components/ProductDetailSkeleton';
+import ProductCard from '../components/ProductCard';
 import toast from 'react-hot-toast';
 
 // Removed inline skeleton, now using imported ProductDetailSkeleton
@@ -501,37 +499,9 @@ const ProductDetailPage = () => {
               </div>
 
               <div className="products">
-                {relatedProducts.map((p: any) => {
-                  const pPrice = p.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount 
-                    || p.variants?.[0]?.prices?.[0]?.amount 
-                    || p.variants?.[0]?.price 
-                    || p.price 
-                    || 0;
-                  
-                  const displayPrice = typeof pPrice === 'number' && pPrice > 0 ? pPrice.toLocaleString('vi-VN') + 'đ' : 'Liên hệ';
-                  const imgUrl = p.thumbnail || 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=500&q=80&auto=format&fit=crop';
-
-                  return (
-                    <article className="product-card" key={p.id || p.name}>
-                      <div className="img-wrap">
-                        <button className="wishlist"><Heart size={18} /></button>
-                        <img src={imgUrl} alt={p.title || p.name} style={{ objectFit: 'contain' }} />
-                      </div>
-                      <div className="stock"><span className="dot"></span>Còn hàng</div>
-                      <Link to={`/product/${p.id}`} className="name">{p.title || p.name}</Link>
-                      <div className="price">
-                        <span className="now">{displayPrice}</span>
-                      </div>
-                      <div className="stars">
-                        <div style={{ display: 'flex', gap: '2px', color: 'var(--amber)' }}>
-                          {[...Array(5)].map((_, i) => <Star key={i} size={14} fill={i < 5 ? "currentColor" : "none"} />)}
-                        </div>
-                        <span className="count">({p.metadata?.review_count || 10})</span>
-                      </div>
-                      <Link to="/cart" className="btn">Đặt hàng ngay <ArrowRight size={16} /></Link>
-                    </article>
-                  );
-                })}
+                {relatedProducts.map((p: any) => (
+                  <ProductCard product={p} key={p.id} />
+                ))}
               </div>
             </section>
           )}
