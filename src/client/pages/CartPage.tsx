@@ -40,7 +40,7 @@ const CartPage = () => {
 
   // Shipping Fee State
   const [provinces, setProvinces] = useState<any[]>([]);
-  const [districts, setDistricts] = useState<any[]>([]);
+  const [, setDistricts] = useState<any[]>([]);
   const [wards, setWards] = useState<any[]>([]);
   
   const [selectedProvince, setSelectedProvince] = useState('');

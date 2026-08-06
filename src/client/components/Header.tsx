@@ -5,7 +5,6 @@ import { Menu, X, ShoppingCart, User, Heart, Search, ChevronRight, Plus, Minus, 
 import { getCompareList } from '../utils/compare';
 import { getWishlist } from '../utils/wishlist';
 import { useCart, useUpdateLineItem, useRemoveLineItem } from '../services/cart.service';
-import { useCategories } from '../services/product.service';
 import toast from 'react-hot-toast';
 
 const headerStyles = `
@@ -237,7 +236,6 @@ const Header = () => {
   const [wishlistCount, setWishlistCount] = useState(getWishlist().length);
   const [customerInfo, setCustomerInfo] = useState<any>(null);
   
-  const { data: categories = [] } = useCategories();
   const { data: cart } = useCart();
   const updateLineItem = useUpdateLineItem();
   const removeLineItem = useRemoveLineItem();

@@ -30,8 +30,11 @@ const LoginPage = () => {
   const navigate   = useNavigate();
   const location   = useLocation();
 
+  const searchParams = new URLSearchParams(location.search);
+  const redirectParam = searchParams.get('redirect');
   // where to go after login — default /account
-  const from: string = (location.state as any)?.from?.pathname || '/account';
+  const from: string = redirectParam || (location.state as any)?.from?.pathname || '/account';
+  const isCheckoutRedirect = from.includes('/checkout');
 
   // Form state
   const [email,    setEmail]    = useState('');
@@ -221,6 +224,48 @@ const LoginPage = () => {
             </h1>
             <p className="text-muted text-sm">Chào mừng bạn trở lại! Vui lòng đăng nhập.</p>
           </div>
+
+          {/* Checkout redirect notice */}
+          {isCheckoutRedirect && (
+            <div
+              className="alert alert-info"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                marginBottom: '1.2rem',
+                padding: '12px 16px',
+                background: '#eef2ff',
+                borderLeft: '4px solid #4f46e5',
+                borderRadius: '8px',
+                color: '#312e81'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, fontSize: '0.9rem' }}>
+                <LogIn size={18} color="#4f46e5" />
+                Vui lòng đăng nhập để tiến hành thanh toán đơn hàng
+              </div>
+              <p style={{ margin: 0, fontSize: '0.8rem', color: '#4338ca' }}>
+                Đăng nhập để sử dụng địa chỉ giao hàng đã lưu và thanh toán qua ví.
+              </p>
+              <Link 
+                to="/checkout?guest=true"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '0.825rem',
+                  fontWeight: 600,
+                  color: '#4f46e5',
+                  textDecoration: 'underline',
+                  marginTop: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                Hoặc mua dạng khách (Guest Checkout) không cần tài khoản →
+              </Link>
+            </div>
+          )}
 
           {/* Error alert */}
           {error && (

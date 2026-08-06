@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   ShieldCheck, 
@@ -205,6 +205,10 @@ const CheckoutPage = () => {
     }
   };
 
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const isGuestQuery = searchParams.get('guest') === 'true';
+
   useEffect(() => {
     const checkAuthAndProfile = async () => {
       setIsLoadingProfile(true);
@@ -213,11 +217,15 @@ const CheckoutPage = () => {
         await fetchCustomerProfile();
       } else {
         setIsLoggedIn(false);
+        if (isGuestQuery) {
+          setIsGuestCheckout(true);
+          setAddressMode('new');
+        }
       }
       setIsLoadingProfile(false);
     };
     checkAuthAndProfile();
-  }, []);
+  }, [isGuestQuery]);
 
   // Inline Login Handler
   const handleInlineLogin = async (e: React.FormEvent) => {
@@ -774,6 +782,12 @@ const CheckoutPage = () => {
                           </svg>
                           Facebook
                         </button>
+                      </div>
+
+                      <div style={{ textAlign: 'center', marginTop: '1.2rem' }}>
+                        <Link to="/login?redirect=/checkout" style={{ fontSize: '0.85rem', color: 'var(--checkout-accent)', fontWeight: 600, textDecoration: 'underline' }}>
+                          Mở trang Đăng nhập đầy đủ →
+                        </Link>
                       </div>
                     </form>
                   )}

@@ -17,22 +17,6 @@ import {
 import { useProducts, useCategories } from '../services/product.service';
 import { HomePageProductCard } from '../components/HomePageProductCard';
 
-const getCategoryFallbackImage = (name: string) => {
-  if (!name) return 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&q=80&auto=format&fit=crop';
-  const n = name.toLowerCase();
-  
-  if (n.includes('laptop') || n.includes('máy tính')) return 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=300&q=80&auto=format&fit=crop';
-  if (n.includes('iphone') || n.includes('apple')) return 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=300&q=80&auto=format&fit=crop';
-  if (n.includes('samsung') || n.includes('galaxy')) return 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=300&q=80&auto=format&fit=crop';
-  if (n.includes('oppo') || n.includes('vivo') || n.includes('xiaomi')) return 'https://images.unsplash.com/photo-1598327105666-5b893c0bcce0?w=300&q=80&auto=format&fit=crop';
-  if (n.includes('điện thoại') || n.includes('phone')) return 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=300&q=80&auto=format&fit=crop';
-  if (n.includes('tai nghe') || n.includes('headphone') || n.includes('audio')) return 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&q=80&auto=format&fit=crop';
-  if (n.includes('đồng hồ') || n.includes('watch')) return 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&q=80&auto=format&fit=crop';
-  if (n.includes('máy ảnh') || n.includes('camera')) return 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300&q=80&auto=format&fit=crop';
-  
-  return 'https://images.unsplash.com/photo-1592840496694-26d035b52b48?w=300&q=80&auto=format&fit=crop';
-};
-
 const HomePage = () => {
   const [selectedCatId, setSelectedCatId] = useState<string | null>(null);
   const [compareList, setCompareList] = useState(getCompareList());

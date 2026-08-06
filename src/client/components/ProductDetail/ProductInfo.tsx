@@ -128,6 +128,7 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
           </div>
           <div className="variant-options" style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
             {storages.map((size) => {
+              const price = getStoragePrice(size);
               return (
                 <button 
                   key={size}
@@ -150,6 +151,11 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
                   onClick={() => onStorageChange(size)}
                 >
                   <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>{size}</span>
+                  {price > 0 && (
+                    <span style={{ fontSize: '0.68rem', color: selectedStorage === size ? '#d70018' : '#555', fontWeight: 500 }}>
+                      {price.toLocaleString('vi-VN')}đ
+                    </span>
+                  )}
                 </button>
               );
             })}
