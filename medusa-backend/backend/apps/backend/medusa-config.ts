@@ -94,6 +94,9 @@ module.exports = defineConfig({
         ],
       },
     },
+    recommendationModuleService: {
+      resolve: "./src/modules/recommendation",
+    }
   }
 })
 

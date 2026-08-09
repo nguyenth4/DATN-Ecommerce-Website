@@ -85,6 +85,30 @@ export const productService = {
       return { min: 0, max: 50_000_000 };
     }
   },
+
+  // Track user interaction
+  async trackInteraction(productId: string, interactionType: 'VIEW' | 'CART' | 'PURCHASE', sessionId?: string) {
+    try {
+      await medusa.client.fetch('/store/interactions', {
+        method: 'POST',
+        body: { product_id: productId, interaction_type: interactionType, session_id: sessionId },
+      });
+    } catch (error) {
+      console.error('Failed to track interaction:', error);
+    }
+  },
+
+  // Get recommended products
+  async getRecommendedProducts(sessionId?: string) {
+    try {
+      const url = `/store/recommendations${sessionId ? `?session_id=${sessionId}` : ''}`;
+      const data = await medusa.client.fetch<any>(url, { method: 'GET' });
+      return data.products || [];
+    } catch (error) {
+      console.error('Failed to get recommendations:', error);
+      return [];
+    }
+  }
 };
 
 // --- REACT QUERY HOOKS ---
@@ -123,6 +147,14 @@ export const useProductPriceRange = (selectedCats: string[]) => {
     queryFn: () => productService.getPriceRange(selectedCats.length > 0 ? selectedCats : undefined),
     staleTime: 1000 * 60 * 5,
     placeholderData: { min: 0, max: 50_000_000 },
+  });
+};
+
+export const useRecommendedProducts = (sessionId?: string) => {
+  return useQuery({
+    queryKey: ['recommended_products', sessionId],
+    queryFn: () => productService.getRecommendedProducts(sessionId),
+    staleTime: 1000 * 60 * 5,
   });
 };
 

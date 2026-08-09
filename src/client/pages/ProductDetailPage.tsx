@@ -74,6 +74,12 @@ const ProductDetailPage = () => {
         setSelectedStorage(storages[0]);
       }
       setActiveImage(fetchedProduct.thumbnail || "");
+
+      // Track VIEW interaction
+      const sessionId = typeof window !== 'undefined' ? localStorage.getItem('session_id') : undefined;
+      import('../services/product.service').then(({ productService }) => {
+        productService.trackInteraction(fetchedProduct.id, 'VIEW', sessionId || undefined);
+      });
     }
   }, [fetchedProduct]);
 
