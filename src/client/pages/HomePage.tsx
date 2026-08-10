@@ -15,6 +15,7 @@ import {
   Laptop
 } from 'lucide-react';
 import { useProducts, useCategories, useRecommendedProducts } from '../services/product.service';
+import { HomePageProductCard } from '../components/HomePageProductCard';
 
 const getCategoryFallbackImage = (name: string) => {
   if (!name) return 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&q=80&auto=format&fit=crop';
@@ -91,28 +92,6 @@ const HomePage = () => {
 
   return (
     <main id="main">
-      {/* CATEGORIES */}
-      <section className="section" style={{ paddingTop: 'var(--s5)', paddingBottom: 'var(--s5)' }}>
-        <div className="container">
-          <div className="cats-grid">
-            {[
-              { icon: <Watch size={36} color="var(--indigo)" strokeWidth={1.5} />, name: 'Đồng hồ', count: 28 },
-              { icon: <Camera size={36} color="var(--indigo)" strokeWidth={1.5} />, name: 'Máy ảnh', count: 42 },
-              { icon: <Smartphone size={36} color="var(--indigo)" strokeWidth={1.5} />, name: 'Điện thoại', count: 76 },
-              { icon: <Laptop size={36} color="var(--indigo)" strokeWidth={1.5} />, name: 'Phụ kiện', count: 112 },
-              { icon: <Headphones size={36} color="var(--indigo)" strokeWidth={1.5} />, name: 'Tai nghe', count: 35 },
-            ].map((c, i) => (
-              <Link key={i} to="/products" className="cat-tile" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ marginBottom: '16px', background: 'var(--indigo-soft)', padding: '16px', borderRadius: '50%' }}>
-                  {c.icon}
-                </div>
-                <div className="name" style={{ fontSize: '16px' }}>{c.name}</div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* HERO: bento grid */}
       <section className="hero" style={{ paddingTop: 'var(--s4)' }}>
         <div className="container">
