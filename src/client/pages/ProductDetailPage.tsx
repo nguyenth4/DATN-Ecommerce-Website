@@ -473,7 +473,13 @@ const ProductDetailPage = () => {
 
               {/* Right Column: Dynamic Specifications Table */}
               <div>
-                <ProductSpecsTable specifications={specifications} />
+                <ProductSpecsTable 
+                  specifications={specifications} 
+                  weight={productData.weight}
+                  height={productData.height}
+                  width={productData.width}
+                  length={productData.length}
+                />
               </div>
             </div>
           </section>
