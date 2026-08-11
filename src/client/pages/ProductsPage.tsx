@@ -72,18 +72,20 @@ const ProductsPage = () => {
 
   // Fetch data from Medusa
   const { data: productsData, isLoading: isLoadingProducts } = useProducts({
-    limit,
-    offset: (page - 1) * limit,
+    limit: 100,
     q: debouncedSearch || undefined,
     category_id: selectedCats.length > 0 ? selectedCats : undefined,
-    order: sortBy === 'popular' ? undefined : sortBy
+    order: ['popular', 'views', 'sales', 'rating', 'price_asc', 'price_desc', 'createdAt'].includes(sortBy) ? undefined : sortBy
   });
 
   const { data: categoriesData } = useCategories();
 
   const products = productsData?.products || [];
-  const totalCount = productsData?.count || 0;
-  const categories = categoriesData || [];
+  const totalCount = products.length;
+  const categories = (categoriesData || []).filter((c: any) => {
+    const name = (c.name || '').toLowerCase();
+    return !name.includes('laptop') && !name.includes('điện thoại');
+  });
 
   const getProductImage = (p: any) => {
     return p.thumbnail || (p.images?.[0]?.url) || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80';
@@ -151,6 +153,44 @@ const ProductsPage = () => {
           </div>
         </section>
 
+        <section className="brands" style={{ borderBottom: '1px solid var(--border)', background: 'var(--paper)', padding: '12px 0' }}>
+          <div className="container">
+            <div className="brand-row" style={{ display: 'flex', gap: '24px', overflowX: 'auto', whiteSpace: 'nowrap', paddingBottom: '4px' }}>
+              <button
+                className="brand-logo"
+                onClick={() => {
+                  setSelectedCats([]);
+                  searchParams.delete('category_id');
+                  setSearchParams(searchParams);
+                }}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px',
+                  fontWeight: selectedCats.length === 0 ? '700' : '500',
+                  color: selectedCats.length === 0 ? 'var(--indigo)' : 'var(--fg-mute)',
+                  textTransform: 'uppercase', transition: 'all 0.2s'
+                }}
+              >
+                TẤT CẢ
+              </button>
+              {categories.map((cat: any) => (
+                <button
+                  key={cat.id}
+                  className="brand-logo"
+                  onClick={() => toggleCategory(cat.id)}
+                  style={{
+                    background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px',
+                    fontWeight: selectedCats.includes(cat.id) ? '700' : '500',
+                    color: selectedCats.includes(cat.id) ? 'var(--indigo)' : 'var(--fg-mute)',
+                    textTransform: 'uppercase', transition: 'all 0.2s'
+                  }}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section className="section">
           <div className="container">
             {/* Mobile Filter Trigger */}
@@ -199,39 +239,38 @@ const ProductsPage = () => {
 
 
 
-                <div className="filter-block">
-                  <h3>Tình trạng</h3>
-                  <label><input type="checkbox" defaultChecked /> Còn hàng</label>
-                  <label><input type="checkbox" /> Đang giảm giá</label>
-                  <label><input type="checkbox" /> Sản phẩm mới</label>
-                </div>
-
-                <button className="btn btn--indigo btn--block" onClick={() => setDrawerOpen(false)}>
-                  Xem {products.length} sản phẩm
-                </button>
               </aside>
 
               <div>
-                <div className="shop-toolbar">
-                  <span className="count">
-                    {isLoadingProducts ? 'Đang tải...' : `Hiển thị ${(page - 1) * limit + 1} – ${Math.min(page * limit, totalCount)} của ${totalCount} sản phẩm`}
-                  </span>
-                  <div style={{ display: 'flex', gap: 'var(--s3)', alignItems: 'center' }}>
-                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--fg-mute)', fontWeight: 600 }}>SẮP XẾP</span>
-                    <select
-                      value={sortBy}
-                      onChange={(e) => handleSortChange(e.target.value)}
-                      style={{ padding: '6px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--paper)', fontSize: '14px' }}
-                    >
-                      <option value="popular">Phổ biến nhất</option>
-                      <option value="views">Lượt xem nhiều nhất</option>
-                      <option value="sales">Bán chạy nhất</option>
-                      <option value="rating">Đánh giá cao nhất</option>
-                      <option value="createdAt">Mới nhất</option>
-                      <option value="price_asc">Giá: thấp đến cao</option>
-                      <option value="price_desc">Giá: cao đến thấp</option>
-                    </select>
-                  </div>
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+                  <button 
+                    onClick={() => handleSortChange('price_asc')}
+                    style={{ 
+                      display: 'flex', alignItems: 'center', gap: '8px', 
+                      padding: '8px 16px', border: '1px solid var(--border)', 
+                      borderRadius: '24px', background: sortBy === 'price_asc' ? 'var(--indigo)' : 'var(--paper)',
+                      color: sortBy === 'price_asc' ? 'white' : 'inherit',
+                      cursor: 'pointer', fontSize: '14px',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5h10"></path><path d="M11 9h7"></path><path d="M11 13h4"></path><path d="M3 17l3 3 3-3"></path><path d="M6 18V4"></path></svg>
+                    Giá Thấp - Cao
+                  </button>
+                  <button 
+                    onClick={() => handleSortChange('price_desc')}
+                    style={{ 
+                      display: 'flex', alignItems: 'center', gap: '8px', 
+                      padding: '8px 16px', border: '1px solid var(--border)', 
+                      borderRadius: '24px', background: sortBy === 'price_desc' ? 'var(--indigo)' : 'var(--paper)',
+                      color: sortBy === 'price_desc' ? 'white' : 'inherit',
+                      cursor: 'pointer', fontSize: '14px',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5h4"></path><path d="M11 9h7"></path><path d="M11 13h10"></path><path d="M3 17l3 3 3-3"></path><path d="M6 18V4"></path></svg>
+                    Giá Cao - Thấp
+                  </button>
                 </div>
 
                 {isLoadingProducts ? (
@@ -273,7 +312,9 @@ const ProductsPage = () => {
                         });
                       }
 
-                      return sortedProducts.map((p: any) => {
+                      const paginatedProducts = sortedProducts.slice((page - 1) * limit, page * limit);
+
+                      return paginatedProducts.map((p: any) => {
                         const pPrice = p.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount
                           || p.variants?.[0]?.prices?.[0]?.amount
                           || p.variants?.[0]?.price
@@ -401,7 +442,10 @@ const ProductsPage = () => {
                     <button
                       className="pg"
                       disabled={page === 1}
-                      onClick={() => setPage(p => p - 1)}
+                      onClick={() => {
+                        setPage(p => p - 1);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
                     >
                       <ChevronLeft size={16} />
                     </button>
@@ -409,7 +453,10 @@ const ProductsPage = () => {
                       <button
                         key={i}
                         className={`pg${page === i + 1 ? ' is-active' : ''}`}
-                        onClick={() => setPage(i + 1)}
+                        onClick={() => {
+                          setPage(i + 1);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
                       >
                         {i + 1}
                       </button>
@@ -417,7 +464,10 @@ const ProductsPage = () => {
                     <button
                       className="pg"
                       disabled={page === Math.ceil(totalCount / limit)}
-                      onClick={() => setPage(p => p + 1)}
+                      onClick={() => {
+                        setPage(p => p + 1);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
                     >
                       <ChevronRight size={16} />
                     </button>
@@ -430,18 +480,7 @@ const ProductsPage = () => {
           </div>
         </section>
 
-        <section className="brands">
-          <div className="container">
-            <div className="brand-row">
-              <a href="#" className="brand-logo">HP</a>
-              <a href="#" className="brand-logo">Huawei</a>
-              <a href="#" className="brand-logo">Nokia</a>
-              <a href="#" className="brand-logo">Samsung</a>
-              <a href="#" className="brand-logo">Canon</a>
-              <a href="#" className="brand-logo">Sony</a>
-            </div>
-          </div>
-        </section>
+
 
       </main>
     </>
