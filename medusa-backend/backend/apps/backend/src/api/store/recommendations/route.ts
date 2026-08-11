@@ -10,7 +10,7 @@ export async function GET(
   const recommendationModuleService: RecommendationModuleService = req.scope.resolve(RECOMMENDATION_MODULE)
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
   
-  const customer_id = req.user?.customer_id
+  const customer_id = (req as any).auth_context?.actor_id
   const session_id = req.query.session_id as string | undefined
 
   // Lấy danh sách product_id được gợi ý từ module

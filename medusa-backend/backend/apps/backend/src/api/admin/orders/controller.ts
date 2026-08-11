@@ -1,6 +1,5 @@
-// src/api/admin/orders/controller.ts
 import { MedusaRequest } from "@medusajs/framework/http"
-import { Modules, MedusaContainer } from "@medusajs/framework/utils"
+import { Modules } from "@medusajs/framework/utils"
 import { IOrderModuleService, IInventoryService } from "@medusajs/framework/types"
 
 /**
@@ -59,10 +58,10 @@ export async function updateOrderStatus(
     if (shippingMethod) {
       let shippingResult: any = null
       if (shippingMethod.toLowerCase() === "ghn") {
-        const { createGhnShipping } = await import("../shipping/ghn/service")
+        const { createGhnShipping } = await import("../shipping/ghn/service.js")
         shippingResult = await createGhnShipping(order)
       } else if (shippingMethod.toLowerCase() === "ghtk") {
-        const { createGhtkShipping } = await import("../shipping/ghtk/service")
+        const { createGhtkShipping } = await import("../shipping/ghtk/service.js")
         shippingResult = await createGhtkShipping(order)
       }
       if (shippingResult) {

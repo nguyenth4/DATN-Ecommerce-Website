@@ -97,8 +97,53 @@ const ProductDetailPage = () => {
     };
   }, [id]);
 
+  // Sync active variant's thumbnail to main image when selected options change
+  useEffect(() => {
+    if (!fetchedProduct) return;
+    
+    const colorOptId = fetchedProduct.options?.find((o: any) => o.title === 'Màu sắc' || o.title === 'Color')?.id;
+    const storageOptId = fetchedProduct.options?.find((o: any) => o.title === 'Dung lượng' || o.title === 'Storage')?.id;
+
+    const activeVar = fetchedProduct.variants?.find((v: any) => {
+      if (!v.options || (Array.isArray(v.options) && v.options.length === 0)) return false;
+      
+      let matchColor = !selectedColor;
+      let matchStorage = !selectedStorage;
+
+      if (Array.isArray(v.options)) {
+        if (selectedColor) {
+          matchColor = v.options.some((o: any) => 
+            (colorOptId && o.option_id === colorOptId && o.value === selectedColor) ||
+            o.value === selectedColor || o.title === selectedColor
+          );
+        }
+        if (selectedStorage) {
+          matchStorage = v.options.some((o: any) => 
+            (storageOptId && o.option_id === storageOptId && o.value === selectedStorage) ||
+            o.value === selectedStorage || o.title === selectedStorage
+          );
+        }
+      } else if (typeof v.options === 'object') {
+        if (selectedColor) {
+          const vColor = v.options["Màu sắc"] || v.options["Color"] || (colorOptId ? v.options[colorOptId] : null);
+          matchColor = vColor === selectedColor;
+        }
+        if (selectedStorage) {
+          const vStorage = v.options["Dung lượng"] || v.options["Storage"] || (storageOptId ? v.options[storageOptId] : null);
+          matchStorage = vStorage === selectedStorage;
+        }
+      }
+      return matchColor && matchStorage;
+    }) || fetchedProduct.variants?.[0];
+
+    if (activeVar && activeVar.thumbnail) {
+      setActiveImage(activeVar.thumbnail);
+    }
+  }, [fetchedProduct, selectedColor, selectedStorage]);
+
   if (isLoading) {
     return <ProductDetailSkeleton />;
+
   }
 
   if (!fetchedProduct) {
@@ -117,34 +162,56 @@ const ProductDetailPage = () => {
   const colorOption = productData.options?.find((o: any) => o.title === 'Màu sắc' || o.title === 'Color');
   const storageOption = productData.options?.find((o: any) => o.title === 'Dung lượng' || o.title === 'Storage');
 
+  const colorOptionId = colorOption?.id;
+  const storageOptionId = storageOption?.id;
+
   const storages = storageOption?.values?.map((v: any) => typeof v === 'string' ? v : v.value) || [];
   const colorNames = colorOption?.values?.map((v: any) => typeof v === 'string' ? v : v.value) || [];
 
   // Fallback mappings for colors if not defined in metadata
   const colorFallbacks: Record<string, { hex: string, img: string }> = {
-    "Titan Tự Nhiên": { hex: "#8E8E8A", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-titan-tu-nhien.png" },
-    "Titan Sa Mạc": { hex: "#D1C0B0", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-titan-sa-mac.png" },
-    "Titan Đen": { hex: "#2C2C2C", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-titan-den.png" },
-    "Titan Trắng": { hex: "#F5F5F0", img: "https://cdn2.cellphones.com.vn/358x/media/catalog/product/i/p/iphone-16-pro-titan-trang.png" },
-    "Đen": { hex: "#0F172A", img: productData.thumbnail || "" },
-    "Trắng": { hex: "#FFFFFF", img: productData.thumbnail || "" },
-    "Cam": { hex: "#F97316", img: productData.thumbnail || "" },
-    "Tím": { hex: "#4F46E5", img: productData.thumbnail || "" }
+    "Titan Tự Nhiên": { hex: "#8E8E8A", img: "" },
+    "Titan Sa Mạc": { hex: "#D1C0B0", img: "" },
+    "Titan Đen": { hex: "#2C2C2C", img: "" },
+    "Titan Trắng": { hex: "#F5F5F0", img: "" },
+    "Đen": { hex: "#0F172A", img: "" },
+    "Trắng": { hex: "#FFFFFF", img: "" },
+    "Bạc": { hex: "#E2E8F0", img: "" },
+    "Cam": { hex: "#F97316", img: "" },
+    "Tím": { hex: "#8B5CF6", img: "" },
+    "Xanh": { hex: "#3B82F6", img: "" },
+    "Xanh dương": { hex: "#2563EB", img: "" },
+    "Xanh lá": { hex: "#10B981", img: "" },
+    "Hồng": { hex: "#EC4899", img: "" },
+    "Vàng": { hex: "#EAB308", img: "" },
+    "Xám": { hex: "#6B7280", img: "" },
+    "Đỏ": { hex: "#EF4444", img: "" }
   };
 
   const colors = colorNames.map((name: string) => {
+    // Find matching variant to get the thumbnail image
+    const matchingVariant = productData.variants?.find((v: any) => {
+      if (!v.options) return false;
+      if (Array.isArray(v.options)) {
+        return v.options.some((o: any) => 
+          (colorOptionId && o.option_id === colorOptionId && o.value === name) ||
+          o.value === name
+        );
+      } else if (typeof v.options === 'object') {
+        const vColor = v.options["Màu sắc"] || v.options["Color"] || (colorOptionId ? v.options[colorOptionId] : null);
+        return vColor === name;
+      }
+      return false;
+    });
+
     const fallback = colorFallbacks[name] || { hex: "#cccccc", img: productData.thumbnail || "" };
-    const optionVal = colorOption?.values?.find((v: any) => v.name === name);
+    const optionVal = colorOption?.values?.find((v: any) => v.name === name || v.value === name);
     return {
       name,
       hex: optionVal?.hex || fallback.hex,
-      img: optionVal?.img || fallback.img
+      img: matchingVariant?.thumbnail || optionVal?.img || fallback.img
     };
   });
-
-  // Find active variant by matching options
-  const colorOptionId = productData.options?.find((o: any) => o.title === 'Màu sắc' || o.title === 'Color')?.id;
-  const storageOptionId = productData.options?.find((o: any) => o.title === 'Dung lượng' || o.title === 'Storage')?.id;
 
   const activeVariant = productData.variants?.find((v: any) => {
     if (!v.options || (Array.isArray(v.options) && v.options.length === 0)) return false;

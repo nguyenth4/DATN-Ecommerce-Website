@@ -59,22 +59,6 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
     ((activeVariant.oldPrice - activeVariant.price) / activeVariant.oldPrice) * 100
   );
 
-  // Lấy giá cho từng tuỳ chọn dung lượng
-  const getStoragePrice = (size: string) => {
-    const raw = product.rawProduct;
-    if (!raw || !raw.variants) return 0;
-    
-    // Tìm tuỳ chọn dung lượng
-    const storageOptionId = raw.options?.find((o: any) => o.title === 'Dung lượng' || o.title === 'Storage')?.id;
-    // Lấy variant đầu tiên khớp với dung lượng này
-    const variant = raw.variants.find((v: any) =>
-      v.options?.some((opt: any) => opt.option_id === storageOptionId && opt.value === size)
-    );
-    return variant?.prices?.find((p: any) => p.currency_code === 'vnd')?.amount
-        || variant?.prices?.[0]?.amount
-        || 0;
-  };
-
   // Lấy giá cho từng tuỳ chọn màu sắc (dựa vào dung lượng đang được chọn)
   const getColorPrice = (colorName: string) => {
     const raw = product.rawProduct;
@@ -140,17 +124,18 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
           <div className="variant-label" style={{ marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 600 }}>
             Chọn dung lượng: <strong style={{ color: 'var(--dark)' }}>{selectedStorage}</strong>
           </div>
-          <div className="variant-options" style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+          <div className="variant-options" style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '0.6rem'
+          }}>
             {storages.map((size) => {
-              const price = getStoragePrice(size);
               return (
                 <button 
                   key={size}
                   className={`storage-btn ${selectedStorage === size ? 'active' : ''}`}
                   style={{
-                    flex: '1 1 calc(25% - 0.6rem)',
-                    minWidth: '85px',
-                    padding: '0.5rem 0.4rem',
+                    padding: '0.8rem 0.4rem',
                     border: selectedStorage === size ? '2px solid #d70018' : '1px solid var(--border)',
                     borderRadius: '8px',
                     background: selectedStorage === size ? '#fef2f2' : '#fff',
@@ -158,18 +143,13 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
                     cursor: 'pointer',
                     transition: 'all 0.2s',
                     display: 'flex',
-                    flexDirection: 'column',
                     alignItems: 'center',
-                    gap: '2px'
+                    justifyContent: 'center',
+                    width: '100%'
                   }}
                   onClick={() => onStorageChange(size)}
                 >
                   <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>{size}</span>
-                  {price > 0 && (
-                    <span style={{ fontSize: '0.68rem', color: selectedStorage === size ? '#d70018' : '#555', fontWeight: 500 }}>
-                      {price.toLocaleString('vi-VN')}đ
-                    </span>
-                  )}
                 </button>
               );
             })}
@@ -183,7 +163,11 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
           <div className="variant-label" style={{ marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 600 }}>
             Chọn màu sắc: <strong style={{ color: 'var(--dark)' }}>{selectedColor}</strong>
           </div>
-          <div className="variant-options" style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+          <div className="variant-options" style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '0.6rem'
+          }}>
             {colors.map((col, idx) => {
               const price = getColorPrice(col.name);
               return (
@@ -191,8 +175,6 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
                   key={idx}
                   className={`color-btn-card ${selectedColor === col.name ? 'active' : ''}`} 
                   style={{ 
-                    flex: '1 1 calc(33.333% - 0.6rem)',
-                    minWidth: '120px',
                     padding: '0.5rem 0.6rem',
                     border: selectedColor === col.name ? '2px solid #d70018' : '1px solid var(--border)',
                     borderRadius: '8px',
@@ -203,7 +185,8 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.5rem',
-                    textAlign: 'left'
+                    textAlign: 'left',
+                    width: '100%'
                   }} 
                   title={col.name}
                   onClick={() => onColorChange(col.name, col.img)}

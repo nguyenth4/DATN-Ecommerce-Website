@@ -9,7 +9,7 @@ export async function POST(
   const recommendationModuleService: RecommendationModuleService = req.scope.resolve(RECOMMENDATION_MODULE)
   
   const { product_id, interaction_type, session_id } = req.body as any
-  const customer_id = req.user?.customer_id // Nếu có dùng auth trung gian
+  const customer_id = (req as any).auth_context?.actor_id // Nếu có dùng auth trung gian
 
   if (!product_id || !interaction_type) {
     return res.status(400).json({ message: "product_id and interaction_type are required" })

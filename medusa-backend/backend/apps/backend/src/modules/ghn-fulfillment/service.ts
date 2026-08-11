@@ -56,14 +56,14 @@ export default class GhnFulfillmentProviderService extends AbstractFulfillmentPr
   }
 
   // Hàm tính toán chi phí vận chuyển
-  async calculatePrice(optionData: any, data: any, context: any): Promise<number> {
+  async calculatePrice(optionData: any, data: any, context: any): Promise<any> {
     try {
       // Trong V2, context chứa thông tin giỏ hàng và địa chỉ
       const to_district_id = context.shipping_address?.metadata?.district_id;
       const to_ward_code = context.shipping_address?.metadata?.ward_code;
 
       if (!to_district_id || !to_ward_code) {
-        return 0; // Chưa có địa chỉ không thể tính
+        return { price: 0 }; // Chưa có địa chỉ không thể tính
       }
 
       let totalWeight = 0;
@@ -116,14 +116,14 @@ export default class GhnFulfillmentProviderService extends AbstractFulfillmentPr
       if (response.data && response.data.code === 200) {
         // Trả về số tiền (chú ý: nếu bạn lưu tiền ở dạng Cents (x100) thì nhân 100)
         // GHN trả về VNĐ, nếu giỏ hàng Medusa dùng tiền nguyên thì return thẳng
-        return response.data.data.total;
+        return { price: response.data.data.total };
       }
 
-      return 0;
+      return { price: 0 };
     } catch (error: any) {
       this.logger_.error(`[GHN] Lỗi tính phí: ${error.response?.data?.message || error.message}`);
       // Fallback giá mặc định nếu GHN lỗi để khách hàng vẫn checkout được
-      return 30000;
+      return { price: 30000 };
     }
   }
 
