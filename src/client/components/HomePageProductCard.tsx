@@ -50,15 +50,20 @@ export const HomePageProductCard = ({ p, compareList, wishlist }: HomePageProduc
   const displayPrice = typeof pPrice === 'number' && pPrice > 0 ? pPrice.toLocaleString('vi-VN') + 'đ' : 'Liên hệ';
   const oldPrice = activeVariant?.oldPrice;
   const displayOldPrice = oldPrice ? oldPrice.toLocaleString('vi-VN') + 'đ' : null;
-  const stock = activeVariant?.inventory_quantity !== undefined ? activeVariant.inventory_quantity : (activeVariant?.stock !== undefined ? activeVariant.stock : 10);
+  // Medusa v2: inventory_quantity = 0 có thể do Stock Location chưa link Sales Channel
+  // Dùng manage_inventory để phán đoán: nếu manage_inventory = false thì luôn hiển thị còn hàng
+  const rawStock = activeVariant?.inventory_quantity;
+  const manageInventory = activeVariant?.manage_inventory;
+  const stock = rawStock !== undefined && rawStock !== null ? rawStock : 0;
+  const isInStock = !manageInventory || stock > 0;
   
   let imgUrl = activeVariant?.thumbnail || p.thumbnail || 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=300&q=80&auto=format&fit=crop';
   if (activeColor && colorFallbacks[activeColor]?.img) {
     imgUrl = colorFallbacks[activeColor].img;
   }
   
-  const rating = Number(p.metadata?.rating || 5);
-  const ratingCount = p.metadata?.review_count || 10;
+  const rating = Number(p.metadata?.rating || 0);
+  const ratingCount = p.metadata?.review_count || 0;
 
   return (
     <article className="product-card">
@@ -81,7 +86,10 @@ export const HomePageProductCard = ({ p, compareList, wishlist }: HomePageProduc
         </button>
         <img src={imgUrl} alt={p.title} style={{ objectFit: 'contain' }} />
       </div>
-      <div className="stock"><span className="dot"></span>Còn hàng · {stock} sản phẩm</div>
+      <div className="stock">
+        <span className="dot" style={{ background: isInStock ? 'var(--success)' : 'var(--rose)' }}></span>
+        {isInStock ? (stock > 0 ? `Còn hàng · ${stock} sản phẩm` : 'Còn hàng') : 'Hết hàng'}
+      </div>
       <Link to={`/product/${p.id}`} className="name" style={{ fontSize: '15px' }}>{p.title}</Link>
       <div className="price" style={{ marginBottom: uniqueColorNames.length > 0 ? '6px' : '8px' }}>
         <span className="now">{displayPrice}</span>

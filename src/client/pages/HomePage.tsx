@@ -67,10 +67,11 @@ const HomePage = () => {
   }, []);
 
   const trendingProducts = products.slice(0, 10);
-  // Nếu có recommended products thì hiển thị, nếu không thì fallback về mảng cắt từ list chung
+  // Nếu có recommended products thì hiển thị, nếu không thì fallback về mảng lấy ngẫu nhiên/cắt từ list chung
+  const fallbackProducts = products.filter((p: any) => !trendingProducts.includes(p));
   const forYouProducts = recommendedProductsList.length > 0 
-    ? recommendedProductsList 
-    : (products.length > 5 ? products.slice(5, 9) : products.slice(0, 4));
+    ? recommendedProductsList.slice(0, 4)
+    : (fallbackProducts.length >= 4 ? fallbackProducts.slice(0, 4) : products.slice(0, 4));
 
   return (
     <main id="main">

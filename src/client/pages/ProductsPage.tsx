@@ -325,15 +325,19 @@ const ProductsPage = () => {
                         const oldPrice = p.variants?.[0]?.oldPrice;
                         const displayOldPrice = oldPrice ? oldPrice.toLocaleString('vi-VN') + 'đ' : null;
 
-                        const stock = p.variants?.reduce((acc: number, v: any) => {
+                        // Medusa v2: inventory_quantity = 0 có thể do Stock Location chưa link Sales Channel
+                        const rawStock = p.variants?.reduce((acc: number, v: any) => {
                           const vStock = (v.inventory_quantity !== undefined && v.inventory_quantity !== null) 
                             ? v.inventory_quantity 
-                            : ((v.stock !== undefined && v.stock !== null) ? v.stock : 10);
+                            : 0;
                           return acc + vStock;
-                        }, 0) || 10;
+                        }, 0) ?? 0;
+                        const managesInventory = p.variants?.some((v: any) => v.manage_inventory);
+                        const stock = rawStock;
+                        const isInStock = !managesInventory || stock > 0;
                         const imgUrl = getProductImage(p);
-                        const rating = Number(p.metadata?.rating || 5);
-                        const ratingCount = p.metadata?.review_count || 10;
+                        const rating = Number(p.metadata?.rating || 0);
+                        const ratingCount = p.metadata?.review_count || 0;
 
                         return (
                           <article className="product-card" key={p.id}>
@@ -356,7 +360,10 @@ const ProductsPage = () => {
                               </button>
                               <img src={imgUrl} alt={p.title} style={{ objectFit: 'contain' }} />
                             </div>
-                            <div className="stock"><span className="dot"></span>Còn hàng · {stock > 0 ? `${stock} sản phẩm` : 'Sẵn hàng'}</div>
+                            <div className="stock">
+                              <span className="dot" style={{ background: isInStock ? 'var(--success)' : 'var(--rose)' }}></span>
+                              {isInStock ? (stock > 0 ? `Còn hàng · ${stock} sản phẩm` : 'Còn hàng') : 'Hết hàng'}
+                            </div>
                             <Link to={`/product/${p.id}`} className="name">{p.title}</Link>
                             <div className="price">
                               <span className="now">{displayPrice}</span>
