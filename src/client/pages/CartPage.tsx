@@ -29,11 +29,46 @@ const CartPage = () => {
   // Validate stock when cart items change
   useEffect(() => {
     setValidationErrors([]);
-    const stockMap: Record<string, number> = {};
-    items.forEach(item => {
-      stockMap[item.id] = 999;
-    });
-    setStockInfo(stockMap);
+    let isMounted = true;
+    
+    const fetchStock = async () => {
+      try {
+        const { productService } = await import('../services/product.service');
+        const stockMap: Record<string, number> = {};
+        
+        const productIds = Array.from(new Set(items.map(item => item.productId)));
+        const products = await Promise.all(
+          productIds.map(pid => productService.getProduct(pid).catch(() => null))
+        );
+        
+        items.forEach(item => {
+          const product = products.find(p => p?.id === item.productId);
+          const variant = product?.variants?.find((v: any) => v.id === item.id);
+          
+          if (variant) {
+            stockMap[item.id] = (variant.inventory_quantity !== undefined && variant.inventory_quantity !== null) 
+              ? variant.inventory_quantity 
+              : ((variant.stock !== undefined && variant.stock !== null) ? variant.stock : 10);
+          } else {
+            stockMap[item.id] = 10;
+          }
+        });
+        
+        if (isMounted) {
+          setStockInfo(stockMap);
+        }
+      } catch (err) {
+        console.error("Failed to fetch stock", err);
+      }
+    };
+
+    if (items.length > 0) {
+      fetchStock();
+    } else {
+      setStockInfo({});
+    }
+    
+    return () => { isMounted = false; };
   }, [items]);
   const [promo, setPromo] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
@@ -128,7 +163,8 @@ const CartPage = () => {
   const updateQty = (id: string, delta: number) => {
     const updated = items.map(item => {
       if (item.id === id) {
-        const newQty = Math.max(1, item.qty + delta);
+        const maxStock = stockInfo[id] ?? 10;
+        const newQty = Math.min(maxStock, Math.max(1, item.qty + delta));
         updateCartQty(id, newQty);
         return { ...item, qty: newQty };
       }

@@ -106,7 +106,7 @@ const ProductDetailPage = () => {
       <div className="container" style={{ padding: '8rem 0', textAlign: 'center' }}>
         <h2 style={{ fontSize: '2rem', marginBottom: '1rem', fontWeight: 800 }}>Không tìm thấy sản phẩm</h2>
         <p style={{ color: 'var(--fg-mute)', marginBottom: '2rem' }}>Sản phẩm bạn đang tìm kiếm không tồn tại hoặc đã bị xóa.</p>
-        <Link to="/products" className="btn btn--indigo">Quay lại cửa hàng</Link>
+        <Link to="/" className="btn btn--indigo">Quay lại trang chủ</Link>
       </div>
     );
   }
@@ -253,7 +253,7 @@ const ProductDetailPage = () => {
       <main id="main">
         <div className="container">
           <div className="crumbs" style={{ paddingTop: 'var(--s5)' }}>
-            <Link to="/">Trang chủ</Link> <span className="sep">›</span> <Link to="/products">Sản phẩm</Link> <span className="sep">›</span> <span>{productData.title}</span>
+            <Link to="/">Trang chủ</Link> <span className="sep">›</span> <Link to="/products">Điện thoại</Link> <span className="sep">›</span> <span>{productData.title}</span>
           </div>
 
           <section className="product-detail" style={{ 
@@ -409,7 +409,7 @@ const ProductDetailPage = () => {
                   if (colorImg) setActiveImage(colorImg);
                 }}
                 onStorageChange={(storageName) => setSelectedStorage(storageName)}
-                onQtyChange={(action) => setQty(q => action === 'inc' ? q + 1 : Math.max(1, q - 1))}
+                onQtyChange={(action) => setQty(q => action === 'inc' ? Math.min(10, q + 1) : Math.max(1, q - 1))}
               />
             </div>
           </section>

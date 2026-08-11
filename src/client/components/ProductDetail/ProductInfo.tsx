@@ -234,24 +234,24 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
         <div className="qty-control" style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
           <button 
             className="qty-btn" 
-            style={{ width: '36px', height: '36px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.1rem' }}
+            style={{ width: '36px', height: '36px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.1rem', opacity: qty <= 1 ? 0.5 : 1 }}
             onClick={() => onQtyChange('dec')}
-            disabled={activeVariant.stock === 0}
+            disabled={qty <= 1}
           >
             <i className="bi bi-dash"></i>
           </button>
           <input 
             type="text" 
             className="qty-value" 
-            value={activeVariant.stock > 0 ? qty : 0} 
+            value={qty} 
             readOnly 
             style={{ width: '40px', height: '36px', textAlign: 'center', border: 'none', borderLeft: '1px solid var(--border)', borderRight: '1px solid var(--border)', fontWeight: 600 }} 
           />
           <button 
             className="qty-btn" 
-            style={{ width: '36px', height: '36px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.1rem' }}
+            style={{ width: '36px', height: '36px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.1rem', opacity: qty >= 10 ? 0.5 : 1 }}
             onClick={() => onQtyChange('inc')}
-            disabled={activeVariant.stock === 0}
+            disabled={qty >= 10}
           >
             <i className="bi bi-plus"></i>
           </button>

@@ -125,6 +125,20 @@ const MOCK_ORDERS = [
   }
 ];
 
+// Read real orders from localStorage
+const getRealOrders = () => {
+  try {
+    return JSON.parse(localStorage.getItem('sprylo_orders') || '[]') as Array<{
+      orderId: string;
+      items: Array<{ id: string; qty: number; name?: string; price?: number; img?: string; variant?: string }>;
+      created_at: number;
+      canceled?: boolean;
+    }>;
+  } catch {
+    return [];
+  }
+};
+
 const AccountPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -132,6 +146,8 @@ const AccountPage = () => {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [walletData, setWalletData] = useState<any>(null);
   const [customerId, setCustomerId] = useState<string | null>(null);
+  const [realOrders, setRealOrders] = useState(getRealOrders);
+  const [cancelingOrderId, setCancelingOrderId] = useState<string | null>(null);
 
   // Profile form state
   const [firstName, setFirstName] = useState('');
@@ -655,6 +671,38 @@ const AccountPage = () => {
   };
 
   const selectedOrder = MOCK_ORDERS.find(o => o.id === selectedOrderId);
+  const selectedRealOrder = realOrders.find(o => o.orderId === selectedOrderId);
+
+  // Cancel a real order and restore inventory
+  const handleCancelOrder = async (orderId: string) => {
+    if (!window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác.')) return;
+    setCancelingOrderId(orderId);
+    try {
+      const order = realOrders.find(o => o.orderId === orderId);
+      const response = await fetch(`${MEDUSA_BACKEND_URL}/store/orders/${orderId}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: order?.items || [] }),
+      });
+      if (response.ok) {
+        // Mark order as canceled in localStorage
+        const updated = realOrders.map(o =>
+          o.orderId === orderId ? { ...o, canceled: true } : o
+        );
+        localStorage.setItem('sprylo_orders', JSON.stringify(updated));
+        setRealOrders(updated);
+        setSelectedOrderId(null);
+        alert('Đơn hàng đã được hủy thành công. Số lượng tồn kho đã được khôi phục.');
+      } else {
+        alert('Hủy đơn hàng thất bại. Vui lòng thử lại.');
+      }
+    } catch (err) {
+      console.error('Cancel order error:', err);
+      alert('Lỗi kết nối máy chủ khi hủy đơn hàng.');
+    } finally {
+      setCancelingOrderId(null);
+    }
+  };
 
   const getShippingBadgeClass = (status: string) => {
     switch (status) {
@@ -903,6 +951,44 @@ const AccountPage = () => {
                             </tr>
                           </thead>
                           <tbody>
+                            {/* Real orders from localStorage */}
+                            {realOrders.map((order) => (
+                              <tr key={order.orderId} style={{ opacity: order.canceled ? 0.6 : 1 }}>
+                                <td style={{ fontWeight: 700, color: 'var(--ink)', fontSize: '0.8rem' }}>{order.orderId}</td>
+                                <td>{new Date(order.created_at).toLocaleDateString('vi-VN')}</td>
+                                <td style={{ fontWeight: 700, color: 'var(--indigo)' }}>
+                                  {formatPrice(order.items.reduce((s, i) => s + ((i as any).price || 0) * i.qty, 0))}
+                                </td>
+                                <td>
+                                  <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>{'Đã thanh toán'}</span>
+                                </td>
+                                <td>
+                                  <span className={order.canceled ? 'status-badge badge-cancelled' : 'status-badge badge-pending'}>
+                                    <i className={order.canceled ? 'bi bi-x-circle-fill' : 'bi bi-clock-history'}></i>
+                                    {order.canceled ? ' Đã hủy' : ' Đang xử lý'}
+                                  </span>
+                                </td>
+                                <td style={{ textAlign: 'right', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                  <button
+                                    className="btn btn--sm btn--indigo"
+                                    onClick={() => setSelectedOrderId(order.orderId)}
+                                  >
+                                    Chi tiết
+                                  </button>
+                                  {!order.canceled && (
+                                    <button
+                                      className="btn btn--sm"
+                                      style={{ background: '#fee2e2', color: '#dc2626', border: 'none' }}
+                                      onClick={() => handleCancelOrder(order.orderId)}
+                                      disabled={cancelingOrderId === order.orderId}
+                                    >
+                                      {cancelingOrderId === order.orderId ? 'Đang hủy...' : 'Hủy đơn'}
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                            {/* Demo mock orders */}
                             {MOCK_ORDERS.map((order) => (
                               <tr key={order.id}>
                                 <td style={{ fontWeight: 700, color: 'var(--ink)' }}>{order.id}</td>
@@ -1084,7 +1170,20 @@ const AccountPage = () => {
                               <span>{formatPrice(selectedOrder.total)}</span>
                             </div>
                           </div>
-                          
+                          {/* CANCEL BUTTON - only for real orders not yet canceled */}
+                          {selectedRealOrder && !selectedRealOrder.canceled && (
+                            <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--rule)', display: 'flex', justifyContent: 'flex-end' }}>
+                              <button
+                                className="btn"
+                                style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', fontWeight: 600, padding: '0.5rem 1.5rem', borderRadius: '8px', cursor: 'pointer' }}
+                                onClick={() => handleCancelOrder(selectedOrderId!)}
+                                disabled={cancelingOrderId === selectedOrderId}
+                              >
+                                {cancelingOrderId === selectedOrderId ? '⏳ Đang hủy đơn...' : '❌ Hủy đơn hàng này'}
+                              </button>
+                            </div>
+                          )}
+
                         </div>
                       </div>
                     )

@@ -7,12 +7,7 @@ import {
   ArrowRight, 
   ChevronRight, 
   Heart, 
-  Star,
-  Watch,
-  Camera,
-  Smartphone,
-  Headphones,
-  Laptop
+  Star
 } from 'lucide-react';
 import { useProducts, useCategories, useRecommendedProducts } from '../services/product.service';
 import { HomePageProductCard } from '../components/HomePageProductCard';
@@ -31,19 +26,6 @@ const getCategoryFallbackImage = (name: string) => {
   if (n.includes('máy ảnh') || n.includes('camera')) return 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=300&q=80&auto=format&fit=crop';
   
   return 'https://images.unsplash.com/photo-1592840496694-26d035b52b48?w=300&q=80&auto=format&fit=crop';
-};
-
-const getCategoryIcon = (name: string) => {
-  if (!name) return null;
-  const n = name.toLowerCase();
-  
-  if (n.includes('laptop') || n.includes('máy tính') || n.includes('phụ kiện')) return <Laptop size={36} color="var(--indigo)" strokeWidth={1.5} />;
-  if (n.includes('điện thoại') || n.includes('phone') || n.includes('di động')) return <Smartphone size={36} color="var(--indigo)" strokeWidth={1.5} />;
-  if (n.includes('tai nghe') || n.includes('headphone') || n.includes('loa') || n.includes('âm thanh')) return <Headphones size={36} color="var(--indigo)" strokeWidth={1.5} />;
-  if (n.includes('đồng hồ') || n.includes('watch') || n.includes('smartwatch')) return <Watch size={36} color="var(--indigo)" strokeWidth={1.5} />;
-  if (n.includes('máy ảnh') || n.includes('camera')) return <Camera size={36} color="var(--indigo)" strokeWidth={1.5} />;
-  
-  return null;
 };
 
 const HomePage = () => {
@@ -287,14 +269,8 @@ const HomePage = () => {
           </div>
           <div className="cats-grid">
             {categories.slice(0, 5).map((c: any) => {
-              const icon = getCategoryIcon(c.name);
               return (
                 <Link key={c.id} to="/products" className="cat-tile" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  {icon && (
-                    <div style={{ marginBottom: '16px', background: 'var(--indigo-soft)', padding: '16px', borderRadius: '50%' }}>
-                      {icon}
-                    </div>
-                  )}
                   <div className="name" style={{ fontSize: '16px' }}>{c.name}</div>
                 </Link>
               );
@@ -338,7 +314,6 @@ const HomePage = () => {
           <div className="newsletter">
             <div className="newsletter-grid">
               <div>
-                <h2>Nhận ngay <strong>GIẢM 20%</strong> cho đơn hàng đầu tiên — gửi trực tiếp đến hộp thư của bạn.</h2>
                 <p>Để lại email của bạn và chúng tôi sẽ gửi mã giảm giá một lần, cùng những ưu đãi mới nhất về các thiết bị chúng tôi vừa nhập về. Huỷ đăng ký bất cứ lúc nào.</p>
               </div>
               <form

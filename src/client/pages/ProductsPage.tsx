@@ -11,7 +11,7 @@ import {
   X,
   SlidersHorizontal
 } from 'lucide-react';
-import { useProducts, useCategories, useProductPriceRange } from '../services/product.service';
+import { useProducts, useCategories } from '../services/product.service';
 import { ProductCardSkeleton } from '../components/ProductCardSkeleton';
 import toast from 'react-hot-toast';
 import './ProductsPage.css';
@@ -39,27 +39,7 @@ const ProductsPage = () => {
   const [page, setPage] = useState(1);
   const limit = 12;
 
-  // ── Price range state ─────────────────────────────────────────────────────
-  // priceRange = giá trị slider hiện tại [min, max]
-  // appliedPrice = giá trị đang áp dụng để lọc (chỉ set khi bấm "Áp dụng")
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 50_000_000]);
-  const [appliedPrice, setAppliedPrice] = useState<[number, number] | null>(null);
-  const prevBoundsRef = useRef<string>('');
 
-  // Fetch price bounds theo danh mục đang chọn
-  const { data: priceBounds } = useProductPriceRange(selectedCats);
-  const boundsMin = priceBounds?.min ?? 0;
-  const boundsMax = priceBounds?.max ?? 50_000_000;
-
-  // Khi bounds thay đổi (do đổi danh mục) → reset slider về toàn bộ range
-  useEffect(() => {
-    const key = `${boundsMin}_${boundsMax}`;
-    if (key !== prevBoundsRef.current) {
-      prevBoundsRef.current = key;
-      setPriceRange([boundsMin, boundsMax]);
-      setAppliedPrice(null); // Bỏ filter giá cũ
-    }
-  }, [boundsMin, boundsMax]);
 
   // Listen for compare list updates
   // Listen for compare list & wishlist updates
@@ -101,40 +81,15 @@ const ProductsPage = () => {
 
   const { data: categoriesData } = useCategories();
 
-  // ── Lọc giá trên products đã fetch ────────────────────────────────────────
-  const rawProducts = productsData?.products || [];
+  const products = productsData?.products || [];
   const totalCount = productsData?.count || 0;
   const categories = categoriesData || [];
-
-  const getProductPrice = (p: any): number => {
-    return p.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount
-      || p.variants?.[0]?.prices?.[0]?.amount
-      || p.variants?.[0]?.price
-      || p.price
-      || 0;
-  };
-
-  const products = appliedPrice
-    ? rawProducts.filter((p: any) => {
-      const price = getProductPrice(p);
-      return price >= appliedPrice[0] && price <= appliedPrice[1];
-    })
-    : rawProducts;
 
   const getProductImage = (p: any) => {
     return p.thumbnail || (p.images?.[0]?.url) || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80';
   };
 
-  // ── Dual-thumb slider handler ─────────────────────────────────────────────
-  const handleRangeMin = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = Number(e.target.value);
-    setPriceRange(prev => [Math.min(val, prev[1] - 500_000), prev[1]]);
-  }, []);
 
-  const handleRangeMax = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = Number(e.target.value);
-    setPriceRange(prev => [prev[0], Math.max(val, prev[0] + 500_000)]);
-  }, []);
 
   // Handle category toggle
   const toggleCategory = (id: string) => {
@@ -158,13 +113,7 @@ const ProductsPage = () => {
     setPage(1);
   };
 
-  // Tính % vị trí thumb trên track
-  const span = boundsMax - boundsMin || 1;
-  const leftPc = ((priceRange[0] - boundsMin) / span) * 100;
-  const rightPc = 100 - ((priceRange[1] - boundsMin) / span) * 100;
 
-  const isPriceFiltered = appliedPrice !== null
-    && (appliedPrice[0] > boundsMin || appliedPrice[1] < boundsMax);
 
   return (
     <>
@@ -172,7 +121,7 @@ const ProductsPage = () => {
         <section className="page-head">
           <div className="container">
             <div className="crumbs">
-              <Link to="/">Trang chủ</Link> <span className="sep">/</span> <span>Cửa hàng · Tất cả sản phẩm</span>
+              <Link to="/">Trang chủ</Link> <span className="sep">/</span> <span>Điện thoại</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 'var(--s4)' }}>
               <div>
@@ -248,103 +197,7 @@ const ProductsPage = () => {
                   ))}
                 </div>
 
-                {/* ── Khoảng giá — dynamic theo danh mục ── */}
-                <div className="filter-block">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--s3)' }}>
-                    <h3>Khoảng giá</h3>
-                    {isPriceFiltered && (
-                      <button
-                        onClick={() => { setAppliedPrice(null); setPriceRange([boundsMin, boundsMax]); }}
-                        style={{ fontSize: '12px', color: 'var(--indigo)', fontWeight: 600 }}
-                      >
-                        Xoá lọc
-                      </button>
-                    )}
-                  </div>
 
-                  {/* Giá min/max của range đang chọn */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <span style={{
-                      fontSize: '12px', fontWeight: 700, color: 'var(--indigo)',
-                      background: 'var(--indigo-light, #eef2ff)', padding: '3px 8px', borderRadius: '6px'
-                    }}>
-                      {fmtVND(priceRange[0])}
-                    </span>
-                    <span style={{ fontSize: '12px', color: 'var(--fg-mute)' }}>—</span>
-                    <span style={{
-                      fontSize: '12px', fontWeight: 700, color: 'var(--indigo)',
-                      background: 'var(--indigo-light, #eef2ff)', padding: '3px 8px', borderRadius: '6px'
-                    }}>
-                      {fmtVND(priceRange[1])}
-                    </span>
-                  </div>
-
-                  {/* Dual-thumb range slider */}
-                  <div style={{ position: 'relative', height: '28px', display: 'flex', alignItems: 'center' }}>
-                    {/* Track background */}
-                    <div style={{
-                      position: 'absolute', left: 0, right: 0,
-                      height: '4px', background: 'var(--border, #e2e8f0)', borderRadius: '2px'
-                    }} />
-                    {/* Active track (highlight giữa 2 thumbs) */}
-                    <div style={{
-                      position: 'absolute',
-                      left: `${leftPc}%`,
-                      right: `${rightPc}%`,
-                      height: '4px',
-                      background: 'var(--indigo, #4f46e5)',
-                      borderRadius: '2px',
-                      transition: 'left 0.05s, right 0.05s',
-                    }} />
-                    {/* Thumb MIN */}
-                    <input
-                      type="range"
-                      min={boundsMin}
-                      max={boundsMax}
-                      step={Math.max(500_000, Math.round((boundsMax - boundsMin) / 100))}
-                      value={priceRange[0]}
-                      onChange={handleRangeMin}
-                      aria-label="Giá thấp nhất"
-                      style={{
-                        position: 'absolute', width: '100%',
-                        appearance: 'none', background: 'transparent',
-                        pointerEvents: 'auto', zIndex: priceRange[0] > boundsMax - (boundsMax - boundsMin) * 0.1 ? 3 : 2,
-                      }}
-                      className="price-thumb"
-                    />
-                    {/* Thumb MAX */}
-                    <input
-                      type="range"
-                      min={boundsMin}
-                      max={boundsMax}
-                      step={Math.max(500_000, Math.round((boundsMax - boundsMin) / 100))}
-                      value={priceRange[1]}
-                      onChange={handleRangeMax}
-                      aria-label="Giá cao nhất"
-                      style={{
-                        position: 'absolute', width: '100%',
-                        appearance: 'none', background: 'transparent',
-                        pointerEvents: 'auto', zIndex: 2,
-                      }}
-                      className="price-thumb"
-                    />
-                  </div>
-
-                  {/* Giá bounds hiển thị dưới track */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--fg-mute)', marginTop: '6px' }}>
-                    <span>{fmtVND(boundsMin)}</span>
-                    <span>{fmtVND(boundsMax)}</span>
-                  </div>
-
-                  {/* Nút áp dụng */}
-                  <button
-                    className="btn btn--indigo btn--block"
-                    style={{ marginTop: '12px', fontSize: '13px', padding: '8px' }}
-                    onClick={() => { setAppliedPrice([priceRange[0], priceRange[1]]); setPage(1); }}
-                  >
-                    Áp dụng
-                  </button>
-                </div>
 
                 <div className="filter-block">
                   <h3>Tình trạng</h3>
@@ -533,8 +386,7 @@ const ProductsPage = () => {
                           setSearch('');
                           setSelectedCats([]);
                           setSortBy('popular');
-                          setAppliedPrice(null);
-                          setPriceRange([boundsMin, boundsMax]);
+
                           setSearchParams({});
                         }}
                       >

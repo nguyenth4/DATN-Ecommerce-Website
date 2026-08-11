@@ -1,0 +1,428 @@
+# BÁO CÁO KỸ THUẬT – ĐỒ ÁN TỐT NGHIỆP
+## Hệ thống E-commerce Sprylo – Các Tính năng Nổi bật
+
+> **Môn học:** Đồ án Tốt nghiệp · FPT Polytechnic  
+> **Dự án:** DATN-Ecommerce-Website (Sprylo)  
+> **Công nghệ chính:** MedusaJS v2 (Backend) · React + Vite (Frontend) · TypeScript · Supabase PostgreSQL
+
+---
+
+## Mục lục
+
+1. [Tổng quan Kiến trúc Hệ thống](#1-tổng-quan-kiến-trúc-hệ-thống)
+2. [Tính năng 1: Quản lý Tồn kho Thời gian Thực](#2-tính-năng-1-quản-lý-tồn-kho-thời-gian-thực)
+3. [Tính năng 2: Tích hợp Giao Hàng Nhanh (GHN)](#3-tính-năng-2-tích-hợp-giao-hàng-nhanh-ghn)
+4. [Tính năng 3: Gợi ý Sản phẩm Cá nhân hóa](#4-tính-năng-3-gợi-ý-sản-phẩm-cá-nhân-hóa)
+5. [Hướng dẫn Demo cho Giáo viên](#5-hướng-dẫn-demo-cho-giáo-viên)
+6. [Tổng hợp Luồng Xử lý](#6-tổng-hợp-luồng-xử-lý)
+
+---
+
+## 1. Tổng quan Kiến trúc Hệ thống
+
+### Stack công nghệ
+
+| Tầng | Công nghệ | Vai trò |
+|------|-----------|---------|
+| **Frontend** | React 18 + Vite + TypeScript | Giao diện người dùng (SPA) |
+| **Backend** | MedusaJS v2 (Node.js) | API, Business Logic, Event System |
+| **Database** | Supabase PostgreSQL | Lưu trữ dữ liệu |
+| **Storage** | Supabase Storage (S3-compatible) | Lưu ảnh sản phẩm, avatar |
+| **Vận chuyển** | Giao Hàng Nhanh (GHN) API | Tính phí và tạo đơn vận chuyển |
+| **State** | React Query + localStorage | Caching, Cart, Session |
+
+### Sơ đồ luồng dữ liệu tổng thể
+
+```
+User Browser (React + Vite :5173)
+        │
+        ├──► GET /store/products        ──► MedusaJS API ──► Supabase DB
+        ├──► POST /store/checkout       ──► Business Logic ──► Trừ inventory
+        ├──► POST /store/orders/:id/cancel ──► Hoàn inventory
+        ├──► POST /store/interactions   ──► Recommendation Module ──► DB
+        ├──► GET  /store/recommendations ──► Recommendation Module ──► DB
+        └──► POST /store/ghn/fee        ──► GHN API (Bên ngoài)
+```
+
+---
+
+## 2. Tính năng 1: Quản lý Tồn kho Thời gian Thực
+
+### 2.1 Vấn đề cần giải quyết
+
+Khi khách hàng đặt mua sản phẩm, hệ thống phải tự động **trừ số lượng tồn kho** trong database. Ngược lại, khi đơn hàng bị hủy, số lượng cần được **hoàn trả** về giá trị ban đầu. Nếu không có cơ chế này, nhiều khách hàng có thể đặt cùng một sản phẩm đã hết hàng.
+
+### 2.2 Giải pháp thiết kế
+
+Hệ thống sử dụng trường `inventory_quantity` trong bảng `product_variant` của MedusaJS, kết hợp với **Custom API Endpoints** và **Event Subscribers** để xử lý:
+
+#### Luồng Đặt hàng (Order Placement)
+
+```
+Khách bấm "Đặt hàng"
+        │
+        ▼
+POST /store/checkout
+        │
+        ├── Nhận danh sách items { id: variantId, qty }
+        ├── Gọi productModuleService.retrieveProductVariant(variantId)
+        ├── Tính: newQty = max(0, inventory_quantity - qty)
+        ├── Gọi productModuleService.updateProductVariants(variantId, { inventory_quantity: newQty })
+        ├── Lưu thông tin đơn vào global.__pendingOrders (để hỗ trợ hủy đơn)
+        ├── Lưu orderId + items vào localStorage của trình duyệt
+        └── Phát sự kiện: eventBus.emit("order.placed")
+```
+
+#### Luồng Hủy Đơn hàng (Order Cancellation)
+
+```
+Khách bấm "Hủy đơn"
+        │
+        ▼
+POST /store/orders/:id/cancel  { items: [...] }
+        │
+        ├── Đọc items từ request body (hoặc từ global.__pendingOrders cache)
+        ├── Gọi productModuleService.retrieveProductVariant(variantId)
+        ├── Tính: newQty = inventory_quantity + qty  (hoàn lại số lượng)
+        ├── Gọi productModuleService.updateProductVariants(variantId, { inventory_quantity: newQty })
+        ├── Cập nhật trạng thái đơn trong localStorage: { canceled: true }
+        └── Phát sự kiện: eventBus.emit("order.canceled")
+```
+
+### 2.3 Các file chính liên quan
+
+```
+Backend:
+├── src/api/store/checkout/route.ts          ← Trừ inventory khi đặt hàng
+├── src/api/store/orders/[id]/cancel/route.ts ← Hoàn inventory khi hủy đơn
+└── src/subscribers/order-canceled.ts        ← Subscriber xử lý sự kiện
+
+Frontend:
+├── src/client/pages/CheckoutPage.tsx         ← Lưu orderId + items vào localStorage
+├── src/client/pages/CartPage.tsx             ← Fetch stock thực từ backend
+├── src/client/pages/AccountPage.tsx          ← Hiển thị đơn hàng + nút "Hủy đơn"
+└── src/client/components/ProductDetail/ProductInfo.tsx  ← Giới hạn qty min=1, max=stock
+```
+
+### 2.4 Hiển thị tồn kho trên giao diện
+
+Tồn kho được hiển thị ở **3 vị trí**:
+
+| Vị trí | Nội dung hiển thị | Nguồn dữ liệu |
+|--------|-------------------|---------------|
+| Trang danh sách sản phẩm | `● Còn hàng · N sản phẩm` | `inventory_quantity` từ API |
+| Trang chi tiết sản phẩm | Bộ chọn số lượng (min=1, max=stock) | `inventory_quantity` |
+| Trang giỏ hàng | `Còn hàng (N sản phẩm)` / `Hết hàng` | Fetch lại từ API mỗi khi mở giỏ |
+
+---
+
+## 3. Tính năng 2: Tích hợp Giao Hàng Nhanh (GHN)
+
+### 3.1 Mục tiêu
+
+Cho phép hệ thống **tính phí vận chuyển động** dựa trên địa chỉ người nhận và khối lượng đơn hàng, thay vì dùng mức phí cố định.
+
+### 3.2 Kiến trúc Fulfillment Module (MedusaJS v2)
+
+MedusaJS v2 sử dụng kiến trúc **Module** cho các nhà cung cấp vận chuyển. Hệ thống đã tạo custom module theo chuẩn này:
+
+```
+src/modules/ghn-fulfillment/
+├── index.ts       ← Khai báo ModuleProvider, liên kết với Modules.FULFILLMENT
+└── service.ts     ← Kế thừa AbstractFulfillmentProviderService
+    ├── getFulfillmentOptions()   ← Trả về 2 tùy chọn: Tiêu Chuẩn (ID:2) & Hàng Nặng (ID:5)
+    ├── calculatePrice()          ← Gọi GHN API tính phí thực tế
+    └── createFulfillment()       ← (Chuẩn bị) Tạo mã vận đơn GHN thực tế
+```
+
+### 3.3 Luồng tính phí vận chuyển
+
+```
+Người dùng chọn Tỉnh/Thành + Phường/Xã
+        │
+        ▼
+Frontend gọi: POST http://localhost:9000/store/ghn/fee
+        │       Body: { to_district_id, to_ward_code, weight, height, ... }
+        │
+        ▼
+Backend proxy sang GHN API:
+   POST https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/preview
+        │
+        ▼
+GHN trả về: { data: { total: 35000 } }
+        │
+        ▼
+Frontend hiển thị: "Phí vận chuyển: 35.000đ"
+```
+
+> **Fallback:** Nếu GHN API lỗi (timeout, token hết hạn...), hệ thống trả về mức phí đồng giá **30.000đ** để tránh "sập" trang giỏ hàng.
+
+### 3.4 Tính năng phụ: Đồng bộ Admin → GHN
+
+Khi admin xác nhận đơn hàng và bấm nút **"Giao hàng"**, hệ thống:
+1. Gọi `POST /admin/orders/:id/sync-shipping`
+2. Lấy thông tin đơn hàng từ DB
+3. **Trừ tồn kho** một lần nữa (đảm bảo đồng bộ)
+4. Gọi GHN API tạo mã vận đơn thực tế
+5. Lưu `tracking_code` vào metadata của đơn hàng
+
+### 3.5 Biến môi trường cần cấu hình
+
+```env
+GHN_API_URL=https://dev-online-gateway.ghn.vn/shiip/public-api/v2
+GHN_API_TOKEN=<token_từ_GHN>
+GHN_SHOP_ID=<shop_id_từ_GHN>
+```
+
+---
+
+## 4. Tính năng 3: Gợi ý Sản phẩm Cá nhân hóa
+
+### 4.1 Mục tiêu
+
+Xây dựng hệ thống gợi ý sản phẩm dựa trên **hành vi duyệt web** của người dùng, không cần đăng nhập (dùng `session_id` cho khách vãng lai).
+
+### 4.2 Kiến trúc Recommendation Module
+
+```
+src/modules/recommendation/
+├── models/interaction.ts   ← Entity lưu hành vi (VIEW, CART, PURCHASE)
+├── service.ts              ← Logic tính toán gợi ý
+└── index.ts                ← Khai báo module
+
+src/api/store/
+├── interactions/route.ts   ← POST /store/interactions (nhận tracking data)
+└── recommendations/route.ts ← GET /store/recommendations (trả gợi ý)
+```
+
+### 4.3 Schema dữ liệu – Bảng `Interaction`
+
+| Trường | Kiểu | Mô tả |
+|--------|------|-------|
+| `id` | UUID | Khóa chính |
+| `product_id` | string | ID sản phẩm |
+| `customer_id` | string (nullable) | ID khách hàng đã đăng nhập |
+| `session_id` | string (nullable) | Session ID cho khách vãng lai |
+| `interaction_type` | enum | `VIEW` / `CART` / `PURCHASE` |
+| `created_at` | timestamp | Thời điểm xảy ra hành vi |
+
+### 4.4 Luồng Tracking & Gợi ý
+
+```
+── TRACKING ──────────────────────────────────────────────────
+Người dùng vào trang chi tiết sản phẩm (ProductDetailPage.tsx)
+        │
+        ▼ (useEffect khi product load xong)
+productService.trackInteraction(productId, 'VIEW', sessionId)
+        │
+        ▼
+POST /store/interactions
+  { product_id, interaction_type: "VIEW", session_id }
+        │
+        ▼
+Lưu vào database bảng Interaction
+
+── RECOMMENDATION ────────────────────────────────────────────
+Người dùng vào trang Chủ (HomePage.tsx)
+        │
+        ▼ (useRecommendedProducts hook)
+GET /store/recommendations?session_id=xxx
+        │
+        ▼
+RecommendationModuleService:
+  1. Đọc lịch sử Interaction theo session_id / customer_id
+  2. Lấy danh sách product_id đã xem
+  3. Query Graph lấy thông tin đầy đủ (variants, prices, images)
+  4. Trả về mảng sản phẩm gợi ý
+        │
+        ▼
+Hiển thị mục "Dành cho bạn" trên trang chủ
+(Fallback: Sản phẩm ngẫu nhiên nếu chưa có lịch sử)
+```
+
+### 4.5 Hướng phát triển tiếp theo
+
+| Phương án | Mô tả | Độ khó |
+|-----------|-------|--------|
+| **Content-based (đã làm)** | Gợi ý theo lịch sử xem của cùng session | ⭐⭐ |
+| **Collaborative Filtering** | Gợi ý dựa trên hành vi người dùng tương đồng | ⭐⭐⭐⭐ |
+| **Scheduled Cronjob** | Tính toán trước vào ban đêm, cache kết quả | ⭐⭐⭐ |
+
+---
+
+## 5. Hướng dẫn Demo cho Giáo viên
+
+### 5.1 Chuẩn bị môi trường
+
+```bash
+# Terminal 1: Khởi động Backend
+cd medusa-backend/apps/backend
+npm run dev
+# Backend chạy tại: http://localhost:9000
+
+# Terminal 2: Khởi động Frontend
+cd <root project>
+npm run dev
+# Frontend chạy tại: http://localhost:5173
+```
+
+---
+
+### 5.2 Demo Tính năng Quản lý Tồn kho
+
+#### Kịch bản 1: Mua sản phẩm → Tồn kho giảm
+
+1. Mở **Admin Panel** tại `http://localhost:9000/app`
+   - Vào **Products → Samsung Galaxy S25 Ultra**
+   - Ghi nhớ số lượng `inventory_quantity` hiện tại (ví dụ: 10)
+
+2. Mở **Cửa hàng** tại `http://localhost:5173`
+   - Vào trang chi tiết **Samsung Galaxy S25 Ultra**
+   - Quan sát badge: `● Còn hàng · 10 sản phẩm`
+   - Thêm vào giỏ, chọn số lượng (tối đa = stock thực)
+   - Tiến hành **Thanh toán** (chọn COD)
+   - Bấm **Đặt hàng**
+
+3. Quay lại Admin Panel:
+   - Refresh trang sản phẩm
+   - `inventory_quantity` đã giảm đúng bằng số lượng đã mua ✅
+
+#### Kịch bản 2: Hủy đơn hàng → Tồn kho phục hồi
+
+1. Vào **Tài khoản** (`/account`) → Tab **Đơn hàng của tôi**
+   - Thấy đơn vừa đặt với trạng thái "Đang xử lý"
+   - Bấm **Hủy đơn** → Xác nhận
+
+2. Quay lại Admin Panel → Refresh:
+   - `inventory_quantity` đã tăng trở lại ✅
+
+#### Kịch bản 3: Giới hạn số lượng trên giao diện
+
+1. Vào trang chi tiết bất kỳ sản phẩm có stock < 10
+2. Thử bấm tăng số lượng — nút `+` sẽ bị disabled khi đạt giới hạn stock
+3. Trong giỏ hàng, số lượng cũng bị giới hạn theo stock thực ✅
+
+---
+
+### 5.3 Demo Tính phí Vận chuyển GHN
+
+1. Thêm sản phẩm vào giỏ hàng → Vào **Giỏ hàng** (`/cart`)
+2. Trong phần "Tính phí vận chuyển":
+   - Chọn **Tỉnh/Thành phố**: TP. Hồ Chí Minh
+   - Chọn **Phường/Xã**: Bến Nghé (Quận 1)
+3. Hệ thống tự động gọi GHN API và hiển thị phí vận chuyển thực tế ✅
+4. Thay đổi địa chỉ → Phí vận chuyển cập nhật tức thì
+
+> **Nếu GHN API lỗi:** Hệ thống hiển thị phí mặc định 30.000đ (không crash ứng dụng)
+
+---
+
+### 5.4 Demo Gợi ý Sản phẩm
+
+1. Mở **trình duyệt ẩn danh (Incognito)** để reset session
+2. Vào trang chủ → Mục "Dành cho bạn": hiển thị sản phẩm mặc định (ngẫu nhiên)
+3. Click vào xem **2-3 sản phẩm** khác nhau (ví dụ: iPhone 16 Pro, Samsung S26)
+4. Quay lại trang chủ → Mục "Dành cho bạn" **cập nhật theo sản phẩm vừa xem** ✅
+
+> **Kiểm tra Database:** Vào Supabase Dashboard → Bảng `Interaction` sẽ thấy các record VIEW được ghi lại.
+
+---
+
+### 5.5 Demo Quy trình Checkout Đầy đủ
+
+```
+Bước 1: Vào /products → Chọn sản phẩm → "Đặt ngay"
+Bước 2: Trang Chi tiết → Chọn màu sắc, dung lượng, số lượng
+Bước 3: "Thêm vào giỏ" → Vào /cart
+Bước 4: Tính phí GHN → Xem tổng tiền
+Bước 5: "Tiến hành thanh toán" → /checkout
+Bước 6: Chọn phương thức: COD / VNPay / Ví Sprylo
+Bước 7: Bấm "Đặt hàng" → Màn hình Order Success
+Bước 8: Vào /account → Đơn hàng hiển thị, inventory đã giảm ✅
+```
+
+---
+
+## 6. Tổng hợp Luồng Xử lý
+
+### Luồng 1: Đặt hàng và Trừ tồn kho
+
+```mermaid
+sequenceDiagram
+    participant U as User (Browser)
+    participant FE as Frontend (React)
+    participant BE as Backend (MedusaJS)
+    participant DB as Database (Supabase)
+
+    U->>FE: Bấm "Đặt hàng"
+    FE->>BE: POST /store/checkout { items, paymentMethod }
+    BE->>DB: retrieveProductVariant(variantId)
+    DB-->>BE: variant { inventory_quantity: 10 }
+    BE->>DB: updateProductVariants(variantId, { inventory_quantity: 9 })
+    BE-->>FE: { orderId: "order_xxx", paymentUrl }
+    FE->>FE: Lưu orderId + items → localStorage
+    FE->>U: Chuyển sang /order-success
+```
+
+### Luồng 2: Hủy đơn và Hoàn kho
+
+```mermaid
+sequenceDiagram
+    participant U as User (Browser)
+    participant FE as Frontend (React)
+    participant BE as Backend (MedusaJS)
+    participant DB as Database (Supabase)
+
+    U->>FE: Bấm "Hủy đơn"
+    FE->>FE: Đọc items từ localStorage
+    FE->>BE: POST /store/orders/:id/cancel { items }
+    BE->>DB: retrieveProductVariant(variantId)
+    DB-->>BE: variant { inventory_quantity: 9 }
+    BE->>DB: updateProductVariants(variantId, { inventory_quantity: 10 })
+    BE->>BE: emit("order.canceled")
+    BE-->>FE: { message: "Order canceled" }
+    FE->>FE: Cập nhật trạng thái → canceled: true
+    FE->>U: Thông báo hủy thành công
+```
+
+### Luồng 3: Gợi ý sản phẩm
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant FE as Frontend
+    participant BE as Backend
+    participant DB as Database
+
+    U->>FE: Vào trang chi tiết sản phẩm
+    FE->>BE: POST /store/interactions { product_id, type: "VIEW", session_id }
+    BE->>DB: INSERT INTO Interaction(...)
+    
+    U->>FE: Quay về trang chủ
+    FE->>BE: GET /store/recommendations?session_id=xxx
+    BE->>DB: SELECT DISTINCT product_id WHERE session_id = xxx
+    DB-->>BE: [product_id_1, product_id_2]
+    BE->>DB: Query Graph → Lấy full product data
+    DB-->>BE: [{ product với variants, prices, images }]
+    BE-->>FE: { products: [...] }
+    FE->>U: Hiển thị "Dành cho bạn"
+```
+
+---
+
+## Phụ lục: Danh sách API Endpoints
+
+| Method | Endpoint | Mô tả |
+|--------|----------|-------|
+| `POST` | `/store/checkout` | Đặt hàng + trừ inventory |
+| `POST` | `/store/orders/:id/cancel` | Hủy đơn + hoàn inventory |
+| `POST` | `/store/ghn/fee` | Tính phí vận chuyển GHN |
+| `POST` | `/store/interactions` | Ghi nhận hành vi người dùng |
+| `GET`  | `/store/recommendations` | Lấy sản phẩm gợi ý |
+| `POST` | `/admin/orders/:id/sync-shipping` | Admin xác nhận & tạo đơn GHN |
+| `GET`  | `/store/products` | Danh sách sản phẩm (có inventory) |
+| `GET`  | `/store/products/:id` | Chi tiết sản phẩm (có inventory) |
+
+---
+
+*Tài liệu được tạo tự động từ codebase dự án Sprylo – DATN FPT Polytechnic 2026*

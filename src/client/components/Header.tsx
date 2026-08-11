@@ -392,7 +392,7 @@ const Header = () => {
           </Link>
           <div className="main-nav">
             <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>Trang chủ</NavLink>
-            <NavLink to="/products" className={({ isActive }) => isActive ? 'active' : ''}>Cửa hàng</NavLink>
+            <NavLink to="/products" className={({ isActive }) => isActive ? 'active' : ''}>Điện thoại</NavLink>
             <NavLink to="/cart" className={({ isActive }) => isActive ? 'active' : ''}>Giỏ hàng</NavLink>
             <NavLink to="/checkout" className={({ isActive }) => isActive ? 'active' : ''}>Thanh toán</NavLink>
             <NavLink to="/contact" className={({ isActive }) => isActive ? 'active' : ''}>Liên hệ</NavLink>
@@ -488,7 +488,7 @@ const Header = () => {
           <button className="drawer-close" onClick={() => setDrawerOpen(false)}><X size={24} /></button>
         </div>
         <Link to="/" onClick={() => setDrawerOpen(false)}>Trang chủ</Link>
-        <Link to="/products" onClick={() => setDrawerOpen(false)}>Cửa hàng</Link>
+        <Link to="/products" onClick={() => setDrawerOpen(false)}>Điện thoại</Link>
         <Link to="/cart" onClick={() => setDrawerOpen(false)}>Giỏ hàng</Link>
         <Link to="/contact" onClick={() => setDrawerOpen(false)}>Liên hệ</Link>
         <Link

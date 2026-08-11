@@ -561,6 +561,19 @@ const CheckoutPage = () => {
       });
       const data = await response.json();
       
+      // Save orderId + items to localStorage for potential cancellation rollback
+      if (data.orderId) {
+        const orderRecord = {
+          orderId: data.orderId,
+          items: cartItems.map(i => ({ id: i.id, qty: i.qty })),
+          created_at: Date.now(),
+        };
+        // Keep last 10 orders in history
+        const history: any[] = JSON.parse(localStorage.getItem('sprylo_orders') || '[]');
+        history.unshift(orderRecord);
+        localStorage.setItem('sprylo_orders', JSON.stringify(history.slice(0, 10)));
+      }
+
       clearCart();
       if (data.paymentUrl) {
         window.location.href = data.paymentUrl;
