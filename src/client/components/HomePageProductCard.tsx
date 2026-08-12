@@ -50,12 +50,31 @@ export const HomePageProductCard = ({ p, compareList, wishlist }: HomePageProduc
   const displayPrice = typeof pPrice === 'number' && pPrice > 0 ? pPrice.toLocaleString('vi-VN') + 'đ' : 'Liên hệ';
   const oldPrice = activeVariant?.oldPrice;
   const displayOldPrice = oldPrice ? oldPrice.toLocaleString('vi-VN') + 'đ' : null;
-  // Medusa v2: inventory_quantity = 0 có thể do Stock Location chưa link Sales Channel
-  // Dùng manage_inventory để phán đoán: nếu manage_inventory = false thì luôn hiển thị còn hàng
+  // Logic tồn kho:
+  // - manage_inventory = false → không quản lý tồn kho → luôn còn hàng
+  // - inventory_quantity = null/undefined → fallback tổng tất cả variants để lấy số hiển thị
+  // - inventory_quantity = 0 với manage_inventory = true → thực sự hết hàng
   const rawStock = activeVariant?.inventory_quantity;
   const manageInventory = activeVariant?.manage_inventory;
-  const stock = rawStock !== undefined && rawStock !== null ? rawStock : 0;
-  const isInStock = !manageInventory || stock > 0;
+  const stockConfigured = rawStock !== undefined && rawStock !== null;
+
+  // Nếu activeVariant không có inventory_quantity, tính tổng tất cả variants
+  const allVariants: any[] = p.variants || [];
+  const totalStock = allVariants.reduce((acc: number, v: any) => {
+    if (v.manage_inventory === false) return acc;
+    const vq = v.inventory_quantity;
+    return acc + (vq !== null && vq !== undefined ? Number(vq) : 0);
+  }, 0);
+  const hasAnyConfigured = allVariants.some(
+    (v: any) => v.inventory_quantity !== null && v.inventory_quantity !== undefined
+  );
+
+  // Số hiển thị: dùng activeVariant nếu có, ngược lại dùng tổng tất cả variants
+  const displayStock = stockConfigured ? Number(rawStock) : (hasAnyConfigured ? totalStock : 0);
+  const stock = displayStock;
+  const isInStock = manageInventory === false   // không quản lý tồn kho
+    || (!stockConfigured && !hasAnyConfigured)  // chưa cấu hình gì → hiện còn hàng
+    || stock > 0;                               // có hàng thực tế
   
   let imgUrl = activeVariant?.thumbnail || p.thumbnail || 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=300&q=80&auto=format&fit=crop';
   if (activeColor && colorFallbacks[activeColor]?.img) {
@@ -88,7 +107,7 @@ export const HomePageProductCard = ({ p, compareList, wishlist }: HomePageProduc
       </div>
       <div className="stock">
         <span className="dot" style={{ background: isInStock ? 'var(--success)' : 'var(--rose)' }}></span>
-        {isInStock ? (stock > 0 ? `Còn hàng · ${stock} sản phẩm` : 'Còn hàng') : 'Hết hàng'}
+        {isInStock ? (hasAnyConfigured && stock > 0 ? `Còn hàng · ${stock} sản phẩm` : 'Còn hàng') : 'Hết hàng'}
       </div>
       <Link to={`/product/${p.id}`} className="name" style={{ fontSize: '15px' }}>{p.title}</Link>
       <div className="price" style={{ marginBottom: uniqueColorNames.length > 0 ? '6px' : '8px' }}>

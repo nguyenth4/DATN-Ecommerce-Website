@@ -321,16 +321,25 @@ const ProductsPage = () => {
                         const oldPrice = p.variants?.[0]?.oldPrice;
                         const displayOldPrice = oldPrice ? oldPrice.toLocaleString('vi-VN') + 'đ' : null;
 
-                        // Medusa v2: inventory_quantity = 0 có thể do Stock Location chưa link Sales Channel
-                        const rawStock = p.variants?.reduce((acc: number, v: any) => {
-                          const vStock = (v.inventory_quantity !== undefined && v.inventory_quantity !== null)
-                            ? v.inventory_quantity
+                        // Tính tổng stock từ các variants
+                        // - manage_inventory=false → không quản lý tồn kho → luôn còn hàng
+                        // - inventory_quantity=null → chưa cấu hình → coi là còn hàng
+                        const allVariants = p.variants || [];
+                        const hasAnyUnmanaged = allVariants.some((v: any) => v.manage_inventory === false);
+                        const allNullInventory = allVariants.length > 0 && allVariants.every(
+                          (v: any) => v.inventory_quantity === null || v.inventory_quantity === undefined
+                        );
+                        const rawStock = allVariants.reduce((acc: number, v: any) => {
+                          if (v.manage_inventory === false) return acc; // skip unmanaged
+                          const vStock = (v.inventory_quantity !== null && v.inventory_quantity !== undefined)
+                            ? Number(v.inventory_quantity)
                             : 0;
                           return acc + vStock;
-                        }, 0) ?? 0;
-                        const managesInventory = p.variants?.some((v: any) => v.manage_inventory);
+                        }, 0);
                         const stock = rawStock;
-                        const isInStock = !managesInventory || stock > 0;
+                        // isInStock = true khi: có variant không quản lý tồn kho, HOẶC
+                        //   tất cả inventory_quantity đều null (chưa setup), HOẶC stock > 0
+                        const isInStock = hasAnyUnmanaged || allNullInventory || stock > 0;
                         const imgUrl = getProductImage(p);
                         const rating = Number(p.metadata?.rating || 0);
                         const ratingCount = p.metadata?.review_count || 0;

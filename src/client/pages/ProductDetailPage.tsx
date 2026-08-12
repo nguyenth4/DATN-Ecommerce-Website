@@ -464,9 +464,13 @@ const ProductDetailPage = () => {
                   id: activeVariant.id,
                   price: price,
                   oldPrice: oldPrice,
-                  stock: (activeVariant.inventory_quantity !== undefined && activeVariant.inventory_quantity !== null)
-                    ? activeVariant.inventory_quantity 
-                    : ((activeVariant.stock !== undefined && activeVariant.stock !== null) ? activeVariant.stock : 10),
+                  stock: activeVariant.manage_inventory === false
+                    ? 999 // Không quản lý tồn kho → luôn còn hàng
+                    : (activeVariant.inventory_quantity !== undefined && activeVariant.inventory_quantity !== null)
+                      ? activeVariant.inventory_quantity
+                      : ((activeVariant.stock !== undefined && activeVariant.stock !== null)
+                          ? activeVariant.stock
+                          : 999), // null = chưa cấu hình stock location → coi là còn hàng
                   sku: activeVariant.sku || "SPRYLO-PROD"
                 }}
                 qty={qty}
