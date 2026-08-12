@@ -49,7 +49,7 @@ interface MedusaAddress {
   city?: string;
   province?: string;
   is_default_shipping?: boolean;
-  metadata?: any;
+  metadata?: Record<string, any>;
 }
 
 interface MedusaCustomer {
@@ -68,6 +68,7 @@ interface SavedAddress {
   phone: string;
   mergedAddress: string;
   isDefault: boolean;
+  metadata?: Record<string, any>;
 }
 
 const CheckoutPage = () => {
@@ -175,7 +176,8 @@ const CheckoutPage = () => {
                 fullName: `${addr.first_name || ''} ${addr.last_name || ''}`.trim(),
                 phone: addr.phone || '',
                 mergedAddress: merged,
-                isDefault: addr.is_default_shipping || false
+                isDefault: addr.is_default_shipping || false,
+                metadata: addr.metadata
               };
             });
             setSavedAddresses(mapped);
@@ -590,9 +592,14 @@ const CheckoutPage = () => {
         is_default_shipping: true,
         metadata: {
           province_id: selectedProvince,
+<<<<<<< HEAD
           district_id: resolvedGhnDistrictId ? resolvedGhnDistrictId.toString() : selectedDistrict,
           ward_id: selectedWard,
           ward_code: resolvedGhnWardCode || selectedWard
+=======
+          district_id: selectedDistrict,
+          ward_code: selectedWard
+>>>>>>> c82413b (feat: implement checkout page with support for guest and authenticated user flows)
         }
       };
 
@@ -620,8 +627,15 @@ const CheckoutPage = () => {
             province: provinceName,
             district: districtName,
             ward: wardName,
-            detail: detailAddress
-        } : undefined,
+            detail: detailAddress,
+            metadata: {
+                province_id: selectedProvince,
+                district_id: selectedDistrict,
+                ward_code: selectedWard
+            }
+        } : {
+            metadata: savedAddresses.find(a => a.id === selectedSavedAddressId)?.metadata
+        },
         setAsDefault: addressMode === 'new' ? setAsDefault : false,
         note,
         items: cartItems,
