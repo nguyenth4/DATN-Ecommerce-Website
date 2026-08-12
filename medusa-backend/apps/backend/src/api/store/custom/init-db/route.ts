@@ -4,30 +4,14 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   try {
     const db = req.scope.resolve("__pg_connection__");
     
-    // Create wallet table
-    await db.raw(`
-      CREATE TABLE IF NOT EXISTS wallet (
-        id VARCHAR(50) PRIMARY KEY,
-        customer_id VARCHAR(50) NOT NULL UNIQUE,
-        balance NUMERIC(15, 2) NOT NULL DEFAULT 0,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
+    // Check tables
+    const tablesRes = await db.raw("SELECT table_name FROM information_schema.tables WHERE table_name LIKE '%review%'");
+    const columnsRes = await db.raw("SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'reviews'");
 
-    // Create wallet_transaction table
-    await db.raw(`
-      CREATE TABLE IF NOT EXISTS wallet_transaction (
-        id VARCHAR(50) PRIMARY KEY,
-        wallet_id VARCHAR(50) NOT NULL REFERENCES wallet(id) ON DELETE CASCADE,
-        amount NUMERIC(15, 2) NOT NULL,
-        type VARCHAR(20) NOT NULL CHECK (type IN ('topup', 'deduction', 'refund')),
-        description TEXT,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-
-    res.json({ message: "Tables created successfully" });
+    res.json({
+      tables: tablesRes.rows,
+      columns: columnsRes.rows
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
