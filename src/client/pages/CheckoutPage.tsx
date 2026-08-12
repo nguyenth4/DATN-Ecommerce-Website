@@ -633,6 +633,19 @@ const CheckoutPage = () => {
 
     console.log("Placing order...", orderData);
     
+    // Save order data for the success page
+    const finalPaymentMethod = (useWallet && walletBalance >= (subtotal + shippingFee)) ? 'wallet' : paymentMethod;
+    localStorage.setItem('latest_order', JSON.stringify({
+      ...orderData,
+      id: `#SF${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      createdAt: new Date().toISOString(),
+      subtotal,
+      shippingFee,
+      discount: useWallet && walletBalance > 0 ? (walletBalance >= (subtotal + shippingFee) ? subtotal + shippingFee : walletBalance) : 0, // Simplified discount logic for wallet
+      total: (subtotal + shippingFee) - (useWallet && walletBalance > 0 ? (walletBalance >= (subtotal + shippingFee) ? subtotal + shippingFee : walletBalance) : 0),
+      paymentMethod: finalPaymentMethod
+    }));
+    
     try {
       const response = await fetch(`${MEDUSA_BACKEND_URL}/store/checkout`, {
         method: 'POST',
