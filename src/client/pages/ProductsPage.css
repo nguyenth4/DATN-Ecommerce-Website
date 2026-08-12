@@ -51,8 +51,66 @@
 
 .shop-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: var(--s6);
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+
+/* ── Compact card overrides for 5-column layout ─────────────────────────── */
+.shop-grid .product-card {
+  padding: 12px;
+}
+
+.shop-grid .product-card .img-wrap {
+  aspect-ratio: 4 / 3;
+  margin-bottom: 8px;
+}
+
+.shop-grid .product-card .name {
+  font-size: 12px;
+  line-height: 1.3;
+  margin-bottom: 3px;
+  /* Truncate to 2 lines */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.shop-grid .product-card .stock {
+  font-size: 10px;
+  margin-bottom: 3px;
+}
+
+.shop-grid .product-card .price .now {
+  font-size: 13px;
+}
+
+.shop-grid .product-card .price .was {
+  font-size: 11px;
+}
+
+.shop-grid .product-card .stars {
+  font-size: 11px;
+}
+
+.shop-grid .product-card .stars .count {
+  font-size: 10px;
+}
+
+.shop-grid .product-card .btn {
+  padding: 7px 8px;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+.shop-grid .product-card .wishlist {
+  width: 26px;
+  height: 26px;
+}
+
+.shop-grid .product-card .badge {
+  font-size: 9px;
+  padding: 3px 7px;
 }
 
 .pagination {
@@ -188,9 +246,15 @@
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .shop-grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 500px) {
+  .shop-grid {
+    grid-template-columns: repeat(2, 1fr);
     gap: var(--s4);
   }
 

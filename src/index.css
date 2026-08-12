@@ -1087,8 +1087,8 @@ input, select, textarea { font: inherit; color: inherit; }
 }
 .shop-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--s4);
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
 }
 .pagination {
   display: flex; justify-content: center; gap: 6px;

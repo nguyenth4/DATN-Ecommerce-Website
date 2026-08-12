@@ -7,9 +7,7 @@ import {
   Heart,
   ChevronRight,
   ChevronLeft,
-  Search,
-  X,
-  SlidersHorizontal
+  Search
 } from 'lucide-react';
 import { useProducts, useCategories } from '../services/product.service';
 import { ProductCardSkeleton } from '../components/ProductCardSkeleton';
@@ -25,7 +23,6 @@ const fmtVND = (n: number) => {
 
 const ProductsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [compareList, setCompareList] = useState(getCompareList());
   const [wishlist, setWishlist] = useState(getWishlist());
 
@@ -37,7 +34,7 @@ const ProductsPage = () => {
     searchParams.get('category_id')?.split(',') || []
   );
   const [page, setPage] = useState(1);
-  const limit = 12;
+  const limit = 15;
 
 
 
@@ -62,9 +59,11 @@ const ProductsPage = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
-      if (search) searchParams.set('q', search);
-      else searchParams.delete('q');
-      setSearchParams(searchParams);
+      setSearchParams(params => {
+        if (search) params.set('q', search);
+        else params.delete('q');
+        return params;
+      });
       setPage(1);
     }, 500);
     return () => clearTimeout(timer);
@@ -97,10 +96,11 @@ const ProductsPage = () => {
   const toggleCategory = (id: string) => {
     setSelectedCats(prev => {
       const next = prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id];
-      // Sync with URL
-      if (next.length > 0) searchParams.set('category_id', next.join(','));
-      else searchParams.delete('category_id');
-      setSearchParams(searchParams);
+      setSearchParams(params => {
+        if (next.length > 0) params.set('category_id', next.join(','));
+        else params.delete('category_id');
+        return params;
+      });
       return next;
     });
     setPage(1); // Reset to first page
@@ -109,9 +109,11 @@ const ProductsPage = () => {
   // Handle sort change
   const handleSortChange = (val: string) => {
     setSortBy(val);
-    if (val !== 'popular') searchParams.set('order', val);
-    else searchParams.delete('order');
-    setSearchParams(searchParams);
+    setSearchParams(params => {
+      if (val !== 'popular') params.set('order', val);
+      else params.delete('order');
+      return params;
+    });
     setPage(1);
   };
 
@@ -120,7 +122,7 @@ const ProductsPage = () => {
   return (
     <>
       <main id="main">
-        <section className="page-head">
+        <section className="page-head" style={{ borderBottom: 'none' }}>
           <div className="container">
             <div className="crumbs">
               <Link to="/">Trang chủ</Link> <span className="sep">/</span> <span>Điện thoại</span>
@@ -153,21 +155,34 @@ const ProductsPage = () => {
           </div>
         </section>
 
-        <section className="brands" style={{ borderBottom: '1px solid var(--border)', background: 'var(--paper)', padding: '12px 0' }}>
+        <section className="brands" style={{ background: 'var(--paper)', padding: '12px 0', border: 'none' }}>
           <div className="container">
-            <div className="brand-row" style={{ display: 'flex', gap: '24px', overflowX: 'auto', whiteSpace: 'nowrap', paddingBottom: '4px' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: 'bold', fontFamily: 'var(--ff-display)', marginBottom: '16px', color: 'var(--ink)' }}>Điện thoại</h2>
+            <div className="brand-row" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', paddingBottom: '4px', justifyContent: 'flex-start' }}>
               <button
                 className="brand-logo"
                 onClick={() => {
                   setSelectedCats([]);
-                  searchParams.delete('category_id');
-                  setSearchParams(searchParams);
+                  setSearchParams(params => {
+                    params.delete('category_id');
+                    return params;
+                  });
                 }}
                 style={{
-                  background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px',
-                  fontWeight: selectedCats.length === 0 ? '700' : '500',
-                  color: selectedCats.length === 0 ? 'var(--indigo)' : 'var(--fg-mute)',
-                  textTransform: 'uppercase', transition: 'all 0.2s'
+                  background: 'var(--paper)',
+                  border: selectedCats.length === 0 ? '1px solid var(--indigo)' : '1px solid var(--border)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: selectedCats.length === 0 ? '600' : '500',
+                  color: selectedCats.length === 0 ? 'var(--indigo)' : 'var(--fg)',
+                  padding: '8px 16px',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minWidth: '80px',
+                  height: '36px'
                 }}
               >
                 TẤT CẢ
@@ -178,10 +193,20 @@ const ProductsPage = () => {
                   className="brand-logo"
                   onClick={() => toggleCategory(cat.id)}
                   style={{
-                    background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px',
-                    fontWeight: selectedCats.includes(cat.id) ? '700' : '500',
-                    color: selectedCats.includes(cat.id) ? 'var(--indigo)' : 'var(--fg-mute)',
-                    textTransform: 'uppercase', transition: 'all 0.2s'
+                    background: 'var(--paper)',
+                    border: selectedCats.includes(cat.id) ? '1px solid var(--indigo)' : '1px solid var(--border)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '13px',
+                    fontWeight: selectedCats.includes(cat.id) ? '600' : '500',
+                    color: selectedCats.includes(cat.id) ? 'var(--indigo)' : 'var(--fg)',
+                    padding: '8px 16px',
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minWidth: '80px',
+                    height: '36px'
                   }}
                 >
                   {cat.name}
@@ -193,61 +218,28 @@ const ProductsPage = () => {
 
         <section className="section">
           <div className="container">
-            {/* Mobile Filter Trigger */}
-            <button
-              className="btn btn--paper mobile-filter-btn"
-              onClick={() => setDrawerOpen(true)}
-              style={{ display: 'none', marginBottom: 'var(--s4)', width: '100%', justifyContent: 'center' }}
-            >
-              <SlidersHorizontal size={18} /> Bộ lọc
-            </button>
+            <div>
 
-            <div className="shop-layout">
-
-              <aside className={`filters${drawerOpen ? ' is-open' : ''}`} aria-label="Bộ lọc">
-                <div className="drawer-head" style={{ display: 'none', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--s6)' }}>
-                  <h3>Bộ lọc</h3>
-                  <button onClick={() => setDrawerOpen(false)}><X size={24} /></button>
-                </div>
-
-                <div className="filter-block">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--s3)' }}>
-                    <h3>Danh mục</h3>
-                    {selectedCats.length > 0 && (
-                      <button
-                        onClick={() => { setSelectedCats([]); searchParams.delete('category_id'); setSearchParams(searchParams); }}
-                        style={{ fontSize: '12px', color: 'var(--indigo)', fontWeight: 600 }}
-                      >
-                        Xoá lọc
-                      </button>
-                    )}
-                  </div>
-                  {categories.map((cat: any) => (
-                    <label key={cat.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '4px 0' }}>
-                      <input
-                        type="checkbox"
-                        checked={selectedCats.includes(cat.id)}
-                        onChange={() => toggleCategory(cat.id)}
-                      />
-                      {cat.name}
-                      <span className="ct" style={{ marginLeft: 'auto', opacity: 0.5, fontSize: '12px' }}>
-                        {cat.products?.length || ''}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-
-
-
-              </aside>
-
-              <div>
-                <div style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
-                  <button 
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => handleSortChange('createdAt')}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '8px',
+                      padding: '8px 16px', border: '1px solid var(--border)',
+                      borderRadius: '24px', background: sortBy === 'createdAt' ? 'var(--indigo)' : 'var(--paper)',
+                      color: sortBy === 'createdAt' ? 'white' : 'inherit',
+                      cursor: 'pointer', fontSize: '14px',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+                    Phổ Biến
+                  </button>
+                  <button
                     onClick={() => handleSortChange('price_asc')}
-                    style={{ 
-                      display: 'flex', alignItems: 'center', gap: '8px', 
-                      padding: '8px 16px', border: '1px solid var(--border)', 
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '8px',
+                      padding: '8px 16px', border: '1px solid var(--border)',
                       borderRadius: '24px', background: sortBy === 'price_asc' ? 'var(--indigo)' : 'var(--paper)',
                       color: sortBy === 'price_asc' ? 'white' : 'inherit',
                       cursor: 'pointer', fontSize: '14px',
@@ -257,11 +249,11 @@ const ProductsPage = () => {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5h10"></path><path d="M11 9h7"></path><path d="M11 13h4"></path><path d="M3 17l3 3 3-3"></path><path d="M6 18V4"></path></svg>
                     Giá Thấp - Cao
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleSortChange('price_desc')}
-                    style={{ 
-                      display: 'flex', alignItems: 'center', gap: '8px', 
-                      padding: '8px 16px', border: '1px solid var(--border)', 
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '8px',
+                      padding: '8px 16px', border: '1px solid var(--border)',
                       borderRadius: '24px', background: sortBy === 'price_desc' ? 'var(--indigo)' : 'var(--paper)',
                       color: sortBy === 'price_desc' ? 'white' : 'inherit',
                       cursor: 'pointer', fontSize: '14px',
@@ -310,6 +302,12 @@ const ProductsPage = () => {
                           const priceB = b.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount || b.variants?.[0]?.prices?.[0]?.amount || b.variants?.[0]?.price || b.price || 0;
                           return priceB - priceA;
                         });
+                      } else if (sortBy === 'createdAt') {
+                        sortedProducts.sort((a, b) => {
+                          const dateA = new Date(a.created_at || 0).getTime();
+                          const dateB = new Date(b.created_at || 0).getTime();
+                          return dateB - dateA;
+                        });
                       }
 
                       const paginatedProducts = sortedProducts.slice((page - 1) * limit, page * limit);
@@ -327,8 +325,8 @@ const ProductsPage = () => {
 
                         // Medusa v2: inventory_quantity = 0 có thể do Stock Location chưa link Sales Channel
                         const rawStock = p.variants?.reduce((acc: number, v: any) => {
-                          const vStock = (v.inventory_quantity !== undefined && v.inventory_quantity !== null) 
-                            ? v.inventory_quantity 
+                          const vStock = (v.inventory_quantity !== undefined && v.inventory_quantity !== null)
+                            ? v.inventory_quantity
                             : 0;
                           return acc + vStock;
                         }, 0) ?? 0;
@@ -483,7 +481,6 @@ const ProductsPage = () => {
 
               </div>
 
-            </div>
           </div>
         </section>
 

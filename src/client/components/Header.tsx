@@ -235,7 +235,7 @@ const Header = () => {
   const [compareCount, setCompareCount] = useState(getCompareList().length);
   const [wishlistCount, setWishlistCount] = useState(getWishlist().length);
   const [customerInfo, setCustomerInfo] = useState<any>(null);
-  
+
   const { data: cart } = useCart();
   const updateLineItem = useUpdateLineItem();
   const removeLineItem = useRemoveLineItem();
@@ -266,14 +266,14 @@ const Header = () => {
         handleAuthChange();
       }
     };
-    
+
     handleAuthChange();
-    
+
     window.addEventListener('compare-updated', handleCompareUpdate);
     window.addEventListener('wishlist-updated', handleWishlistUpdate);
     window.addEventListener('customer-auth-change', handleAuthChange);
     window.addEventListener('storage', handleStorageChange);
-    
+
     return () => {
       window.removeEventListener('compare-updated', handleCompareUpdate);
       window.removeEventListener('wishlist-updated', handleWishlistUpdate);
@@ -293,7 +293,7 @@ const Header = () => {
   const handleUpdateQty = (lineId: string, currentQty: number, delta: number) => {
     const newQty = Math.max(1, currentQty + delta);
     if (newQty === currentQty) return;
-    
+
     updateLineItem.mutate({ lineId, quantity: newQty }, {
       onError: () => toast.error("Không thể cập nhật số lượng")
     });
@@ -310,95 +310,98 @@ const Header = () => {
     <>
       <style>{headerStyles}</style>
 
-      {/* Header */}
-      <header className="site-header">
-        <div className="container">
-          <Link to="/" className="brand">
-            <span className="brand-mark">S</span>
-            Sprylo
-          </Link>
+      {/* Header Wrapper to keep both rows sticky together */}
+      <div className="header-wrapper" style={{ position: 'sticky', top: 0, zIndex: 50, background: 'var(--paper)', borderBottom: '1px solid var(--rule)' }}>
+        {/* Header Top Row */}
+        <header className="site-header" style={{ borderBottom: '1px solid var(--rule)' }}>
+          <div className="container">
+            <Link to="/" className="brand">
+              <span className="brand-mark">S</span>
+              Sprylo
+            </Link>
 
-          <form className="search" role="search" onSubmit={handleSearch}>
-            <input
-              type="text"
-              placeholder="Tìm kiếm sản phẩm, thương hiệu, danh mục..."
-              aria-label="Tìm kiếm trong cửa hàng"
-              value={searchQ}
-              onChange={(e) => setSearchQ(e.target.value)}
-            />
-            <button type="submit" aria-label="Tìm kiếm">
-              <Search size={18} />
-            </button>
-          </form>
+            <form className="search" role="search" onSubmit={handleSearch}>
+              <input
+                type="text"
+                placeholder="Tìm kiếm sản phẩm, thương hiệu, danh mục..."
+                aria-label="Tìm kiếm trong cửa hàng"
+                value={searchQ}
+                onChange={(e) => setSearchQ(e.target.value)}
+              />
+              <button type="submit" aria-label="Tìm kiếm">
+                <Search size={18} />
+              </button>
+            </form>
 
-          <div className="icon-row">
-            {customerInfo ? (
-              <Link to="/account" className="icon-btn" aria-label="Tài khoản" title={`Chào, ${customerInfo.first_name || 'bạn'}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                {customerInfo.avatar_url ? (
-                  <img 
-                    src={customerInfo.avatar_url} 
-                    alt="Avatar" 
-                    style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--rule)' }} 
-                  />
-                ) : (
+            <div className="icon-row">
+              {customerInfo ? (
+                <Link to="/account" className="icon-btn" aria-label="Tài khoản" title={`Chào, ${customerInfo.first_name || 'bạn'}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {customerInfo.avatar_url ? (
+                    <img
+                      src={customerInfo.avatar_url}
+                      alt="Avatar"
+                      style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--rule)' }}
+                    />
+                  ) : (
+                    <User size={20} />
+                  )}
+                  <span className="text-xs font-semibold" style={{ fontSize: '0.8rem', fontWeight: 600, maxWidth: '70px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {customerInfo.first_name}
+                  </span>
+                </Link>
+              ) : (
+                <Link to="/login" className="icon-btn" aria-label="Đăng nhập" title="Đăng nhập">
                   <User size={20} />
-                )}
-                <span className="text-xs font-semibold" style={{ fontSize: '0.8rem', fontWeight: 600, maxWidth: '70px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {customerInfo.first_name}
-                </span>
+                </Link>
+              )}
+              <Link to="/compare" className="icon-btn" aria-label="Compare" title="So sánh sản phẩm">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 3h5v5M21 3L14 10M8 21H3v-5M3 21l7-7" />
+                </svg>
+                {compareCount > 0 && <span className="count">{compareCount}</span>}
               </Link>
-            ) : (
-              <Link to="/login" className="icon-btn" aria-label="Đăng nhập" title="Đăng nhập">
-                <User size={20} />
+              <Link to="/wishlist" className="icon-btn" aria-label="Yêu thích" title="Sản phẩm yêu thích">
+                <Heart size={20} />
+                {wishlistCount > 0 && <span className="count">{wishlistCount}</span>}
               </Link>
-            )}
-            <Link to="/compare" className="icon-btn" aria-label="Compare" title="So sánh sản phẩm">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M16 3h5v5M21 3L14 10M8 21H3v-5M3 21l7-7"/>
-              </svg>
-              {compareCount > 0 && <span className="count">{compareCount}</span>}
-            </Link>
-            <Link to="/wishlist" className="icon-btn" aria-label="Yêu thích" title="Sản phẩm yêu thích">
-              <Heart size={20} />
-              {wishlistCount > 0 && <span className="count">{wishlistCount}</span>}
-            </Link>
-            <Link 
-              to="/cart"
-              className="icon-btn icon-btn--cart" 
-              aria-label="Giỏ hàng" 
-              title="Giỏ hàng"
-            >
-              <ShoppingCart size={20} />
-              {cartCount > 0 && <span className="count">{cartCount}</span>}
-            </Link>
-            <button
-              className="nav-toggle"
-              aria-label="Mở menu"
-              aria-expanded={drawerOpen}
-              onClick={() => setDrawerOpen(true)}
-            >
-              <Menu size={24} />
-            </button>
+              <Link
+                to="/cart"
+                className="icon-btn icon-btn--cart"
+                aria-label="Giỏ hàng"
+                title="Giỏ hàng"
+              >
+                <ShoppingCart size={20} />
+                {cartCount > 0 && <span className="count">{cartCount}</span>}
+              </Link>
+              <button
+                className="nav-toggle"
+                aria-label="Mở menu"
+                aria-expanded={drawerOpen}
+                onClick={() => setDrawerOpen(true)}
+              >
+                <Menu size={24} />
+              </button>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Nav bar */}
-      <nav className="nav-bar" aria-label="Primary">
-        <div className="container">
-          <Link to="/products" className="all-cats">
-            <Menu size={16} />
-            Tất cả danh mục
-          </Link>
-          <div className="main-nav">
-            <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>Trang chủ</NavLink>
-            <NavLink to="/products" className={({ isActive }) => isActive ? 'active' : ''}>Điện thoại</NavLink>
-            <NavLink to="/cart" className={({ isActive }) => isActive ? 'active' : ''}>Giỏ hàng</NavLink>
-            <NavLink to="/checkout" className={({ isActive }) => isActive ? 'active' : ''}>Thanh toán</NavLink>
-            <NavLink to="/contact" className={({ isActive }) => isActive ? 'active' : ''}>Liên hệ</NavLink>
+        {/* Nav bar */}
+        <nav className="nav-bar" aria-label="Primary" style={{ position: 'static', borderBottom: 'none' }}>
+          <div className="container">
+            <Link to="/products" className="all-cats">
+              <Menu size={16} />
+              Tất cả danh mục
+            </Link>
+            <div className="main-nav">
+              <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>Trang chủ</NavLink>
+              <NavLink to="/products" className={({ isActive }) => isActive ? 'active' : ''}>Điện thoại</NavLink>
+              <NavLink to="/cart" className={({ isActive }) => isActive ? 'active' : ''}>Giỏ hàng</NavLink>
+              <NavLink to="/checkout" className={({ isActive }) => isActive ? 'active' : ''}>Thanh toán</NavLink>
+              <NavLink to="/contact" className={({ isActive }) => isActive ? 'active' : ''}>Liên hệ</NavLink>
+            </div>
           </div>
-        </div>
-      </nav>
+        </nav>
+      </div>
 
       {/* Cart Drawer */}
       <div className={`cart-drawer ${cartDrawerOpen ? 'is-open' : ''}`}>
@@ -414,8 +417,8 @@ const Header = () => {
             <div style={{ textAlign: 'center', padding: '40px 0', color: '#9ca3af' }}>
               <ShoppingCart size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
               <p style={{ fontSize: '14px' }}>Giỏ hàng của bạn đang trống</p>
-              <button 
-                className="cart-drawer-btn cart-drawer-btn--primary" 
+              <button
+                className="cart-drawer-btn cart-drawer-btn--primary"
                 style={{ margin: '16px auto 0', width: '140px' }}
                 onClick={() => {
                   setCartDrawerOpen(false);
@@ -460,15 +463,15 @@ const Header = () => {
               <span className="cart-drawer-subtotal-price">{cartSubtotal.toLocaleString('vi-VN')}đ</span>
             </div>
             <div className="cart-drawer-buttons">
-              <Link 
-                to="/cart" 
+              <Link
+                to="/cart"
                 className="cart-drawer-btn cart-drawer-btn--secondary"
                 onClick={() => setCartDrawerOpen(false)}
               >
                 Xem giỏ hàng
               </Link>
-              <Link 
-                to="/checkout" 
+              <Link
+                to="/checkout"
                 className="cart-drawer-btn cart-drawer-btn--primary"
                 onClick={() => setCartDrawerOpen(false)}
               >
@@ -497,7 +500,7 @@ const Header = () => {
           style={{ marginTop: 'var(--s5)', justifyContent: 'center' }}
           onClick={() => setDrawerOpen(false)}
         >
-          Xem giỏ hàng <ChevronRight size={18} style={{marginLeft: '8px'}}/>
+          Xem giỏ hàng <ChevronRight size={18} style={{ marginLeft: '8px' }} />
         </Link>
       </div>
 
