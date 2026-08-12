@@ -49,6 +49,7 @@ interface MedusaAddress {
   city?: string;
   province?: string;
   is_default_shipping?: boolean;
+  metadata?: any;
 }
 
 interface MedusaCustomer {
@@ -475,6 +476,82 @@ const CheckoutPage = () => {
     }
   }, [selectedProvince]);
 
+  // Clean names to match provinces and wards correctly
+  const cleanName = (name: string) => {
+    if (!name) return '';
+    return name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/^(thanh\s+pho|tinh|quan|huyen|phuong|xa|thi\s+tran|thi\s+xa)\s+/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  // Sync selected saved address's province and ward IDs
+  useEffect(() => {
+    console.log("Sync Effect triggered", { 
+      addressMode, 
+      selectedSavedAddressId, 
+      hasCustomer: !!customer, 
+      addressesCount: customer?.addresses?.length,
+      provincesCount: provinces.length, 
+      wardsCount: wards.length 
+    });
+    if (addressMode === 'saved' && selectedSavedAddressId && customer?.addresses) {
+      const selectedAddr = customer.addresses.find(addr => addr.id === selectedSavedAddressId);
+      console.log("Selected Address found:", selectedAddr);
+      if (selectedAddr) {
+        const metadata = selectedAddr.metadata || {};
+        console.log("Address Metadata:", metadata);
+        if (metadata.province_id && metadata.ward_id) {
+          console.log("Using metadata IDs directly:", metadata.province_id, metadata.ward_id);
+          // If metadata exists, use it directly
+          if (selectedProvince !== metadata.province_id) {
+            setSelectedProvince(metadata.province_id);
+          }
+          if (selectedDistrict !== (metadata.district_id || 'default')) {
+            setSelectedDistrict(metadata.district_id || 'default');
+          }
+          if (selectedWard !== metadata.ward_id) {
+            setSelectedWard(metadata.ward_id);
+          }
+        } else {
+          console.log("No metadata IDs found. Cleaning names:", { provinceName: selectedAddr.province, wardName: selectedAddr.address_2 });
+          // Fallback to name matching
+          if (selectedAddr.province && provinces.length > 0) {
+            const matchedProv = provinces.find(
+              p => cleanName(p.name) === cleanName(selectedAddr.province || '')
+            );
+            console.log("Matched Province from list:", matchedProv);
+            if (matchedProv && selectedProvince !== matchedProv.id) {
+              setSelectedProvince(matchedProv.id);
+            }
+          }
+          if (selectedAddr.address_2 && wards.length > 0) {
+            const matchedWard = wards.find(
+              w => cleanName(w.name) === cleanName(selectedAddr.address_2 || '')
+            );
+            console.log("Matched Ward from list:", matchedWard);
+            if (matchedWard && selectedWard !== matchedWard.id) {
+              setSelectedWard(matchedWard.id);
+              setSelectedDistrict('default');
+            }
+          }
+        }
+      }
+    }
+  }, [
+    addressMode,
+    selectedSavedAddressId,
+    customer?.addresses,
+    provinces,
+    wards,
+    selectedProvince,
+    selectedWard,
+    selectedDistrict
+  ]);
+
   const handlePlaceOrder = async () => {
     // Validate email & phone if guest checkout
     if (isGuestCheckout && !isLoggedIn) {
@@ -513,8 +590,9 @@ const CheckoutPage = () => {
         is_default_shipping: true,
         metadata: {
           province_id: selectedProvince,
-          district_id: selectedDistrict,
-          ward_id: selectedWard
+          district_id: resolvedGhnDistrictId ? resolvedGhnDistrictId.toString() : selectedDistrict,
+          ward_id: selectedWard,
+          ward_code: resolvedGhnWardCode || selectedWard
         }
       };
 
@@ -598,22 +676,54 @@ const CheckoutPage = () => {
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
   const [shippingFee, setShippingFee] = useState(35000);
+  const [resolvedGhnDistrictId, setResolvedGhnDistrictId] = useState<number | null>(null);
+  const [resolvedGhnWardCode, setResolvedGhnWardCode] = useState<string | null>(null);
   
   useEffect(() => {
     // Call Shipping Fee API when district/ward changes
     if (selectedDistrict && selectedWard) {
       // 2: Nhanh (Express), 5: Tiết kiệm (Economy - using GHN API as proxy for economy rates)
       const serviceTypeId = shippingMethod === 'ghn' ? 2 : 5;
+      
+      let provinceName = '';
+      let wardName = '';
+
+      if (addressMode === 'saved' && selectedSavedAddressId && customer?.addresses) {
+        const selectedAddr = customer.addresses.find(addr => addr.id === selectedSavedAddressId);
+        if (selectedAddr) {
+          provinceName = selectedAddr.province || '';
+          wardName = selectedAddr.address_2 || '';
+        }
+      } else {
+        const provinceObj = provinces.find(p => p.id === selectedProvince);
+        provinceName = provinceObj ? provinceObj.name : '';
+        const wardObj = wards.find(w => w.id === selectedWard);
+        wardName = wardObj ? wardObj.name : '';
+      }
+
+      console.log("Fetching shipping fee for names/IDs:", { 
+        selectedProvince,
+        selectedDistrict, 
+        selectedWard, 
+        provinceName,
+        wardName,
+        serviceTypeId 
+      });
 
       fetch(`${MEDUSA_BACKEND_URL}/store/ghn/fee`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-publishable-api-key': PUBLISHABLE_KEY
+        },
         body: JSON.stringify({
           from_district_id: 1442,
           from_ward_code: "21211",
           service_type_id: serviceTypeId,
           to_district_id: parseInt(selectedDistrict) || 1442,
           to_ward_code: selectedWard || "21211",
+          province_name: provinceName,
+          ward_name: wardName,
           height: totalHeight || 10,
           length: maxLength || 10,
           weight: totalWeight || 200,
@@ -623,10 +733,18 @@ const CheckoutPage = () => {
           coupon: null
         })
       })
-      .then(res => res.json())
+      .then(res => {
+        console.log("Fee API Response Status:", res.status);
+        return res.json();
+      })
       .then(data => {
+        console.log("Fee API Response Data:", data);
         if (data.data?.total) {
           setShippingFee(data.data.total);
+          if (data.data.resolved_district_id && data.data.resolved_ward_code) {
+            setResolvedGhnDistrictId(data.data.resolved_district_id);
+            setResolvedGhnWardCode(data.data.resolved_ward_code);
+          }
         } else {
           setShippingFee(0);
         }
@@ -636,12 +754,28 @@ const CheckoutPage = () => {
         setShippingFee(0);
       });
     } else {
+      console.log("Skipping shipping fee fetch - missing IDs:", { selectedDistrict, selectedWard });
       // Default initial prices before location is selected
       setTimeout(() => {
         setShippingFee(0);
       }, 0);
     }
-  }, [selectedDistrict, selectedWard, shippingMethod, totalHeight, maxLength, totalWeight, maxWidth, insuranceValue]);
+  }, [
+    selectedDistrict, 
+    selectedWard, 
+    shippingMethod, 
+    totalHeight, 
+    maxLength, 
+    totalWeight, 
+    maxWidth, 
+    insuranceValue,
+    addressMode,
+    selectedSavedAddressId,
+    customer,
+    provinces,
+    wards,
+    selectedProvince
+  ]);
 
   const total = subtotal + shippingFee;
   const walletDeduction = useWallet ? Math.min(walletBalance, total) : 0;

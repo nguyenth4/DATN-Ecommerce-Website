@@ -4,8 +4,11 @@
  * Uses a fake token (FAKE_GHN_TOKEN) – replace with a real token later.
  */
 export async function createGhnShipping(order: any) {
-  const token = "FAKE_GHN_TOKEN"
-  // Build minimal payload required by GHN sandbox API
+  const token = process.env.GHN_API_TOKEN || process.env.GHN_TOKEN || "FAKE_GHN_TOKEN"
+  const shopId = process.env.GHN_SHOP_ID
+  const apiUrl = process.env.GHN_API_URL || "https://online-gateway.ghn.vn/shiip/public-api/v2"
+
+  // Build minimal payload required by GHN API
   const payload = {
     order: {
       order_code: order.id,
@@ -30,13 +33,13 @@ export async function createGhnShipping(order: any) {
     // Additional fields can be added for real integration
   }
 
-  // GHN sandbox endpoint (placeholder URL)
-  const url = "https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/create"
+  const url = `${apiUrl}/shipping-order/create`
   const response = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      token,
+      Token: token,
+      ...(shopId ? { ShopId: shopId } : {}),
     },
     body: JSON.stringify(payload),
   })

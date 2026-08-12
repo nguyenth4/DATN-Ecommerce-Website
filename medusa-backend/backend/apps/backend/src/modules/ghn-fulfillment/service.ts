@@ -17,7 +17,7 @@ export default class GhnFulfillmentProviderService extends AbstractFulfillmentPr
   constructor({ logger }: { logger: Logger }, options: GhnFulfillmentOptions) {
     super()
     this.logger_ = logger
-    this.options_ = options
+    this.options_ = options || {} as GhnFulfillmentOptions
 
     // Fallback nếu người dùng cấu hình thiếu trong medusa-config.ts
     if (!this.options_.api_token) {

@@ -16,6 +16,11 @@ import type { CartItem } from '../utils/cart';
 
 const PROMO_CODE = 'WELCOME20';
 const PROMO_DISCOUNT = 56000;
+const MEDUSA_BACKEND_URL =
+  (import.meta as any).env?.VITE_MEDUSA_BACKEND_URL || 'http://localhost:9000';
+const PUBLISHABLE_KEY =
+  (import.meta as any).env?.VITE_MEDUSA_PUBLISHABLE_KEY ||
+  'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483';
 
 const CartPage = () => {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -125,15 +130,25 @@ const CartPage = () => {
       const totalWeight = items.reduce((acc, item) => acc + 250 * item.qty, 0);
       const insuranceValue = items.reduce((acc, item) => acc + item.price * item.qty, 0);
 
-      fetch('http://localhost:9000/store/ghn/fee', {
+      const provinceObj = provinces.find(p => p.id === selectedProvince);
+      const provinceName = provinceObj ? provinceObj.name : '';
+      const wardObj = wards.find(w => w.id === selectedWard);
+      const wardName = wardObj ? wardObj.name : '';
+
+      fetch(`${MEDUSA_BACKEND_URL}/store/ghn/fee`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-publishable-api-key': PUBLISHABLE_KEY
+        },
         body: JSON.stringify({
           from_district_id: 1442,
           from_ward_code: "21211",
           service_type_id: 2, // GHN Express
           to_district_id: parseInt(selectedDistrict) || 1442,
           to_ward_code: selectedWard,
+          province_name: provinceName,
+          ward_name: wardName,
           height: 10,
           length: 15,
           weight: totalWeight || 250,
@@ -158,7 +173,7 @@ const CartPage = () => {
     } else {
       setShippingFee(0);
     }
-  }, [selectedDistrict, selectedWard, items]);
+  }, [selectedDistrict, selectedWard, items, provinces, wards, selectedProvince]);
 
   const updateQty = (id: string, delta: number) => {
     const updated = items.map(item => {
