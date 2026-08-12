@@ -16,7 +16,17 @@ const ProductSpecsTable: React.FC<ProductSpecsTableProps> = ({
   length,
 }) => {
   // Combine native attributes with specifications metadata
-  const mergedSpecs: Record<string, string> = { ...specifications };
+  let mergedSpecs: Record<string, string> = {};
+
+  if (typeof specifications === 'string') {
+    try {
+      mergedSpecs = JSON.parse(specifications);
+    } catch (e) {
+      console.warn("Failed to parse specifications metadata:", e);
+    }
+  } else if (typeof specifications === 'object' && specifications !== null) {
+    mergedSpecs = { ...specifications };
+  }
 
   if (weight && !mergedSpecs['Trọng lượng']) {
     mergedSpecs['Trọng lượng'] = `${weight} g`;
@@ -36,7 +46,7 @@ const ProductSpecsTable: React.FC<ProductSpecsTableProps> = ({
   return (
     <div style={{ background: 'white', padding: '1.5rem', borderRadius: '12px', border: '1px solid var(--border)', alignSelf: 'start', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
       <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.2rem', borderBottom: '2px solid var(--dark)', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <span>📋</span> THÔNG SỐ KỸ THUẬT
+        THÔNG SỐ KỸ THUẬT
       </h3>
       
       {entries.length > 0 ? (
