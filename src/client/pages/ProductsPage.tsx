@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
+import { addToCart } from '../utils/cart';
 import { getCompareList, toggleCompareProduct } from '../utils/compare';
 import { getWishlist, toggleWishlistProduct } from '../utils/wishlist';
 import {
@@ -22,6 +23,7 @@ const fmtVND = (n: number) => {
 };
 
 const ProductsPage = () => {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [compareList, setCompareList] = useState(getCompareList());
   const [wishlist, setWishlist] = useState(getWishlist());
@@ -411,7 +413,34 @@ const ProductsPage = () => {
                                 <span style={{ fontWeight: 500 }}>So sánh</span>
                               </label>
                             </div>
-                            <Link to="/cart" className="btn" style={{ marginTop: '0.65rem' }}>Đặt ngay <ChevronRight size={16} /></Link>
+                            <button
+                              className="btn"
+                              style={{ marginTop: '0.65rem', width: '100%', cursor: 'pointer' }}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const variant = p.variants?.[0];
+                                if (!variant) return;
+                                const price = variant.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount
+                                  || variant.prices?.[0]?.amount
+                                  || variant.price
+                                  || 0;
+                                const imgUrl2 = getProductImage(p);
+                                addToCart({
+                                  id: variant.id,
+                                  productId: p.id,
+                                  name: p.title,
+                                  variant: variant.title || '',
+                                  price,
+                                  qty: 1,
+                                  img: imgUrl2,
+                                });
+                                window.dispatchEvent(new Event('cart-updated'));
+                                navigate('/checkout');
+                              }}
+                            >
+                              Đặt ngay <ChevronRight size={16} />
+                            </button>
                           </article>
                         );
                       });

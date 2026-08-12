@@ -9,7 +9,8 @@ import {
   Zap,
   RotateCcw,
   Star,
-  ShieldCheck
+  ShieldCheck,
+  Ticket
 } from 'lucide-react';
 import { getCart, updateCartQty, removeFromCart } from '../utils/cart';
 import type { CartItem } from '../utils/cart';
@@ -78,102 +79,7 @@ const CartPage = () => {
   const [promo, setPromo] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
 
-  // Shipping Fee State
-  const [provinces, setProvinces] = useState<any[]>([]);
-  const [, setDistricts] = useState<any[]>([]);
-  const [wards, setWards] = useState<any[]>([]);
-  
-  const [selectedProvince, setSelectedProvince] = useState('');
-  const [selectedDistrict, setSelectedDistrict] = useState('');
-  const [selectedWard, setSelectedWard] = useState('');
-  
-  const [shippingFee, setShippingFee] = useState<number>(0);
-
-  // Fetch Provinces (Cas AddressKit API via proxy - 2025-07-01)
-  useEffect(() => {
-    fetch('/api/cas/address-kit/2025-07-01/provinces')
-      .then(res => res.json())
-      .then(data => {
-        const list = data?.provinces || (Array.isArray(data) ? data : []);
-        setProvinces(list.map((p: any) => ({ id: p.code, name: p.name })));
-      })
-      .catch(console.error);
-  }, []);
-
-  // Fetch Communes (Cas AddressKit API via proxy - 2025-07-01)
-  useEffect(() => {
-    if (selectedProvince) {
-      fetch(`/api/cas/address-kit/2025-07-01/provinces/${selectedProvince}/communes`)
-        .then(res => res.json())
-        .then(data => {
-          const list = data?.communes || (Array.isArray(data) ? data : []);
-          if (list.length > 0) {
-            setWards(list.map((c: any) => ({ id: c.code, name: c.name })));
-            setDistricts([{ id: 'default', name: 'Toàn khu vực' }]);
-            setSelectedDistrict('default');
-            setSelectedWard('');
-          } else {
-            setWards([]);
-            setDistricts([]);
-          }
-        })
-        .catch(console.error);
-    } else {
-      setDistricts([]);
-      setWards([]);
-    }
-  }, [selectedProvince]);
-
-  // Fetch Shipping Fee
-  useEffect(() => {
-    if (selectedDistrict && selectedWard) {
-      const totalWeight = items.reduce((acc, item) => acc + 250 * item.qty, 0);
-      const insuranceValue = items.reduce((acc, item) => acc + item.price * item.qty, 0);
-
-      const provinceObj = provinces.find(p => p.id === selectedProvince);
-      const provinceName = provinceObj ? provinceObj.name : '';
-      const wardObj = wards.find(w => w.id === selectedWard);
-      const wardName = wardObj ? wardObj.name : '';
-
-      fetch(`${MEDUSA_BACKEND_URL}/store/ghn/fee`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-publishable-api-key': PUBLISHABLE_KEY
-        },
-        body: JSON.stringify({
-          from_district_id: 1442,
-          from_ward_code: "21211",
-          service_type_id: 2, // GHN Express
-          to_district_id: parseInt(selectedDistrict) || 1442,
-          to_ward_code: selectedWard,
-          province_name: provinceName,
-          ward_name: wardName,
-          height: 10,
-          length: 15,
-          weight: totalWeight || 250,
-          width: 10,
-          insurance_value: insuranceValue > 5000000 ? 5000000 : insuranceValue,
-          cod_failed_amount: 2000,
-          coupon: null
-        })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.data?.total) {
-          setShippingFee(data.data.total);
-        } else {
-          setShippingFee(0);
-        }
-      })
-      .catch((err) => {
-        console.error(err);
-        setShippingFee(0);
-      });
-    } else {
-      setShippingFee(0);
-    }
-  }, [selectedDistrict, selectedWard, items, provinces, wards, selectedProvince]);
+  const shippingFee = 0;
 
   const updateQty = (id: string, delta: number) => {
     const updated = items.map(item => {
@@ -201,9 +107,8 @@ const CartPage = () => {
 
   const itemCount = items.reduce((sum, i) => sum + i.qty, 0);
   const subtotal = items.reduce((sum, i) => sum + i.price * i.qty, 0);
-  const tax = Math.round(subtotal * 0.08);
   const discount = promoApplied ? PROMO_DISCOUNT : 0;
-  const total = subtotal + tax + shippingFee - discount;
+  const total = subtotal + shippingFee - discount;
 
 
   return (
@@ -328,95 +233,67 @@ const CartPage = () => {
                 </div>
               </div>
 
-              <aside className="cart-summary">
-                <h3>Tóm tắt đơn hàng</h3>
+              <aside className="cart-summary" style={{ background: '#fff', borderRadius: '8px', padding: '16px', boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)', alignSelf: 'flex-start', position: 'sticky', top: '90px' }}>
+                <h3 style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '16px', color: '#111' }}>Thông tin đơn hàng</h3>
 
-                <div className="promo-input">
-                  <input
-                    type="text"
-                    placeholder="Mã giảm giá"
-                    value={promo}
-                    onChange={(e) => setPromo(e.target.value)}
-                  />
-                  <button onClick={applyPromo}>Áp dụng</button>
+                {/* Promo Box */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8f9fa', padding: '12px 16px', borderRadius: '8px', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Ticket size={20} fill="#2563eb" color="#2563eb" style={{ transform: 'rotate(-45deg)' }} />
+                    <span style={{ fontSize: '14px', color: '#333' }}>Áp dụng mã giảm giá</span>
+                  </div>
+                  <button onClick={applyPromo} style={{ background: '#eff6ff', color: '#2563eb', border: 'none', padding: '4px 16px', borderRadius: '16px', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>Chọn</button>
                 </div>
 
-                <div style={{ marginBottom: 'var(--s4)' }}>
-                  <p style={{ fontSize: '12px', fontWeight: 600, marginBottom: '8px', color: 'var(--fg-mute)' }}>TÍNH PHÍ VẬN CHUYỂN (GHN)</p>
-                  <select 
-                    style={{ width: '100%', padding: '10px', marginBottom: '8px', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '14px', background: 'var(--bg)' }}
-                    value={selectedProvince} onChange={e => setSelectedProvince(e.target.value)}
-                  >
-                    <option value="">Chọn Tỉnh/Thành phố</option>
-                    {provinces.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
-                  <select 
-                    style={{ width: '100%', padding: '10px', borderRadius: '4px', border: '1px solid var(--border)', fontSize: '14px', background: 'var(--bg)' }}
-                    value={selectedWard} onChange={e => setSelectedWard(e.target.value)}
-                    disabled={!selectedProvince}
-                  >
-                    <option value="">Chọn Phường/Xã</option>
-                    {wards.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-                  </select>
-                </div>
-
-                <div className="cart-line">
-                  <span>Tạm tính · {itemCount} sản phẩm</span>
-                  <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{subtotal.toLocaleString('vi-VN')}đ</span>
-                </div>
-                <div className="cart-line">
-                  <span>Phí vận chuyển</span>
-                  {shippingFee > 0 ? (
-                    <span style={{ color: 'var(--ink)', fontWeight: 600 }}>{shippingFee.toLocaleString('vi-VN')}đ</span>
-                  ) : (
-                    <span style={{ color: 'var(--emerald)', fontWeight: 600 }}>Chưa tính</span>
+                {/* Summary Lines */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#444' }}>
+                    <span>Số lượng sản phẩm</span>
+                    <span style={{ fontWeight: 600, color: '#111' }}>{itemCount}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#444' }}>
+                    <span>Tổng tiền hàng</span>
+                    <span style={{ fontWeight: 600, color: '#111' }}>{subtotal.toLocaleString('vi-VN')}đ</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#444' }}>
+                    <span>Phí vận chuyển</span>
+                    <span style={{ fontWeight: 600, color: '#111' }}>{shippingFee > 0 ? `${shippingFee.toLocaleString('vi-VN')}đ` : 'Miễn phí'}</span>
+                  </div>
+                  {promoApplied && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#444' }}>
+                      <span>Khuyến mãi</span>
+                      <span style={{ fontWeight: 600, color: '#2563eb' }}>−{discount.toLocaleString('vi-VN')}đ</span>
+                    </div>
                   )}
                 </div>
-                <div className="cart-line">
-                  <span>Thuế ước tính (8%)</span>
-                  <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{tax.toLocaleString('vi-VN')}đ</span>
-                </div>
-                {promoApplied && (
-                  <div className="cart-line">
-                    <span>Khuyến mãi · {PROMO_CODE}</span>
-                    <span style={{ color: 'var(--rose)', fontWeight: 600 }}>−{discount.toLocaleString('vi-VN')}đ</span>
+
+                <div style={{ height: '1px', background: '#eaeaea', margin: '20px 0' }}></div>
+
+                {/* Total */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '14px', color: '#111', textTransform: 'uppercase' }}>TỔNG TIỀN</div>
+                    <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>(Đã bao gồm VAT và được làm tròn)</div>
                   </div>
-                )}
+                  <div style={{ fontWeight: 700, fontSize: '18px', color: '#2563eb' }}>{total.toLocaleString('vi-VN')}đ</div>
+                </div>
 
-                <div className="cart-line is-total"><span>Tổng cộng</span><span>{total.toLocaleString('vi-VN')}đ</span></div>
-
-
+                {/* Action */}
                 {validationErrors.length > 0 ? (
                   <button 
-                    className="btn btn--block" 
-                    style={{ 
-                      background: '#ef4444', 
-                      color: '#fff', 
-                      cursor: 'not-allowed',
-                      opacity: 0.8
-                    }} 
+                    style={{ width: '100%', background: '#ef4444', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', fontWeight: 600, cursor: 'not-allowed', opacity: 0.8 }} 
                     disabled
                   >
                     Vui lòng sửa lỗi tồn kho
                   </button>
                 ) : (
-                  <Link to="/checkout" className="btn btn--indigo btn--block">Tiến hành thanh toán <ChevronRight size={18} style={{marginLeft: '4px'}}/></Link>
+                  <Link to="/checkout" style={{ display: 'block', textDecoration: 'none' }}>
+                    <button style={{ width: '100%', background: '#2563eb', color: '#fff', border: 'none', padding: '12px', borderRadius: '8px', cursor: 'pointer', textAlign: 'center' }}>
+                      <div style={{ fontSize: '15px', fontWeight: 600, textTransform: 'uppercase' }}>MUA NGAY ({itemCount})</div>
+                      <div style={{ fontSize: '12px', fontWeight: 400, marginTop: '2px' }}>Giao nhanh từ 2 giờ hoặc nhận tại cửa hàng</div>
+                    </button>
+                  </Link>
                 )}
-
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 'var(--s3)', marginTop: 'var(--s5)', flexWrap: 'wrap' }}>
-                  {['VISA', 'MASTERCARD', 'AMEX', 'PAYPAL', 'APPLE PAY'].map((method) => (
-                    <span
-                      key={method}
-                      style={{ fontSize: '11px', color: 'var(--fg-mute)', padding: '6px 10px', background: 'var(--paper)', borderRadius: '4px' }}
-                    >
-                      {method}
-                    </span>
-                  ))}
-                </div>
-
-                <p style={{ marginTop: 'var(--s5)', fontSize: '11px', color: 'var(--fg-mute)', textAlign: 'center', lineHeight: 1.6 }}>
-                   <ShieldCheck size={12} style={{display: 'inline', verticalAlign: 'middle', marginRight: '4px'}}/> Giao dịch <Link to="/checkout" style={{ color: 'inherit', textDecoration: 'underline' }}>thanh toán</Link> được mã hoá · Bảo mật SSL. Thông tin thanh toán không bao giờ được lưu trữ trên máy chủ của chúng tôi.
-                </p>
               </aside>
 
             </div>

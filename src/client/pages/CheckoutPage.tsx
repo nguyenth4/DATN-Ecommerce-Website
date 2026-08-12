@@ -208,10 +208,6 @@ const CheckoutPage = () => {
     }
   };
 
-  const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  const isGuestQuery = searchParams.get('guest') === 'true';
-
   useEffect(() => {
     const checkAuthAndProfile = async () => {
       setIsLoadingProfile(true);
@@ -220,15 +216,12 @@ const CheckoutPage = () => {
         await fetchCustomerProfile();
       } else {
         setIsLoggedIn(false);
-        if (isGuestQuery) {
-          setIsGuestCheckout(true);
-          setAddressMode('new');
-        }
+        navigate('/login?redirect=/checkout');
       }
       setIsLoadingProfile(false);
     };
     checkAuthAndProfile();
-  }, [isGuestQuery]);
+  }, [navigate]);
 
   // Inline Login Handler
   const handleInlineLogin = async (e: React.FormEvent) => {

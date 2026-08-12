@@ -1,8 +1,19 @@
-import { Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import ClientRoutes from './client/routes/index';
 import { ThemeProvider } from './shared/components/ThemeProvider';
 import { Toaster } from 'react-hot-toast';
 import './client/styles/custom.css';
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
 
 function App() {
   return (
@@ -19,6 +30,7 @@ function App() {
           }
         }}
       />
+      <ScrollToTop />
       <Routes>
         <Route path="/*" element={<ClientRoutes />} />
       </Routes>

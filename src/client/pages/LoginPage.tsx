@@ -246,24 +246,8 @@ const LoginPage = () => {
                 Vui lòng đăng nhập để tiến hành thanh toán đơn hàng
               </div>
               <p style={{ margin: 0, fontSize: '0.8rem', color: '#4338ca' }}>
-                Đăng nhập để sử dụng địa chỉ giao hàng đã lưu và thanh toán qua ví.
+                Đăng nhập để sử dụng địa chỉ giao hàng đã lưu và thanh toán an toàn.
               </p>
-              <Link 
-                to="/checkout?guest=true"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '0.825rem',
-                  fontWeight: 600,
-                  color: '#4f46e5',
-                  textDecoration: 'underline',
-                  marginTop: '4px',
-                  cursor: 'pointer'
-                }}
-              >
-                Hoặc mua dạng khách (Guest Checkout) không cần tài khoản →
-              </Link>
             </div>
           )}
 

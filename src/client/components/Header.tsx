@@ -312,15 +312,22 @@ const Header = () => {
 
       {/* Header Wrapper to keep both rows sticky together */}
       <div className="header-wrapper" style={{ position: 'sticky', top: 0, zIndex: 50, background: 'var(--paper)', borderBottom: '1px solid var(--rule)' }}>
-        {/* Header Top Row */}
-        <header className="site-header" style={{ borderBottom: '1px solid var(--rule)' }}>
-          <div className="container">
-            <Link to="/" className="brand">
+        {/* Header Row */}
+        <header className="site-header" style={{ borderBottom: 'none' }}>
+          <div className="container" style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+            <Link to="/" className="brand" style={{ flexShrink: 0 }}>
               <span className="brand-mark">S</span>
               Sprylo
             </Link>
 
-            <form className="search" role="search" onSubmit={handleSearch}>
+            <nav className="main-nav" aria-label="Primary" style={{ display: 'flex', gap: '1.5rem', flex: 1 }}>
+              <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>Trang chủ</NavLink>
+              <NavLink to="/products" className={({ isActive }) => isActive ? 'active' : ''}>Điện thoại</NavLink>
+              <NavLink to="/cart" className={({ isActive }) => isActive ? 'active' : ''}>Giỏ hàng</NavLink>
+              <NavLink to="/contact" className={({ isActive }) => isActive ? 'active' : ''}>Liên hệ</NavLink>
+            </nav>
+
+            <form className="search" role="search" onSubmit={handleSearch} style={{ flex: 1, maxWidth: '300px' }}>
               <input
                 type="text"
                 placeholder="Tìm kiếm sản phẩm, thương hiệu, danh mục..."
@@ -384,23 +391,6 @@ const Header = () => {
             </div>
           </div>
         </header>
-
-        {/* Nav bar */}
-        <nav className="nav-bar" aria-label="Primary" style={{ position: 'static', borderBottom: 'none' }}>
-          <div className="container">
-            <Link to="/products" className="all-cats">
-              <Menu size={16} />
-              Tất cả danh mục
-            </Link>
-            <div className="main-nav">
-              <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>Trang chủ</NavLink>
-              <NavLink to="/products" className={({ isActive }) => isActive ? 'active' : ''}>Điện thoại</NavLink>
-              <NavLink to="/cart" className={({ isActive }) => isActive ? 'active' : ''}>Giỏ hàng</NavLink>
-              <NavLink to="/checkout" className={({ isActive }) => isActive ? 'active' : ''}>Thanh toán</NavLink>
-              <NavLink to="/contact" className={({ isActive }) => isActive ? 'active' : ''}>Liên hệ</NavLink>
-            </div>
-          </div>
-        </nav>
       </div>
 
       {/* Cart Drawer */}
