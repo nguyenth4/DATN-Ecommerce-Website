@@ -209,49 +209,28 @@ const AccountPage = () => {
     setPwLoading(true);
 
     try {
-      // Step 1: Re-authenticate with old password to verify it
-      const authRes = await fetch(`${MEDUSA_BACKEND_URL}/auth/customer/emailpass`, {
+      // Call custom secure password change endpoint
+      const updateRes = await authService.authFetch(`${MEDUSA_BACKEND_URL}/store/custom/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-publishable-api-key': (import.meta as any).env?.VITE_MEDUSA_PUBLISHABLE_KEY || 'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483',
         },
-        body: JSON.stringify({ email, password: oldPassword }),
-      });
-
-      if (!authRes.ok) {
-        setPwFieldErrors({ old: 'Mật khẩu hiện tại không đúng' });
-        setPwLoading(false);
-        return;
-      }
-
-      const authData = await authRes.json();
-      const tempToken = authData?.token;
-      if (!tempToken) {
-        setPwError('Không thể xác thực. Vui lòng thử lại.');
-        setPwLoading(false);
-        return;
-      }
-
-      // Step 2: Update password using the auth token
-      const updateRes = await fetch(`${MEDUSA_BACKEND_URL}/auth/customer/emailpass/update`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-publishable-api-key': (import.meta as any).env?.VITE_MEDUSA_PUBLISHABLE_KEY || 'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483',
-          'Authorization': `Bearer ${tempToken}`,
-        },
-        body: JSON.stringify({ email, password: newPassword }),
+        body: JSON.stringify({ oldPassword, newPassword }),
       });
 
       if (!updateRes.ok) {
         const body = await updateRes.json().catch(() => ({}));
-        setPwError(body?.message || 'Không thể cập nhật mật khẩu. Vui lòng thử lại.');
+        const msg = body?.message || 'Không thể cập nhật mật khẩu. Vui lòng thử lại.';
+        if (msg.includes('Mật khẩu hiện tại không đúng')) {
+          setPwFieldErrors({ old: 'Mật khẩu hiện tại không đúng' });
+        } else {
+          setPwError(msg);
+        }
         setPwLoading(false);
         return;
       }
 
-      // Step 3: Success — clear form
+      // Success — clear form
       setPwSuccess(true);
       setOldPassword('');
       setNewPassword('');

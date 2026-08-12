@@ -585,14 +585,9 @@ const CheckoutPage = () => {
         is_default_shipping: true,
         metadata: {
           province_id: selectedProvince,
-<<<<<<< HEAD
           district_id: resolvedGhnDistrictId ? resolvedGhnDistrictId.toString() : selectedDistrict,
           ward_id: selectedWard,
           ward_code: resolvedGhnWardCode || selectedWard
-=======
-          district_id: selectedDistrict,
-          ward_code: selectedWard
->>>>>>> c82413b (feat: implement checkout page with support for guest and authenticated user flows)
         }
       };
 
