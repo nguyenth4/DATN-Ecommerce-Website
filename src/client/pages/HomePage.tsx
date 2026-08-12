@@ -271,7 +271,8 @@ const HomePage = () => {
           <div className="cats-grid">
             {categories.slice(0, 5).map((c: any) => {
               return (
-                <Link key={c.id} to="/products" className="cat-tile" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <Link key={c.id} to="/products" className="cat-tile" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  {getCategoryIcon(c.name)}
                   <div className="name" style={{ fontSize: '16px' }}>{c.name}</div>
                 </Link>
               );

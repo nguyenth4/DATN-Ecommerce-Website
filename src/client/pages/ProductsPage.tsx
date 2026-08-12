@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { addToCart } from '../utils/cart';
 import { getCompareList, toggleCompareProduct } from '../utils/compare';
@@ -14,13 +14,6 @@ import { useProducts, useCategories } from '../services/product.service';
 import { ProductCardSkeleton } from '../components/ProductCardSkeleton';
 import toast from 'react-hot-toast';
 import './ProductsPage.css';
-
-// ── Format tiền VND ──────────────────────────────────────────────────────────
-const fmtVND = (n: number) => {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1) + ' triệu';
-  if (n >= 1_000) return (n / 1_000).toFixed(0) + 'K';
-  return n.toLocaleString('vi-VN') + 'đ';
-};
 
 const ProductsPage = () => {
   const navigate = useNavigate();

@@ -29,111 +29,12 @@ import ProductCard from '../components/ProductCard';
 const MEDUSA_BACKEND_URL = (import.meta as any).env?.VITE_MEDUSA_BACKEND_URL || 'http://localhost:9000';
 
 // Mock Orders Data
-const MOCK_ORDERS = [
-  {
-    id: 'SF2025-8843',
-    date: '24/05/2025 – 09:32',
-    total: 38015000,
-    paymentStatus: 'Đã thanh toán',
-    paymentMethod: 'Thẻ tín dụng (Visa/Mastercard)',
-    shippingStatus: 'Đang giao',
-    shippingAddress: {
-      name: 'Trần Ngọc',
-      phone: '0912 345 678',
-      address: 'Số 123 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh'
-    },
-    items: [
-      {
-        name: 'Sony WH-1000XM5',
-        variant: 'Đen',
-        quantity: 1,
-        price: 8490000,
-        image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=120&q=80'
-      },
-      {
-        name: 'iPhone 15 Pro Max 256GB',
-        variant: 'Titan Tự Nhiên',
-        quantity: 1,
-        price: 29525000,
-        image: 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=120&q=80'
-      }
-    ],
-    timeline: [
-      { time: '25/05/2025 – 10:45', desc: 'Đang trên đường giao hàng', sub: 'Nhân viên: Nguyễn Văn Tài – 0901 234 567', current: true },
-      { time: '25/05/2025 – 08:20', desc: 'Đã rời kho phân phối – TP.HCM', sub: 'Bưu cục: GHN Quận 1', done: true },
-      { time: '24/05/2025 – 14:30', desc: 'Đang đóng gói hàng hóa', sub: 'Nhân viên kho: Lê Văn B', done: true },
-      { time: '24/05/2025 – 10:15', desc: 'Đơn hàng đã được xác nhận', sub: 'Thanh toán trực tuyến thành công', done: true },
-      { time: '24/05/2025 – 09:32', desc: 'Đặt hàng thành công', sub: 'Mã giao dịch: #TXN-778932', done: true }
-    ],
-    statusStep: 3 // Ordered: 0, Confirmed: 1, Packing: 2, Shipping: 3, Delivered: 4
-  },
-  {
-    id: 'SF2025-4421',
-    date: '18/04/2025 – 14:15',
-    total: 3490000,
-    paymentStatus: 'Đã thanh toán',
-    paymentMethod: 'Ví MoMo',
-    shippingStatus: 'Đã nhận',
-    shippingAddress: {
-      name: 'Trần Ngọc',
-      phone: '0912 345 678',
-      address: 'Số 123 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh'
-    },
-    items: [
-      {
-        name: 'Bàn phím cơ Keychron K8 Pro',
-        variant: 'RGB Red Switch',
-        quantity: 1,
-        price: 3490000,
-        image: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=120&q=80'
-      }
-    ],
-    timeline: [
-      { time: '20/04/2025 – 15:30', desc: 'Đã giao hàng thành công', sub: 'Người nhận: Trần Ngọc', done: true },
-      { time: '20/04/2025 – 09:15', desc: 'Đang giao hàng', sub: 'Nhân viên: Nguyễn Văn Tài', done: true },
-      { time: '19/04/2025 – 11:20', desc: 'Đã rời kho phân phối', sub: 'Bưu cục: GHN Quận 1', done: true },
-      { time: '18/04/2025 – 15:40', desc: 'Đã hoàn tất đóng gói', sub: 'Nhân viên kho', done: true },
-      { time: '18/04/2025 – 14:15', desc: 'Đặt hàng thành công', sub: 'Mã giao dịch: #TXN-665243', done: true }
-    ],
-    statusStep: 4
-  },
-  {
-    id: 'SF2025-1102',
-    date: '02/03/2025 – 18:22',
-    total: 12500000,
-    paymentStatus: 'Chưa thanh toán',
-    paymentMethod: 'Thanh toán khi nhận hàng (COD)',
-    shippingStatus: 'Đã hủy',
-    shippingAddress: {
-      name: 'Trần Ngọc',
-      phone: '0912 345 678',
-      address: 'Số 123 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh'
-    },
-    items: [
-      {
-        name: 'Màn hình Dell UltraSharp U2422H 24" IPS',
-        variant: 'Đen',
-        quantity: 2,
-        price: 6250000,
-        image: 'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?w=120&q=80'
-      }
-    ],
-    timeline: [
-      { time: '03/03/2025 – 10:00', desc: 'Đã hủy đơn hàng', sub: 'Lý do: Khách hàng yêu cầu hủy đơn', done: true }
-    ],
-    statusStep: -1
-  }
-];
+const MOCK_ORDERS: any[] = [];
 
 // Read real orders from localStorage
 const getRealOrders = () => {
   try {
-    return JSON.parse(localStorage.getItem('sprylo_orders') || '[]') as Array<{
-      orderId: string;
-      items: Array<{ id: string; qty: number; name?: string; price?: number; img?: string; variant?: string }>;
-      created_at: number;
-      canceled?: boolean;
-    }>;
+    return JSON.parse(localStorage.getItem('sprylo_orders') || '[]') as any[];
   } catch {
     return [];
   }
@@ -302,6 +203,16 @@ const AccountPage = () => {
 
   useEffect(() => {
     fetchProfile();
+    try {
+      const orders = JSON.parse(localStorage.getItem('sprylo_orders') || '[]') as any[];
+      const filtered = orders.filter(o => o.orderId !== 'order_01KZVAZ2QRBPQC89BH2WV0Q26');
+      if (orders.length !== filtered.length) {
+        localStorage.setItem('sprylo_orders', JSON.stringify(filtered));
+        setRealOrders(filtered);
+      }
+    } catch (e) {
+      console.error(e);
+    }
   }, [navigate]);
 
   // Fetch Provinces on mount (Cas AddressKit API via proxy - 2025-07-01)
@@ -649,8 +560,39 @@ const AccountPage = () => {
     }
   };
 
-  const selectedOrder = MOCK_ORDERS.find(o => o.id === selectedOrderId);
   const selectedRealOrder = realOrders.find(o => o.orderId === selectedOrderId);
+  const selectedMockOrder = MOCK_ORDERS.find(o => o.id === selectedOrderId);
+  const selectedOrder = selectedRealOrder ? {
+    id: selectedRealOrder.orderId,
+    date: new Date(selectedRealOrder.created_at).toLocaleString('vi-VN'),
+    total: selectedRealOrder.items.reduce((s: number, i: any) => s + ((i as any).price || 0) * i.qty, 0) + (selectedRealOrder.shippingFee || 35000),
+    shippingFee: selectedRealOrder.shippingFee || 35000,
+    paymentStatus: selectedRealOrder.paymentMethod === 'cod' ? 'Chưa thanh toán' : 'Đã thanh toán',
+    shippingStatus: selectedRealOrder.canceled ? 'Đã hủy' : 'Đang xử lý',
+    shippingAddress: {
+      name: selectedRealOrder.customer?.fullName || 'Khách Hàng',
+      phone: selectedRealOrder.customer?.phoneNumber || '0000000000',
+      address: selectedRealOrder.address || 'Địa chỉ mặc định'
+    },
+    paymentMethod: selectedRealOrder.paymentMethod === 'cod' ? 'COD (Thanh toán khi nhận hàng)' : (selectedRealOrder.paymentMethod === 'wallet' ? 'Ví điện tử Sprylo' : 'VNPay'),
+    items: selectedRealOrder.items.map((item: any) => ({
+      name: item.name || 'Sản phẩm',
+      variant: item.variant || '',
+      quantity: item.qty,
+      price: item.price || 0,
+      image: item.img || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=120&q=80'
+    })),
+    timeline: selectedRealOrder.canceled ? [
+      { time: new Date(selectedRealOrder.created_at).toLocaleString('vi-VN'), desc: 'Đã đặt hàng', sub: '', done: true },
+      { time: new Date().toLocaleString('vi-VN'), desc: 'Đã hủy đơn hàng', sub: 'Lý do: Khách hàng yêu cầu hủy đơn', done: true }
+    ] : [
+      { time: new Date(selectedRealOrder.created_at).toLocaleString('vi-VN'), desc: 'Đã đặt hàng', sub: 'Chờ xác nhận từ cửa hàng', done: true }
+    ],
+    statusStep: selectedRealOrder.canceled ? -1 : 0
+  } : (selectedMockOrder ? {
+    ...selectedMockOrder,
+    shippingFee: 30000
+  } : null);
 
   // Cancel a real order and restore inventory
   const handleCancelOrder = async (orderId: string) => {
@@ -658,7 +600,7 @@ const AccountPage = () => {
     setCancelingOrderId(orderId);
     try {
       const order = realOrders.find(o => o.orderId === orderId);
-      const response = await fetch(`${MEDUSA_BACKEND_URL}/store/orders/${orderId}/cancel`, {
+      const response = await authService.authFetch(`${MEDUSA_BACKEND_URL}/store/orders/${orderId}/cancel`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: order?.items || [] }),
@@ -671,7 +613,7 @@ const AccountPage = () => {
         localStorage.setItem('sprylo_orders', JSON.stringify(updated));
         setRealOrders(updated);
         setSelectedOrderId(null);
-        alert('Đơn hàng đã được hủy thành công. Số lượng tồn kho đã được khôi phục.');
+        alert('Đơn hàng đã được hủy thành công.');
       } else {
         alert('Hủy đơn hàng thất bại. Vui lòng thử lại.');
       }
@@ -936,10 +878,12 @@ const AccountPage = () => {
                                 <td style={{ fontWeight: 700, color: 'var(--ink)', fontSize: '0.8rem' }}>{order.orderId}</td>
                                 <td>{new Date(order.created_at).toLocaleDateString('vi-VN')}</td>
                                 <td style={{ fontWeight: 700, color: 'var(--indigo)' }}>
-                                  {formatPrice(order.items.reduce((s, i) => s + ((i as any).price || 0) * i.qty, 0))}
+                                  {formatPrice(order.items.reduce((s: number, i: any) => s + ((i as any).price || 0) * i.qty, 0) + (order.shippingFee || 35000))}
                                 </td>
                                 <td>
-                                  <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>{'Đã thanh toán'}</span>
+                                  <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>
+                                    {order.paymentMethod === 'cod' ? 'Chưa thanh toán' : 'Đã thanh toán'}
+                                  </span>
                                 </td>
                                 <td>
                                   <span className={order.canceled ? 'status-badge badge-cancelled' : 'status-badge badge-pending'}>
@@ -1094,7 +1038,7 @@ const AccountPage = () => {
                           Sản phẩm trong đơn hàng
                         </div>
                         <div className="order-items-list">
-                          {selectedOrder.items.map((item, idx) => (
+                          {selectedOrder.items.map((item: any, idx: number) => (
                             <div className="order-item-row" key={idx}>
                               <img src={item.image} alt={item.name} className="order-item-img" />
                               <div className="order-item-info">
@@ -1117,7 +1061,7 @@ const AccountPage = () => {
                               Lịch sử vận chuyển
                             </div>
                             <div className="timeline" style={{ background: 'white', padding: '1rem', border: '1px solid var(--rule)', borderRadius: 'var(--r)' }}>
-                              {selectedOrder.timeline.map((event, idx) => (
+                              {(selectedOrder.timeline as any[]).map((event: any, idx) => (
                                 <div className="timeline-item" key={idx}>
                                   <div className={`timeline-dot ${event.current ? 'current' : ''} ${event.done ? 'done' : ''}`}>
                                     {event.current ? <i className="bi bi-truck"></i> : <i className="bi bi-check"></i>}
@@ -1134,11 +1078,11 @@ const AccountPage = () => {
                           <div className="order-totals-card" style={{ minWidth: '280px' }}>
                             <div className="total-row">
                               <span className="text-muted">Tạm tính:</span>
-                              <span style={{ fontWeight: 600 }}>{formatPrice(selectedOrder.total - 30000)}</span>
+                              <span style={{ fontWeight: 600 }}>{formatPrice(selectedOrder.total - selectedOrder.shippingFee)}</span>
                             </div>
                             <div className="total-row">
                               <span className="text-muted">Phí vận chuyển:</span>
-                              <span style={{ fontWeight: 600 }}>{formatPrice(30000)}</span>
+                              <span style={{ fontWeight: 600 }}>{formatPrice(selectedOrder.shippingFee)}</span>
                             </div>
                             <div className="total-row">
                               <span className="text-muted">Giảm giá:</span>

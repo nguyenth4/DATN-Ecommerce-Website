@@ -10,6 +10,13 @@ export default defineConfig({
         ssl: {
           rejectUnauthorized: false
         }
+      },
+      pool: {
+        min: 0,
+        max: 2,
+        idleTimeoutMillis: 5000,
+        createTimeoutMillis: 8000,
+        acquireConnectionTimeoutMillis: 8000
       }
     },
     http: {

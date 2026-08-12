@@ -4,24 +4,16 @@ import {
   Plus, 
   Minus, 
   X, 
-  ChevronRight, 
   ArrowLeft,
   Zap,
   RotateCcw,
   Star,
-  ShieldCheck,
   Ticket
 } from 'lucide-react';
 import { getCart, updateCartQty, removeFromCart } from '../utils/cart';
 import type { CartItem } from '../utils/cart';
 
-const PROMO_CODE = 'WELCOME20';
 const PROMO_DISCOUNT = 56000;
-const MEDUSA_BACKEND_URL =
-  (import.meta as any).env?.VITE_MEDUSA_BACKEND_URL || 'http://localhost:9000';
-const PUBLISHABLE_KEY =
-  (import.meta as any).env?.VITE_MEDUSA_PUBLISHABLE_KEY ||
-  'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483';
 
 const CartPage = () => {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -48,7 +40,7 @@ const CartPage = () => {
         );
         
         items.forEach(item => {
-          const product = products.find(p => p?.id === item.productId);
+          const product = products.find((p: any) => p?.id === item.productId);
           const variant = product?.variants?.find((v: any) => v.id === item.id);
           
           if (variant) {
@@ -76,7 +68,6 @@ const CartPage = () => {
     
     return () => { isMounted = false; };
   }, [items]);
-  const [promo, setPromo] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
 
   const shippingFee = 0;
@@ -100,9 +91,7 @@ const CartPage = () => {
   };
 
   const applyPromo = () => {
-    if (promo.trim().toUpperCase() === PROMO_CODE) {
-      setPromoApplied(true);
-    }
+    setPromoApplied(true);
   };
 
   const itemCount = items.reduce((sum, i) => sum + i.qty, 0);

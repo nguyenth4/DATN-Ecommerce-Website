@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   ShieldCheck, 
@@ -610,6 +610,7 @@ const CheckoutPage = () => {
         },
         paymentMethod: (useWallet && walletBalance >= (subtotal + shippingFee)) ? 'wallet' : paymentMethod,
         shippingMethod,
+        shippingFee,
         address: finalOrderAddress,
         addressComponents: addressMode === 'new' ? {
             province: provinceName,
@@ -648,7 +649,7 @@ const CheckoutPage = () => {
     }));
     
     try {
-      const response = await fetch(`${MEDUSA_BACKEND_URL}/store/checkout`, {
+      const response = await authService.authFetch(`${MEDUSA_BACKEND_URL}/store/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(orderData)
@@ -659,13 +660,27 @@ const CheckoutPage = () => {
       if (data.orderId) {
         const orderRecord = {
           orderId: data.orderId,
-          items: cartItems.map(i => ({ id: i.id, qty: i.qty })),
+          items: cartItems.map(i => ({
+            id: i.id,
+            qty: i.qty,
+            name: i.name,
+            price: i.price,
+            img: i.img,
+            variant: i.variant
+          })),
+          customer: orderData.customer,
+          address: orderData.address,
+          paymentMethod: orderData.paymentMethod,
+          shippingMethod: orderData.shippingMethod,
+          shippingFee: shippingFee,
           created_at: Date.now(),
         };
         // Keep last 10 orders in history
         const history: any[] = JSON.parse(localStorage.getItem('sprylo_orders') || '[]');
         history.unshift(orderRecord);
         localStorage.setItem('sprylo_orders', JSON.stringify(history.slice(0, 10)));
+        // Save as the last order for the OrderSuccessPage to display dynamically
+        localStorage.setItem('sprylo_last_order', JSON.stringify(orderRecord));
       }
 
       clearCart();

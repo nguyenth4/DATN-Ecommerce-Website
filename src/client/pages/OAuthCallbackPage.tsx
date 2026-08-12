@@ -117,7 +117,7 @@ const OAuthCallbackPage = () => {
             // Nếu backend tìm thấy customer trùng email và đã liên kết + cấp token mới:
             if (authIdentityData.customer && authIdentityData.token) {
               activeToken = authIdentityData.token;
-              saveToken(activeToken);
+              saveToken(activeToken!);
               customer = authIdentityData.customer;
               setMessage('Liên kết tài khoản thành công!');
               console.log('[OAuthCallbackPage] Tự động liên kết với tài khoản có sẵn:', customer);
