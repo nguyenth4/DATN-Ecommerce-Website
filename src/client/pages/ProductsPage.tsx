@@ -222,7 +222,9 @@ const ProductsPage = () => {
           <div className="container">
             <div>
 
-                <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', justifyContent: 'flex-end' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+                  <h2 style={{ fontSize: '24px', fontWeight: 'bold', fontFamily: 'var(--ff-display)', color: 'var(--ink)', margin: 0 }}>Sắp xếp theo</h2>
+                  <div style={{ display: 'flex', gap: '12px' }}>
                   <button
                     onClick={() => handleSortChange('createdAt')}
                     style={{
@@ -265,6 +267,7 @@ const ProductsPage = () => {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5h4"></path><path d="M11 9h7"></path><path d="M11 13h10"></path><path d="M3 17l3 3 3-3"></path><path d="M6 18V4"></path></svg>
                     Giá Cao - Thấp
                   </button>
+                  </div>
                 </div>
 
                 {isLoadingProducts ? (
