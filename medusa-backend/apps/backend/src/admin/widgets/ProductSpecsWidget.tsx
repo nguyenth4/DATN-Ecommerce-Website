@@ -21,10 +21,21 @@ export const ProductSpecsWidget = ({ data }: { data?: any }) => {
   const [subtitle, setSubtitle] = useState<string>("")
   const [videoUrl, setVideoUrl] = useState<string>("")
 
+  // Metrics & Ratings
+  const [rating, setRating] = useState<string>("5.0")
+  const [saleCount, setSaleCount] = useState<string>("0")
+  const [viewCount, setViewCount] = useState<string>("0")
+  const [reviewCount, setReviewCount] = useState<string>("0")
+
   // Tech Specs Key-Value pairs
   const [specs, setSpecs] = useState<SpecItem[]>([])
   const [newKey, setNewKey] = useState("")
   const [newValue, setNewValue] = useState("")
+
+  // Other Custom Metadata (like seller, etc.)
+  const [otherMeta, setOtherMeta] = useState<SpecItem[]>([])
+  const [newMetaKey, setNewMetaKey] = useState("")
+  const [newMetaValue, setNewMetaValue] = useState("")
 
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
@@ -42,27 +53,28 @@ export const ProductSpecsWidget = ({ data }: { data?: any }) => {
       setSubtitle(meta.subtitle || "")
       setVideoUrl(meta.video_url || "")
 
+      setRating(meta.rating !== undefined && meta.rating !== null ? String(meta.rating) : "5.0")
+      setSaleCount(meta.sale_count !== undefined && meta.sale_count !== null ? String(meta.sale_count) : "0")
+      setViewCount(meta.view_count !== undefined && meta.view_count !== null ? String(meta.view_count) : "0")
+      setReviewCount(meta.review_count !== undefined && meta.review_count !== null ? String(meta.review_count) : "0")
+
+      // Extract specifications
       const existingSpecs = meta.specifications || {}
       const specArray: SpecItem[] = Object.entries(existingSpecs).map(([key, value]) => ({
         key,
         value: typeof value === "object" ? JSON.stringify(value) : String(value),
       }))
+      setSpecs(specArray)
 
-      if (specArray.length > 0) {
-        setSpecs(specArray)
-      } else {
-        // Default template for mobile/electronics if no specs exist yet
-        setSpecs([
-          { key: "Màn hình", value: "6.7 inch OLED 120Hz" },
-          { key: "Chip CPU", value: "Apple A18 Pro 6 nhân" },
-          { key: "RAM", value: "8 GB" },
-          { key: "Bộ nhớ trong", value: "256 GB" },
-          { key: "Dung lượng pin", value: "4422 mAh (Sạc nhanh 30W)" },
-          { key: "Camera sau", value: "48MP + 48MP + 12MP" },
-          { key: "Camera trước", value: "12MP TrueDepth" },
-          { key: "Bảo hành", value: "12 tháng chính hãng" },
-        ])
-      }
+      // Extract other custom metadata keys
+      const managedKeys = ["brand", "subtitle", "video_url", "specifications", "rating", "sale_count", "view_count", "review_count"]
+      const otherArray: SpecItem[] = Object.entries(meta)
+        .filter(([key]) => !managedKeys.includes(key))
+        .map(([key, value]) => ({
+          key,
+          value: typeof value === "object" ? JSON.stringify(value) : String(value),
+        }))
+      setOtherMeta(otherArray)
     }
   }, [data])
 
@@ -83,6 +95,23 @@ export const ProductSpecsWidget = ({ data }: { data?: any }) => {
     setSpecs(updated)
   }
 
+  const handleAddOtherMeta = () => {
+    if (!newMetaKey.trim()) return
+    setOtherMeta([...otherMeta, { key: newMetaKey.trim(), value: newMetaValue.trim() }])
+    setNewMetaKey("")
+    setNewMetaValue("")
+  }
+
+  const handleRemoveOtherMeta = (index: number) => {
+    setOtherMeta(otherMeta.filter((_, i) => i !== index))
+  }
+
+  const handleOtherMetaChange = (index: number, field: "key" | "value", val: string) => {
+    const updated = [...otherMeta]
+    updated[index][field] = val
+    setOtherMeta(updated)
+  }
+
   const handleSave = async () => {
     if (!productId) return
     setLoading(true)
@@ -96,6 +125,18 @@ export const ProductSpecsWidget = ({ data }: { data?: any }) => {
       }
     })
 
+    // Convert other custom metadata back
+    const otherMetaRecord: Record<string, any> = {}
+    otherMeta.forEach((item) => {
+      if (item.key.trim()) {
+        try {
+          otherMetaRecord[item.key.trim()] = JSON.parse(item.value.trim())
+        } catch {
+          otherMetaRecord[item.key.trim()] = item.value.trim()
+        }
+      }
+    })
+
     const payload = {
       weight: parseFloat(weight) || 0,
       height: parseFloat(height) || 0,
@@ -103,9 +144,14 @@ export const ProductSpecsWidget = ({ data }: { data?: any }) => {
       length: parseFloat(length) || 0,
       metadata: {
         ...(data.metadata || {}),
+        ...otherMetaRecord,
         brand: brand.trim(),
         subtitle: subtitle.trim(),
         video_url: videoUrl.trim(),
+        rating: parseFloat(rating) || 5.0,
+        sale_count: parseInt(saleCount, 10) || 0,
+        view_count: parseInt(viewCount, 10) || 0,
+        review_count: parseInt(reviewCount, 10) || 0,
         specifications: specRecord,
       },
     }
@@ -120,7 +166,7 @@ export const ProductSpecsWidget = ({ data }: { data?: any }) => {
       })
 
       if (res.ok) {
-        setMessage({ type: "success", text: "Đã cập nhật thông số kỹ thuật & kích thước thành công!" })
+        setMessage({ type: "success", text: "Đã cập nhật toàn bộ thông số & siêu dữ liệu thành công!" })
       } else {
         const errData = await res.json().catch(() => ({}))
         setMessage({ type: "error", text: errData.message || "Cập nhật thất bại. Vui lòng thử lại." })
@@ -134,16 +180,16 @@ export const ProductSpecsWidget = ({ data }: { data?: any }) => {
   }
 
   return (
-    <Container className="p-6">
+    <Container className="p-6 my-6 border rounded-lg shadow-sm bg-white">
       <div className="flex items-center justify-between mb-4 border-b pb-3">
         <div>
-          <Heading level="h2">⚙️ Quản lý Thông Số Kỹ Thuật & Thuộc Tính Sản Phẩm (T-85)</Heading>
+          <Heading level="h2">⚡ Bộ Chỉnh Sửa Thông Số & Siêu Dữ Liệu Sản Phẩm (Custom Admin Metadata Editor)</Heading>
           <p className="text-sm text-gray-500 mt-1">
-            Chỉnh sửa cân nặng, kích thước, thương hiệu và bảng thông số kỹ thuật hiển thị ở Trang chi tiết sản phẩm Storefront.
+            Chỉnh sửa trực tiếp Trọng lượng, Kích thước, Đánh giá, Lượt bán, Video và Bảng Thông số Kỹ thuật (thay vì chỉ xem JSON).
           </p>
         </div>
         <Button variant="primary" onClick={handleSave} isLoading={loading}>
-          💾 Lưu Thông Số
+          💾 Lưu Thay Đổi
         </Button>
       </div>
 
@@ -162,11 +208,11 @@ export const ProductSpecsWidget = ({ data }: { data?: any }) => {
       {/* SECTION 1: PHYSICAL DIMENSIONS */}
       <div className="mb-6">
         <Heading level="h3" className="text-base font-semibold mb-3">
-          📦 Trọng Lượng & Kích Thước Vật Lý (GHN / GHTK Sync)
+          📦 Trọng Lượng & Kích Thước Vật Lý
         </Heading>
         <div className="grid grid-cols-4 gap-4">
           <div>
-            <Label className="text-xs text-gray-600 font-medium">Trọng lượng (gam)</Label>
+            <Label className="text-xs text-gray-600 font-medium">Trọng lượng (g)</Label>
             <Input
               type="number"
               value={weight}
@@ -204,18 +250,18 @@ export const ProductSpecsWidget = ({ data }: { data?: any }) => {
         </div>
       </div>
 
-      {/* SECTION 2: METADATA EXTRA INFO */}
+      {/* SECTION 2: METADATA EXTRA INFO & METRICS */}
       <div className="mb-6 border-t pt-4">
         <Heading level="h3" className="text-base font-semibold mb-3">
-          🏷️ Thông Tin Bổ Sung (Brand & Subtitle & Video)
+          🏷️ Thông Tin & Chỉ Số Sản Phẩm (Metadata)
         </Heading>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-4 mb-4">
           <div>
             <Label className="text-xs text-gray-600 font-medium">Thương hiệu (Brand)</Label>
             <Input
               value={brand}
               onChange={(e) => setBrand(e.target.value)}
-              placeholder="VD: Apple, Samsung, Xiaomi..."
+              placeholder="VD: Apple, Samsung..."
             />
           </div>
           <div>
@@ -223,7 +269,7 @@ export const ProductSpecsWidget = ({ data }: { data?: any }) => {
             <Input
               value={subtitle}
               onChange={(e) => setSubtitle(e.target.value)}
-              placeholder="VD: Titan Sa Mạc 256GB - VN/A"
+              placeholder="VD: Titan Sa Mạc 256GB"
             />
           </div>
           <div>
@@ -231,22 +277,62 @@ export const ProductSpecsWidget = ({ data }: { data?: any }) => {
             <Input
               value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
-              placeholder="https://www.youtube.com/embed/..."
+              placeholder="https://youtu.be/..."
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-4 gap-4">
+          <div>
+            <Label className="text-xs text-gray-600 font-medium">⭐ Đánh giá (Rating)</Label>
+            <Input
+              type="number"
+              step="0.1"
+              value={rating}
+              onChange={(e) => setRating(e.target.value)}
+              placeholder="4.9"
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-gray-600 font-medium">🔥 Lượt bán (Sale Count)</Label>
+            <Input
+              type="number"
+              value={saleCount}
+              onChange={(e) => setSaleCount(e.target.value)}
+              placeholder="220"
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-gray-600 font-medium">👁️ Lượt xem (View Count)</Label>
+            <Input
+              type="number"
+              value={viewCount}
+              onChange={(e) => setViewCount(e.target.value)}
+              placeholder="5200"
+            />
+          </div>
+          <div>
+            <Label className="text-xs text-gray-600 font-medium">💬 Số nhận xét (Review Count)</Label>
+            <Input
+              type="number"
+              value={reviewCount}
+              onChange={(e) => setReviewCount(e.target.value)}
+              placeholder="312"
             />
           </div>
         </div>
       </div>
 
       {/* SECTION 3: TECHNICAL SPECIFICATIONS (CRUD TABLE) */}
-      <div className="border-t pt-4">
+      <div className="border-t pt-4 mb-6">
         <div className="flex items-center justify-between mb-3">
           <Heading level="h3" className="text-base font-semibold">
-            📋 Bảng Thông Số Kỹ Thuật (Technical Specifications)
+            📋 Bảng Thông Số Kỹ Thuật (Specifications)
           </Heading>
           <Badge color="blue">{specs.length} Thông số</Badge>
         </div>
 
-        <div className="space-y-2 mb-4 max-h-[400px] overflow-y-auto pr-1">
+        <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto pr-1">
           {specs.map((item, idx) => (
             <div key={idx} className="flex items-center gap-3 bg-gray-50 p-2 rounded border border-gray-200">
               <div className="w-1/3">
@@ -276,7 +362,7 @@ export const ProductSpecsWidget = ({ data }: { data?: any }) => {
             </div>
           ))}
           {specs.length === 0 && (
-            <div className="text-center py-6 text-gray-400 text-sm">
+            <div className="text-center py-4 text-gray-400 text-sm">
               Chưa có thông số kỹ thuật nào. Thêm mới ở ô bên dưới.
             </div>
           )}
@@ -302,6 +388,74 @@ export const ProductSpecsWidget = ({ data }: { data?: any }) => {
           </div>
           <Button size="small" variant="secondary" onClick={handleAddSpec}>
             ➕ Thêm Mục
+          </Button>
+        </div>
+      </div>
+
+      {/* SECTION 4: OTHER CUSTOM METADATA */}
+      <div className="border-t pt-4">
+        <div className="flex items-center justify-between mb-3">
+          <Heading level="h3" className="text-base font-semibold">
+            ⚙️ Các Siêu Dữ Liệu Khác (Other Custom Metadata)
+          </Heading>
+          <Badge color="grey">{otherMeta.length} Mục</Badge>
+        </div>
+
+        <div className="space-y-2 mb-4 max-h-[200px] overflow-y-auto pr-1">
+          {otherMeta.map((item, idx) => (
+            <div key={idx} className="flex items-center gap-3 bg-gray-50 p-2 rounded border border-gray-200">
+              <div className="w-1/3">
+                <Input
+                  size="small"
+                  value={item.key}
+                  onChange={(e) => handleOtherMetaChange(idx, "key", e.target.value)}
+                  placeholder="Key (VD: seller)"
+                />
+              </div>
+              <div className="flex-1">
+                <Input
+                  size="small"
+                  value={item.value}
+                  onChange={(e) => handleOtherMetaChange(idx, "value", e.target.value)}
+                  placeholder="Value (Text hoặc JSON)"
+                />
+              </div>
+              <Button
+                size="small"
+                variant="danger"
+                onClick={() => handleRemoveOtherMeta(idx)}
+                title="Xóa mục này"
+              >
+                🗑️
+              </Button>
+            </div>
+          ))}
+          {otherMeta.length === 0 && (
+            <div className="text-center py-2 text-gray-400 text-sm">
+              Chưa có siêu dữ liệu tùy chỉnh nào khác.
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3 p-3 bg-gray-100 rounded border border-gray-300">
+          <div className="w-1/3">
+            <Input
+              size="small"
+              value={newMetaKey}
+              onChange={(e) => setNewMetaKey(e.target.value)}
+              placeholder="+ Key metadata mới"
+            />
+          </div>
+          <div className="flex-1">
+            <Input
+              size="small"
+              value={newMetaValue}
+              onChange={(e) => setNewMetaValue(e.target.value)}
+              placeholder="Giá trị metadata"
+            />
+          </div>
+          <Button size="small" variant="secondary" onClick={handleAddOtherMeta}>
+            ➕ Thêm Metadata
           </Button>
         </div>
       </div>
