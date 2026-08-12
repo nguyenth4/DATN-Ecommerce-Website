@@ -58,8 +58,32 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       // Update payment_status
       console.log(`[Checkout API] Updated payment_status to '${status}' for order: ${mockOrderId}`);
       
-      if (isWallet) {
-        console.log(`[Checkout API] Deducted from customer wallet for order: ${mockOrderId}`);
+      if (payload.use_wallet && payload.customer_id && payload.totalAmount) {
+        const db = req.scope.resolve("__pg_connection__");
+        const customerId = payload.customer_id;
+        const amount = payload.totalAmount;
+        
+        console.log(`[Checkout API] Deducting ${amount} from customer ${customerId} wallet for order: ${mockOrderId}`);
+        
+        try {
+          const walletRes = await db.raw(`SELECT id, balance FROM wallet WHERE customer_id = ?`, [customerId]);
+          const wallet = walletRes.rows[0];
+          
+          if (wallet && wallet.balance >= amount) {
+            await db.raw(`UPDATE wallet SET balance = balance - ?, updated_at = NOW() WHERE id = ?`, [amount, wallet.id]);
+            const txId = `tx_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+            await db.raw(`
+              INSERT INTO wallet_transaction (id, wallet_id, amount, type, description)
+              VALUES (?, ?, ?, 'deduction', ?)
+            `, [txId, wallet.id, amount, `Thanh toán đơn hàng ${mockOrderId}`]);
+            console.log(`[Checkout API] Wallet deducted successfully.`);
+          } else {
+            return res.status(400).json({ error: "Số dư ví không đủ để thanh toán." });
+          }
+        } catch (dbErr: any) {
+          console.error("[Checkout API] Wallet deduction error:", dbErr);
+          return res.status(500).json({ error: "Lỗi trừ tiền ví: " + dbErr.message });
+        }
       }
       
       // Emit order placed event to trigger GHN sync

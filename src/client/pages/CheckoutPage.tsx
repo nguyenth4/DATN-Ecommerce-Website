@@ -629,6 +629,7 @@ const CheckoutPage = () => {
         items: cartItems,
         use_wallet: useWallet,
         customer_id: customer?.id || undefined,
+        totalAmount: subtotal + shippingFee,
     };
 
     console.log("Placing order...", orderData);

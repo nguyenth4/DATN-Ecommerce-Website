@@ -1284,7 +1284,7 @@ const AccountPage = () => {
                   <div style={{ background: 'white', borderRadius: 'var(--r-lg)', border: '1px solid var(--rule)', padding: '1.8rem', boxShadow: 'var(--shadow-sm)' }}>
                     <div style={{ fontFamily: "var(--ff-display)", fontSize: '1.3rem', fontWeight: 700, marginBottom: '1.5rem', paddingBottom: '0.8rem', borderBottom: '1px solid var(--rule)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       Ví điện tử Sprylo
-                      <button className="btn btn-sm btn--ghost" onClick={() => walletService.topupMock(5000000, 'cus_demo_123').then(res => setWalletData(res.wallet))}>
+                      <button className="btn btn-sm btn--ghost" onClick={() => walletService.topupMock(5000000, customerId || 'cus_demo_123').then(res => setWalletData(res.wallet))}>
                         Nạp 5.000.000đ (Demo)
                       </button>
                     </div>
