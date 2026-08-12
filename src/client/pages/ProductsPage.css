@@ -55,21 +55,20 @@
   gap: 12px;
 }
 
-/* ── Compact card overrides for 5-column layout ─────────────────────────── */
+/* ── Card overrides for 5-column layout ─────────────────────────── */
 .shop-grid .product-card {
-  padding: 12px;
+  padding: var(--s4);
 }
 
 .shop-grid .product-card .img-wrap {
-  aspect-ratio: 4 / 3;
-  margin-bottom: 8px;
+  aspect-ratio: 1 / 1;
+  margin-bottom: var(--s4);
 }
 
 .shop-grid .product-card .name {
-  font-size: 12px;
+  font-size: var(--text-sm);
   line-height: 1.3;
-  margin-bottom: 3px;
-  /* Truncate to 2 lines */
+  margin-bottom: 4px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -77,40 +76,40 @@
 }
 
 .shop-grid .product-card .stock {
-  font-size: 10px;
-  margin-bottom: 3px;
+  font-size: 11px;
+  margin-bottom: 4px;
 }
 
 .shop-grid .product-card .price .now {
-  font-size: 13px;
+  font-size: var(--text-md);
 }
 
 .shop-grid .product-card .price .was {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .shop-grid .product-card .stars {
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .shop-grid .product-card .stars .count {
-  font-size: 10px;
+  font-size: 11px;
 }
 
 .shop-grid .product-card .btn {
-  padding: 7px 8px;
-  font-size: 12px;
-  margin-top: 8px;
+  padding: 10px;
+  font-size: var(--text-sm);
+  margin-top: var(--s3);
 }
 
 .shop-grid .product-card .wishlist {
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
 }
 
 .shop-grid .product-card .badge {
-  font-size: 9px;
-  padding: 3px 7px;
+  font-size: 10px;
+  padding: 4px 10px;
 }
 
 .pagination {
