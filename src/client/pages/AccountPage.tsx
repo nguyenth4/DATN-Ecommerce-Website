@@ -40,6 +40,11 @@ const getRealOrders = () => {
   }
 };
 
+const formatOrderId = (id: string) => {
+  if (!id) return '';
+  return id.replace(/^order_/, '');
+};
+
 const AccountPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -49,6 +54,10 @@ const AccountPage = () => {
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [realOrders, setRealOrders] = useState(getRealOrders);
   const [cancelingOrderId, setCancelingOrderId] = useState<string | null>(null);
+  const [cancelModalOrderId, setCancelModalOrderId] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState<string>('');
+  const [customCancelReason, setCustomCancelReason] = useState<string>('');
+
 
   // Profile form state
   const [firstName, setFirstName] = useState('');
@@ -584,7 +593,7 @@ const AccountPage = () => {
     })),
     timeline: selectedRealOrder.canceled ? [
       { time: new Date(selectedRealOrder.created_at).toLocaleString('vi-VN'), desc: 'Đã đặt hàng', sub: '', done: true },
-      { time: new Date().toLocaleString('vi-VN'), desc: 'Đã hủy đơn hàng', sub: 'Lý do: Khách hàng yêu cầu hủy đơn', done: true }
+      { time: new Date().toLocaleString('vi-VN'), desc: 'Đã hủy đơn hàng', sub: `Lý do: ${selectedRealOrder.cancelReason || 'Khách hàng yêu cầu hủy đơn'}`, done: true }
     ] : [
       { time: new Date(selectedRealOrder.created_at).toLocaleString('vi-VN'), desc: 'Đã đặt hàng', sub: 'Chờ xác nhận từ cửa hàng', done: true }
     ],
@@ -595,8 +604,7 @@ const AccountPage = () => {
   } : null);
 
   // Cancel a real order and restore inventory
-  const handleCancelOrder = async (orderId: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn hủy đơn hàng này? Hành động này không thể hoàn tác.')) return;
+  const handleCancelOrder = async (orderId: string, reason: string) => {
     setCancelingOrderId(orderId);
     try {
       const order = realOrders.find(o => o.orderId === orderId);
@@ -608,11 +616,12 @@ const AccountPage = () => {
       if (response.ok) {
         // Mark order as canceled in localStorage
         const updated = realOrders.map(o =>
-          o.orderId === orderId ? { ...o, canceled: true } : o
+          o.orderId === orderId ? { ...o, canceled: true, cancelReason: reason } : o
         );
         localStorage.setItem('sprylo_orders', JSON.stringify(updated));
         setRealOrders(updated);
         setSelectedOrderId(null);
+        setCancelModalOrderId(null);
         alert('Đơn hàng đã được hủy thành công.');
       } else {
         alert('Hủy đơn hàng thất bại. Vui lòng thử lại.');
@@ -624,6 +633,7 @@ const AccountPage = () => {
       setCancelingOrderId(null);
     }
   };
+
 
   const getShippingBadgeClass = (status: string) => {
     switch (status) {
@@ -707,9 +717,11 @@ const AccountPage = () => {
                   onClick={() => { setActiveTab('orders'); setSelectedOrderId(null); }}
                 >
                   <Receipt size={18} style={{marginRight: '12px'}}/> Đơn hàng của tôi
-                  <span className="badge-count" style={{ marginLeft: 'auto', position: 'static', background: 'var(--indigo)', color: 'white', padding: '1px 6px', borderRadius: '10px', fontSize: '0.68rem' }}>
-                    {MOCK_ORDERS.length}
-                  </span>
+                  {realOrders.length > 0 && (
+                    <span className="badge-count" style={{ marginLeft: 'auto', position: 'static', background: 'var(--indigo)', color: 'white', padding: '2px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: 600 }}>
+                      {realOrders.length}
+                    </span>
+                  )}
                 </div>
                 <div 
                   className={`account-nav-item ${activeTab === 'addresses' ? 'active' : ''}`}
@@ -875,7 +887,7 @@ const AccountPage = () => {
                             {/* Real orders from localStorage */}
                             {realOrders.map((order) => (
                               <tr key={order.orderId} style={{ opacity: order.canceled ? 0.6 : 1 }}>
-                                <td style={{ fontWeight: 700, color: 'var(--ink)', fontSize: '0.8rem' }}>{order.orderId}</td>
+                                <td style={{ fontWeight: 700, color: 'var(--ink)', fontSize: '0.8rem' }}>#{formatOrderId(order.orderId)}</td>
                                 <td>{new Date(order.created_at).toLocaleDateString('vi-VN')}</td>
                                 <td style={{ fontWeight: 700, color: 'var(--indigo)' }}>
                                   {formatPrice(order.items.reduce((s: number, i: any) => s + ((i as any).price || 0) * i.qty, 0) + (order.shippingFee || 35000))}
@@ -891,23 +903,28 @@ const AccountPage = () => {
                                     {order.canceled ? ' Đã hủy' : ' Đang xử lý'}
                                   </span>
                                 </td>
-                                <td style={{ textAlign: 'right', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                  <button
-                                    className="btn btn--sm btn--indigo"
-                                    onClick={() => setSelectedOrderId(order.orderId)}
-                                  >
-                                    Chi tiết
-                                  </button>
-                                  {!order.canceled && (
+                                <td style={{ textAlign: 'right' }}>
+                                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                                    {!order.canceled && (
+                                      <button
+                                        className="btn-order-action btn-order-cancel"
+                                        onClick={() => {
+                                          setCancelModalOrderId(order.orderId);
+                                          setCancelReason('Thay đổi ý định mua sắm / Không còn nhu cầu');
+                                          setCustomCancelReason('');
+                                        }}
+                                        disabled={cancelingOrderId === order.orderId}
+                                      >
+                                        <i className="bi bi-x-circle"></i> Hủy đơn
+                                      </button>
+                                    )}
                                     <button
-                                      className="btn btn--sm"
-                                      style={{ background: '#fee2e2', color: '#dc2626', border: 'none' }}
-                                      onClick={() => handleCancelOrder(order.orderId)}
-                                      disabled={cancelingOrderId === order.orderId}
+                                      className="btn-order-action btn-order-detail"
+                                      onClick={() => setSelectedOrderId(order.orderId)}
                                     >
-                                      {cancelingOrderId === order.orderId ? 'Đang hủy...' : 'Hủy đơn'}
+                                      <i className="bi bi-eye"></i> Chi tiết
                                     </button>
-                                  )}
+                                  </div>
                                 </td>
                               </tr>
                             ))}
@@ -925,12 +942,12 @@ const AccountPage = () => {
                                     <i className={getShippingBadgeIcon(order.shippingStatus)}></i> {order.shippingStatus}
                                   </span>
                                 </td>
-                                <td style={{ textAlign: 'right' }}>
+                                <td style={{ textAlign: 'right', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                                   <button 
-                                    className="btn btn--sm btn--indigo" 
+                                    className="btn-order-action btn-order-detail" 
                                     onClick={() => setSelectedOrderId(order.id)}
                                   >
-                                    Chi tiết
+                                    <i className="bi bi-eye"></i> Chi tiết
                                   </button>
                                 </td>
                               </tr>
@@ -950,7 +967,7 @@ const AccountPage = () => {
                         <div className="order-details-header">
                           <div>
                             <h2 style={{ fontFamily: 'var(--ff-display)', fontSize: '1.5rem', fontWeight: 800 }}>
-                              Chi tiết đơn hàng {selectedOrder.id}
+                              Chi tiết đơn hàng #{formatOrderId(selectedOrder.id)}
                             </h2>
                             <p className="text-xs text-muted" style={{ marginTop: '0.2rem' }}>
                               Đặt lúc {selectedOrder.date}
@@ -1097,12 +1114,16 @@ const AccountPage = () => {
                           {selectedRealOrder && !selectedRealOrder.canceled && (
                             <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--rule)', display: 'flex', justifyContent: 'flex-end' }}>
                               <button
-                                className="btn"
-                                style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', fontWeight: 600, padding: '0.5rem 1.5rem', borderRadius: '8px', cursor: 'pointer' }}
-                                onClick={() => handleCancelOrder(selectedOrderId!)}
+                                className="btn-order-action btn-order-cancel"
+                                style={{ padding: '0.6rem 1.5rem', borderRadius: '8px', fontSize: '0.85rem' }}
+                                onClick={() => {
+                                  setCancelModalOrderId(selectedOrderId!);
+                                  setCancelReason('Thay đổi ý định mua sắm / Không còn nhu cầu');
+                                  setCustomCancelReason('');
+                                }}
                                 disabled={cancelingOrderId === selectedOrderId}
                               >
-                                {cancelingOrderId === selectedOrderId ? '⏳ Đang hủy đơn...' : '❌ Hủy đơn hàng này'}
+                                <i className="bi bi-x-circle" style={{ fontSize: '1rem' }}></i> Hủy đơn hàng này
                               </button>
                             </div>
                           )}
@@ -1613,6 +1634,110 @@ const AccountPage = () => {
               <div className="address-modal-footer">
                 <button className="btn btn--ghost" onClick={() => setShowAddressModal(false)}>Hủy</button>
                 <button className="btn btn--indigo" onClick={handleSaveAddress}>Lưu địa chỉ</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* CANCELLATION REASON MODAL */}
+      <AnimatePresence>
+        {cancelModalOrderId && (
+          <div className="address-modal-overlay">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="address-modal-container"
+              style={{ maxWidth: '500px' }}
+            >
+              <div className="address-modal-header" style={{ borderBottom: '1px solid var(--rule)' }}>
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#dc2626' }}>
+                  <i className="bi bi-x-circle-fill"></i> Lý do hủy đơn hàng
+                </h3>
+                <button className="close-btn" onClick={() => setCancelModalOrderId(null)}>
+                  <i className="bi bi-x-lg"></i>
+                </button>
+              </div>
+              <div className="address-modal-body" style={{ padding: '1.5rem' }}>
+                <p style={{ fontSize: '0.875rem', color: 'var(--fg-soft)', marginBottom: '1.2rem', lineHeight: 1.5 }}>
+                  Vui lòng chọn lý do hủy đơn hàng <strong>#{formatOrderId(cancelModalOrderId)}</strong>. Ý kiến của bạn giúp chúng tôi cải thiện dịch vụ tốt hơn.
+                </p>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                  {[
+                    "Thay đổi ý định mua sắm / Không còn nhu cầu",
+                    "Tìm thấy sản phẩm với giá rẻ hơn ở nơi khác",
+                    "Thời gian giao hàng dự kiến quá lâu",
+                    "Muốn thay đổi thông tin đơn hàng (địa chỉ, số điện thoại, sản phẩm...)",
+                    "Lý do khác"
+                  ].map((reason) => (
+                    <label 
+                      key={reason} 
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'flex-start', 
+                        gap: '10px', 
+                        fontSize: '0.9rem', 
+                        cursor: 'pointer', 
+                        fontWeight: 500, 
+                        color: 'var(--ink)',
+                        padding: '0.8rem 1rem',
+                        border: cancelReason === reason ? '1.5px solid var(--indigo)' : '1.5px solid var(--rule)',
+                        borderRadius: '10px',
+                        background: cancelReason === reason ? 'var(--indigo-soft)' : 'white',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <input 
+                        type="radio" 
+                        name="cancelReason" 
+                        value={reason}
+                        checked={cancelReason === reason}
+                        onChange={() => setCancelReason(reason)}
+                        style={{ accentColor: 'var(--indigo)', marginTop: '3px' }}
+                      />
+                      <span>{reason}</span>
+                    </label>
+                  ))}
+                </div>
+
+                {cancelReason === "Lý do khác" && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    style={{ marginTop: '1rem' }}
+                  >
+                    <label className="form-label" style={{ marginBottom: '0.4rem', fontSize: '0.78rem' }}>Chi tiết lý do khác *</label>
+                    <textarea 
+                      className="form-control" 
+                      rows={3} 
+                      placeholder="Vui lòng nhập lý do cụ thể..." 
+                      value={customCancelReason}
+                      onChange={(e) => setCustomCancelReason(e.target.value)}
+                      style={{ borderRadius: '8px', resize: 'none' }}
+                    />
+                  </motion.div>
+                )}
+              </div>
+              <div className="address-modal-footer">
+                <button className="btn btn--ghost" onClick={() => setCancelModalOrderId(null)}>Quay lại</button>
+                <button 
+                  className="btn" 
+                  style={{ background: '#dc2626', color: 'white', border: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  onClick={() => {
+                    const finalReason = cancelReason === 'Lý do khác' ? customCancelReason : cancelReason;
+                    if (!finalReason || !finalReason.trim()) {
+                      alert("Vui lòng chọn hoặc nhập lý do hủy đơn hàng.");
+                      return;
+                    }
+                    handleCancelOrder(cancelModalOrderId, finalReason);
+                  }}
+                  disabled={cancelingOrderId === cancelModalOrderId}
+                >
+                  {cancelingOrderId === cancelModalOrderId ? 'Đang hủy...' : 'Xác nhận hủy đơn'}
+                </button>
               </div>
             </motion.div>
           </div>

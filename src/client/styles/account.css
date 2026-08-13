@@ -176,32 +176,82 @@
 .status-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.25rem 0.75rem;
-  border-radius: 999px;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.1px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+.status-badge i {
+  font-size: 0.8rem;
 }
 .status-badge.badge-pending {
-  background: #fffbeb;
+  background: rgba(245, 158, 11, 0.08);
   color: #d97706;
-  border: 1px solid #fde68a;
+  border-color: rgba(245, 158, 11, 0.2);
+}
+.status-badge.badge-pending i {
+  animation: rotate-slow 4s linear infinite;
 }
 .status-badge.badge-completed {
-  background: #f0fdf4;
-  color: #166534;
-  border: 1px solid #bbf7d0;
+  background: rgba(16, 185, 129, 0.08);
+  color: #059669;
+  border-color: rgba(16, 185, 129, 0.2);
 }
 .status-badge.badge-shipped {
-  background: #eff6ff;
-  color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+  background: rgba(59, 130, 246, 0.08);
+  color: #2563eb;
+  border-color: rgba(59, 130, 246, 0.2);
 }
 .status-badge.badge-cancelled {
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fecaca;
+  background: rgba(239, 68, 68, 0.08);
+  color: #dc2626;
+  border-color: rgba(239, 68, 68, 0.2);
 }
+@keyframes rotate-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.btn-order-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  line-height: 1.2;
+}
+.btn-order-detail {
+  background: rgba(79, 70, 229, 0.06);
+  color: var(--indigo);
+  border-color: rgba(79, 70, 229, 0.15);
+}
+.btn-order-detail:hover {
+  background: var(--indigo);
+  color: white;
+  border-color: var(--indigo);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+}
+.btn-order-cancel {
+  background: rgba(239, 68, 68, 0.06);
+  color: #dc2626;
+  border-color: rgba(239, 68, 68, 0.15);
+}
+.btn-order-cancel:hover {
+  background: #dc2626;
+  color: white;
+  border-color: #dc2626;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
+}
+
 
 .orders-table {
   width: 100%;
@@ -220,9 +270,10 @@
   border-bottom: 1px solid var(--rule);
 }
 .orders-table td {
-  padding: 1rem;
+  padding: 0.85rem 1rem;
   border-bottom: 1px solid var(--rule);
   font-size: 0.875rem;
+  vertical-align: middle;
 }
 .orders-table tr:hover td {
   background: rgba(79, 70, 229, 0.02);
