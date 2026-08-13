@@ -272,16 +272,36 @@ const ProductDetailPage = () => {
       return;
     }
 
-    const customerId = localStorage.getItem('test_customer_id') || 'cus_01KWH0KYDJM5N7GW2G6WMXMXC4';
+    const token = localStorage.getItem('customer_token');
+    const info = localStorage.getItem('customer_info');
+    let customerId = '';
+    if (info) {
+      try {
+        const parsed = JSON.parse(info);
+        customerId = parsed.id;
+      } catch (e) {
+        console.error("Failed to parse customer_info", e);
+      }
+    }
+
+    if (!customerId) {
+      customerId = localStorage.getItem('test_customer_id') || 'cus_01KWH0KYDJM5N7GW2G6WMXMXC4';
+    }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'x-publishable-api-key': 'pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d',
+      'x-customer-id': customerId
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
 
     try {
       const res = await fetch(`http://localhost:9000/store/reviews`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-publishable-api-key': 'pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d',
-          'x-customer-id': customerId
-        },
+        headers,
         body: JSON.stringify({
           product_id: id,
           rating: newReviewRating,

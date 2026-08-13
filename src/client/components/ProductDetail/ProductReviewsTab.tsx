@@ -37,17 +37,42 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
   errorMessage,
   successMessage,
 }) => {
+  const [customerInfo, setCustomerInfo] = useState<any>(() => {
+    const info = localStorage.getItem('customer_info');
+    return info ? JSON.parse(info) : null;
+  });
+
   const [testUser, setTestUser] = useState(localStorage.getItem('test_customer_id') || 'cus_01KWH0KYDJM5N7GW2G6WMXMXC4');
 
   useEffect(() => {
-    // Tự động đồng bộ tên khi đổi user test
-    if (testUser === 'cus_01KWH0KYDJM5N7GW2G6WMXMXC4') {
-      setNewReviewName('Trần Ngọc');
+    const handleAuthChange = () => {
+      const info = localStorage.getItem('customer_info');
+      setCustomerInfo(info ? JSON.parse(info) : null);
+    };
+    window.addEventListener('customer-auth-change', handleAuthChange);
+    return () => {
+      window.removeEventListener('customer-auth-change', handleAuthChange);
+    };
+  }, []);
+
+  const isLoggedIn = !!customerInfo;
+  const customerName = customerInfo 
+    ? `${customerInfo.last_name || ''} ${customerInfo.first_name || ''}`.trim() || customerInfo.email
+    : '';
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      setNewReviewName(customerName);
     } else {
-      setNewReviewName('Huỳnh Trần Khang Hỷ');
+      // Tự động đồng bộ tên khi đổi user test
+      if (testUser === 'cus_01KWH0KYDJM5N7GW2G6WMXMXC4') {
+        setNewReviewName('Trần Ngọc');
+      } else {
+        setNewReviewName('Huỳnh Trần Khang Hỷ');
+      }
+      localStorage.setItem('test_customer_id', testUser);
     }
-    localStorage.setItem('test_customer_id', testUser);
-  }, [testUser, setNewReviewName]);
+  }, [testUser, isLoggedIn, customerName, setNewReviewName]);
 
   const handleUserChange = (val: string) => {
     setTestUser(val);
@@ -111,18 +136,25 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}><i className="bi bi-pencil-square"></i> Viết đánh giá của bạn</h4>
             
-            {/* Swticher tài khoản test */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
-              <span style={{ color: '#666' }}>Tài khoản test:</span>
-              <select 
-                value={testUser} 
-                onChange={(e) => handleUserChange(e.target.value)}
-                style={{ padding: '2px 6px', border: '1px solid var(--border)', borderRadius: '4px', background: '#f5f5f5', fontSize: '0.75rem' }}
-              >
-                <option value="cus_01KWH0KYDJM5N7GW2G6WMXMXC4">Trần Ngọc (Chưa mua)</option>
-                <option value="cus_01KVS3CAPF91NGY79S5F3TAC7S">Khang Hỷ (Đã mua)</option>
-              </select>
-            </div>
+            {/* Swticher tài khoản test hoặc thông tin tài khoản đăng nhập */}
+            {isLoggedIn ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: '#16a34a', fontWeight: 600 }}>
+                <i className="bi bi-person-check-fill" style={{ fontSize: '0.9rem' }}></i>
+                <span>Tài khoản: {customerName}</span>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem' }}>
+                <span style={{ color: '#666' }}>Tài khoản test:</span>
+                <select 
+                  value={testUser} 
+                  onChange={(e) => handleUserChange(e.target.value)}
+                  style={{ padding: '2px 6px', border: '1px solid var(--border)', borderRadius: '4px', background: '#f5f5f5', fontSize: '0.75rem' }}
+                >
+                  <option value="cus_01KWH0KYDJM5N7GW2G6WMXMXC4">Trần Ngọc (Chưa mua)</option>
+                  <option value="cus_01KVS3CAPF91NGY79S5F3TAC7S">Khang Hỷ (Đã mua)</option>
+                </select>
+              </div>
+            )}
           </div>
 
           {errorMessage && (
