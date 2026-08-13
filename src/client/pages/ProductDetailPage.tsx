@@ -267,9 +267,36 @@ const ProductDetailPage = () => {
     setErrorMessage("");
     setSuccessMessage("");
 
-    if (!newReviewComment.trim()) {
+    const commentTrimmed = newReviewComment.trim();
+
+    // ─── Client-side validation trước khi gửi lên server ──────────────────
+    if (!commentTrimmed) {
       setErrorMessage("Vui lòng nhập nội dung bình luận.");
       return;
+    }
+
+    const noSpaces = commentTrimmed.replace(/\s+/g, "");
+    if (noSpaces.length < 10) {
+      setErrorMessage("Bình luận quá ngắn, vui lòng viết chi tiết hơn (ít nhất 10 ký tự).");
+      return;
+    }
+
+    const urlPattern = /https?:\/\/|www\.|\.(com|net|org|vn|io|xyz)\b/i;
+    if (urlPattern.test(commentTrimmed)) {
+      setErrorMessage("Bình luận không được chứa đường dẫn hoặc liên kết.");
+      return;
+    }
+
+    // Kiểm tra spam ký tự lặp (>65% cùng ký tự)
+    const chars = noSpaces.split("");
+    if (chars.length > 5) {
+      const max = Math.max(...Object.values(
+        chars.reduce((acc: Record<string, number>, c) => { acc[c] = (acc[c] || 0) + 1; return acc; }, {})
+      ));
+      if (max / chars.length > 0.65) {
+        setErrorMessage("Bình luận không hợp lệ (nội dung bị lặp ký tự quá nhiều).");
+        return;
+      }
     }
 
     const token = localStorage.getItem('customer_token');

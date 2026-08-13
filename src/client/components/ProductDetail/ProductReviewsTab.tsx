@@ -158,8 +158,20 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
           </div>
 
           {errorMessage && (
-            <div className="alert alert-danger" style={{ padding: '0.75rem 1rem', marginBottom: '1rem', borderRadius: '6px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px', background: '#fef2f2', border: '1px solid #fee2e2', color: '#991b1b' }}>
-              <i className="bi bi-exclamation-triangle-fill"></i> {errorMessage}
+            <div style={{
+              padding: '0.75rem 1rem',
+              marginBottom: '1rem',
+              borderRadius: '6px',
+              fontSize: '0.8rem',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '8px',
+              background: '#fffbeb',
+              border: '1px solid #fde68a',
+              color: '#92400e'
+            }}>
+              <i className="bi bi-shield-exclamation" style={{ fontSize: '1rem', flexShrink: 0, marginTop: '1px' }}></i>
+              <span>{errorMessage}</span>
             </div>
           )}
 
@@ -195,16 +207,38 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
             </div>
           </div>
           <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.3rem' }}>Nội dung đánh giá *</label>
-            <textarea 
-              rows={3} 
-              value={newReviewComment} 
-              onChange={(e) => setNewReviewComment(e.target.value)} 
-              placeholder="Nhập bình luận chi tiết..." 
-              style={{ width: '100%', padding: '0.5rem', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Nội dung đánh giá *</label>
+              <span style={{
+                fontSize: '0.7rem',
+                color: newReviewComment.replace(/\s+/g, '').length < 10 ? '#ef4444' : '#6b7280',
+                fontWeight: newReviewComment.replace(/\s+/g, '').length < 10 ? 600 : 400
+              }}>
+                {newReviewComment.replace(/\s+/g, '').length}/10 ký tự tối thiểu
+              </span>
+            </div>
+            <textarea
+              rows={4}
+              value={newReviewComment}
+              onChange={(e) => setNewReviewComment(e.target.value)}
+              placeholder="Chia sẻ trải nghiệm thực tế của bạn về sản phẩm này..."
+              maxLength={1000}
+              style={{
+                width: '100%',
+                padding: '0.6rem 0.75rem',
+                border: `1px solid ${newReviewComment.replace(/\s+/g, '').length > 0 && newReviewComment.replace(/\s+/g, '').length < 10 ? '#fca5a5' : 'var(--border)'}`,
+                borderRadius: 'var(--radius)',
+                resize: 'vertical',
+                fontSize: '0.85rem',
+                lineHeight: '1.6',
+                transition: 'border-color 0.2s'
+              }}
             ></textarea>
+            <p style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '0.3rem' }}>
+              💡 Vui lòng chia sẻ trải nghiệm thực tế. Không dùng ngôn ngữ thô tục, không đăng link, không spam.
+            </p>
           </div>
-          <button type="submit" className="btn btn-primary btn-sm">Gửi đánh giá</button>
+          <button type="submit" className="btn btn-primary btn-sm" style={{ padding: '0.5rem 1.5rem' }}>Gửi đánh giá</button>
         </form>
 
         {/* Danh sách các review */}

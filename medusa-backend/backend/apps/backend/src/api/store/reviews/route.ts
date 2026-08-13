@@ -1,5 +1,83 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 
+// ─── Danh sách từ cấm (tiếng Việt + tiếng Anh) ───────────────────────────────
+const BANNED_WORDS: string[] = [
+  // Tiếng Việt thô tục
+  "đụ", "địt", "lồn", "cặc", "buồi", "đéo", "đmm", "vcl", "vkl", "clm",
+  "đcm", "dmm", "đml", "dm", "đb", "vl", "cl", "con địt", "con lồn",
+  "thằng chó", "con chó", "mẹ mày", "bố mày", "cút", "đồ ngu",
+  "thằng ngu", "con ngu", "mày ngu", "óc lợn", "đần", "khốn", "khốn nạn",
+  "vô lại", "mất dạy", "vô học", "đồ chó", "chó chết",
+  // Tiếng Anh
+  "fuck", "shit", "bitch", "asshole", "bastard", "damn", "cunt",
+  "dick", "cock", "pussy", "whore", "slut", "nigger", "faggot",
+  "motherfucker", "bullshit", "wtf", "stfu",
+];
+
+// ─── Hàm kiểm duyệt nội dung bình luận ───────────────────────────────────────
+function moderateComment(comment: string): { passed: boolean; reason?: string } {
+  const trimmed = comment.trim();
+
+  // 1. Kiểm tra độ dài tối thiểu
+  const noSpaces = trimmed.replace(/\s+/g, "");
+  if (noSpaces.length < 10) {
+    return {
+      passed: false,
+      reason: "Bình luận quá ngắn, vui lòng viết chi tiết hơn (ít nhất 10 ký tự).",
+    };
+  }
+
+  // 2. Kiểm tra từ ngữ thô tục / không phù hợp
+  const lowerComment = trimmed.toLowerCase();
+  for (const word of BANNED_WORDS) {
+    // Tìm từ cấm theo ranh giới từ (hoặc substring trong tiếng Việt)
+    if (lowerComment.includes(word.toLowerCase())) {
+      return {
+        passed: false,
+        reason: "Bình luận chứa ngôn ngữ không phù hợp, vui lòng chỉnh sửa lại.",
+      };
+    }
+  }
+
+  // 3. Kiểm tra spam ký tự lặp (cùng ký tự chiếm >65% nội dung)
+  const chars = noSpaces.split("");
+  const charCounts: Record<string, number> = {};
+  for (const c of chars) {
+    charCounts[c] = (charCounts[c] || 0) + 1;
+  }
+  const maxCharCount = Math.max(...Object.values(charCounts));
+  if (chars.length > 5 && maxCharCount / chars.length > 0.65) {
+    return {
+      passed: false,
+      reason: "Bình luận không hợp lệ (nội dung bị lặp ký tự quá nhiều).",
+    };
+  }
+
+  // 4. Kiểm tra chứa URL / đường dẫn
+  const urlPattern = /https?:\/\/|www\.|\.com|\.net|\.org|\.vn|\.io|\.xyz/i;
+  if (urlPattern.test(trimmed)) {
+    return {
+      passed: false,
+      reason: "Bình luận không được chứa đường dẫn hoặc liên kết.",
+    };
+  }
+
+  // 5. Kiểm tra toàn chữ hoa bất thường (>70% ký tự chữ cái là chữ hoa)
+  const letters = trimmed.replace(/[^a-zA-ZÀ-ỹ]/g, "");
+  if (letters.length > 10) {
+    const upperCount = (trimmed.match(/[A-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠƯẠ-Ỵ]/g) || []).length;
+    if (upperCount / letters.length > 0.70) {
+      return {
+        passed: false,
+        reason: "Vui lòng không viết toàn chữ hoa trong bình luận.",
+      };
+    }
+  }
+
+  return { passed: true };
+}
+
+
 export async function GET(
   req: MedusaRequest,
   res: MedusaResponse
@@ -113,14 +191,30 @@ export async function POST(
       }
     }
 
+    // ─── Kiểm duyệt nội dung bình luận ───────────────────────────────────────
+    const commentText = (comment || "").toString().trim();
+
+    if (!commentText) {
+      return res.status(400).json({ message: "Vui lòng nhập nội dung bình luận." });
+    }
+
+    const moderation = moderateComment(commentText);
+    if (!moderation.passed) {
+      return res.status(422).json({
+        message: moderation.reason || "Bình luận không hợp lệ.",
+        code: "REVIEW_REJECTED"
+      });
+    }
+
     // Insert review mới
     const insertRes = await db.raw(`
       INSERT INTO reviews (user_id, product_id, rating, comment, user_name, created_at)
       VALUES (?, ?, ?, ?, ?, NOW())
       RETURNING id, user_id, product_id, rating, comment, created_at, user_name
-    `, [customerId, product_id, numRating, comment || "", fullName]);
+    `, [customerId, product_id, numRating, commentText, fullName]);
 
     const newReview = insertRes.rows[0];
+
 
     // Tính toán lại rating trung bình và tổng số đánh giá của product
     const statsRes = await db.raw(`
