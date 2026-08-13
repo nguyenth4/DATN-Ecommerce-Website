@@ -90,19 +90,21 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
       <h1 className="product-detail-title" style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{product.title}</h1>
       <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>{product.subtitle}</p>
 
-      <div className="flex-center" style={{ marginBottom: '1.2rem', gap: '0.8rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', marginBottom: '1.2rem', gap: '0.8rem' }}>
         <div className="stars" style={{ color: '#ffc107', fontWeight: 'bold' }}>
           {"★".repeat(Math.round(product.rating)) + "☆".repeat(5 - Math.round(product.rating))}
         </div>
-        <span className="text-xs text-muted">{product.rating} ({reviewsCount} đánh giá)</span>
-        <span style={{ width: '1px', height: '14px', background: 'var(--border)' }}></span>
+        <span className="text-xs text-muted" style={{ display: 'flex', alignItems: 'center' }}>
+          {product.rating} ({reviewsCount} đánh giá)
+        </span>
+        <span style={{ width: '1px', height: '14px', background: 'var(--border)', display: 'inline-block' }}></span>
         {activeVariant.stock > 0 ? (
-          <span className="text-xs text-success" style={{ fontWeight: 600 }}>
+          <span className="text-xs text-success" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
             <i className="bi bi-check-circle-fill"></i> Còn hàng {activeVariant.stock < 999 ? `(${activeVariant.stock} sản phẩm)` : ''}
           </span>
         ) : (
-          <span className="text-xs text-danger" style={{ fontWeight: 600 }}>
-            <i className="bi bi-x-circle-fill"></i> Hết hàng tạm thời
+          <span className="text-xs text-danger" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <i className="bi bi-x-circle-fill"></i> Hết hàng
           </span>
         )}
       </div>
@@ -245,7 +247,17 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
       <div className="product-actions" style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
         <button 
           className="btn btn-primary btn-add-cart" 
-          style={{ flex: 1, padding: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+          disabled={activeVariant.stock <= 0}
+          style={{ 
+            flex: 1, 
+            padding: '0.9rem', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            gap: '0.5rem',
+            opacity: activeVariant.stock <= 0 ? 0.5 : 1,
+            cursor: activeVariant.stock <= 0 ? 'not-allowed' : 'pointer'
+          }}
           onClick={() => {
             const variantDetails = [selectedColor, selectedStorage].filter(Boolean).join(' · ');
             addToCart({
@@ -267,6 +279,7 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
         </button>
         <button 
           className="btn btn-accent"
+          disabled={activeVariant.stock <= 0}
           style={{ 
             flex: 1, 
             padding: '0.9rem', 
@@ -277,7 +290,8 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
             background: 'var(--accent)',
             borderColor: 'var(--accent)',
             color: '#fff',
-            cursor: 'pointer',
+            opacity: activeVariant.stock <= 0 ? 0.5 : 1,
+            cursor: activeVariant.stock <= 0 ? 'not-allowed' : 'pointer',
             textAlign: 'center'
           }}
           onClick={() => {

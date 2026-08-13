@@ -159,7 +159,7 @@ const CartPage = () => {
                             <div className="variant">{item.variant}</div>
                             {actualStock !== undefined && !item.id.startsWith('mock-') && (
                               <div style={{ fontSize: '12px', marginTop: '4px', fontWeight: 600, color: isOutOfStock ? '#dc2626' : (isInsufficient ? '#d97706' : '#16a34a') }}>
-                                {isOutOfStock ? 'Hết hàng tạm thời' : (isInsufficient ? `Chỉ còn ${actualStock} sản phẩm` : `Còn hàng (${actualStock} sản phẩm)`)}
+                                {isOutOfStock ? 'Hết hàng' : (isInsufficient ? `Chỉ còn ${actualStock} sản phẩm` : `Còn hàng (${actualStock} sản phẩm)`)}
                               </div>
                             )}
                           </div>

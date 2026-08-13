@@ -26,10 +26,16 @@ const ProductsPage = () => {
   const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [sortBy, setSortBy] = useState(searchParams.get('order') || 'popular');
   const [selectedCats, setSelectedCats] = useState<string[]>(
-    searchParams.get('category_id')?.split(',') || []
+    searchParams.get('category_id')?.split(',').filter(Boolean) || []
   );
   const [page, setPage] = useState(1);
   const limit = 15;
+
+  // Sync selectedCats when URL changes (e.g. navigating from HomePage category tiles)
+  useEffect(() => {
+    const catFromUrl = searchParams.get('category_id')?.split(',').filter(Boolean) || [];
+    setSelectedCats(catFromUrl);
+  }, [searchParams.get('category_id')]);
 
 
 
@@ -76,10 +82,9 @@ const ProductsPage = () => {
 
   const products = productsData?.products || [];
   const totalCount = products.length;
-  const categories = (categoriesData || []).filter((c: any) => {
-    const name = (c.name || '').toLowerCase();
-    return !name.includes('laptop') && !name.includes('điện thoại');
-  });
+  const categories = (categoriesData || []).filter((c: any) =>
+    (c.name || '').toLowerCase() !== 'điện thoại'
+  );
 
   const getProductImage = (p: any) => {
     return p.thumbnail || (p.images?.[0]?.url) || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80';
@@ -89,16 +94,16 @@ const ProductsPage = () => {
 
   // Handle category toggle
   const toggleCategory = (id: string) => {
-    setSelectedCats(prev => {
-      const next = prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id];
-      setSearchParams(params => {
-        if (next.length > 0) params.set('category_id', next.join(','));
-        else params.delete('category_id');
-        return params;
-      });
-      return next;
+    const next = selectedCats.includes(id)
+      ? selectedCats.filter(c => c !== id)
+      : [...selectedCats, id];
+    setSelectedCats(next);
+    setSearchParams(params => {
+      if (next.length > 0) params.set('category_id', next.join(','));
+      else params.delete('category_id');
+      return params;
     });
-    setPage(1); // Reset to first page
+    setPage(1);
   };
 
   // Handle sort change
@@ -243,7 +248,14 @@ const ProductsPage = () => {
                       transition: 'all 0.2s'
                     }}
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5h10"></path><path d="M11 9h7"></path><path d="M11 13h4"></path><path d="M3 17l3 3 3-3"></path><path d="M6 18V4"></path></svg>
+                    {/* sort ascending: short-to-long lines + up arrow */}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 11h4"></path>
+                      <path d="M11 15h7"></path>
+                      <path d="M11 19h10"></path>
+                      <path d="M3 7l3-3 3 3"></path>
+                      <path d="M6 4v16"></path>
+                    </svg>
                     Giá Thấp - Cao
                   </button>
                   <button
@@ -257,7 +269,14 @@ const ProductsPage = () => {
                       transition: 'all 0.2s'
                     }}
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 5h4"></path><path d="M11 9h7"></path><path d="M11 13h10"></path><path d="M3 17l3 3 3-3"></path><path d="M6 18V4"></path></svg>
+                    {/* sort descending: long-to-short lines + down arrow */}
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 5h10"></path>
+                      <path d="M11 9h7"></path>
+                      <path d="M11 13h4"></path>
+                      <path d="M3 17l3 3 3-3"></path>
+                      <path d="M6 4v16"></path>
+                    </svg>
                     Giá Cao - Thấp
                   </button>
                   </div>

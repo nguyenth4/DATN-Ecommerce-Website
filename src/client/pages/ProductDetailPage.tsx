@@ -470,7 +470,7 @@ const ProductDetailPage = () => {
                       ? activeVariant.inventory_quantity
                       : ((activeVariant.stock !== undefined && activeVariant.stock !== null)
                           ? activeVariant.stock
-                          : 999), // null = chưa cấu hình stock location → coi là còn hàng
+                          : 0), // null = chưa cấu hình stock location → coi là hết hàng
                   sku: activeVariant.sku || "SPRYLO-PROD"
                 }}
                 qty={qty}
