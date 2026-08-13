@@ -2,7 +2,7 @@ const MEDUSA_BACKEND_URL =
   (import.meta as any).env?.VITE_MEDUSA_BACKEND_URL || 'http://localhost:9000';
 const PUBLISHABLE_KEY =
   (import.meta as any).env?.VITE_MEDUSA_PUBLISHABLE_KEY ||
-  'pk_d686a27bd027f5ca488190c17cd54313f3366b2d5b7d2f8e416d2225bd136483';
+  'pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d';
 
 export const TOKEN_KEY = 'customer_token';
 export const INFO_KEY = 'customer_info';
