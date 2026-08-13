@@ -196,7 +196,8 @@
 .status-badge.badge-pending i {
   animation: rotate-slow 4s linear infinite;
 }
-.status-badge.badge-completed {
+.status-badge.badge-completed,
+.status-badge.badge-delivered {
   background: rgba(16, 185, 129, 0.08);
   color: #059669;
   border-color: rgba(16, 185, 129, 0.2);
@@ -205,6 +206,11 @@
   background: rgba(59, 130, 246, 0.08);
   color: #2563eb;
   border-color: rgba(59, 130, 246, 0.2);
+}
+.status-badge.badge-packed {
+  background: rgba(6, 182, 212, 0.08);
+  color: #0891b2;
+  border-color: rgba(6, 182, 212, 0.2);
 }
 .status-badge.badge-cancelled {
   background: rgba(239, 68, 68, 0.08);
@@ -299,7 +305,7 @@
 
 .order-details-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1.5rem;
   margin-bottom: 2rem;
 }

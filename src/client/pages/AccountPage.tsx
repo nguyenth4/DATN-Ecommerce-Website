@@ -58,6 +58,89 @@ const AccountPage = () => {
   const [cancelReason, setCancelReason] = useState<string>('');
   const [customCancelReason, setCustomCancelReason] = useState<string>('');
 
+  // Dynamic badge helpers for orders
+  const getOrderFulfillmentBadgeClass = (order: any) => {
+    if (order.canceled || order.status === 'canceled') return 'status-badge badge-cancelled';
+    if (order.status === 'completed') return 'status-badge badge-delivered';
+    
+    switch (order.fulfillment_status) {
+      case 'shipped':
+      case 'partially_shipped':
+        return 'status-badge badge-shipped';
+      case 'fulfilled':
+      case 'partially_fulfilled':
+        return 'status-badge badge-packed';
+      default:
+        return 'status-badge badge-pending';
+    }
+  };
+
+  const getOrderFulfillmentBadgeIcon = (order: any) => {
+    if (order.canceled || order.status === 'canceled') return 'bi bi-x-circle-fill';
+    if (order.status === 'completed') return 'bi bi-check-circle-fill';
+    
+    switch (order.fulfillment_status) {
+      case 'shipped':
+      case 'partially_shipped':
+        return 'bi bi-truck';
+      case 'fulfilled':
+      case 'partially_fulfilled':
+        return 'bi bi-box-seam';
+      default:
+        return 'bi bi-clock-history';
+    }
+  };
+
+  const getOrderFulfillmentBadgeText = (order: any) => {
+    if (order.canceled || order.status === 'canceled') return 'Đã hủy';
+    if (order.status === 'completed') return 'Đã nhận';
+    
+    switch (order.fulfillment_status) {
+      case 'shipped':
+      case 'partially_shipped':
+        return 'Đang giao';
+      case 'fulfilled':
+      case 'partially_fulfilled':
+        return 'Đã đóng gói';
+      default:
+        return 'Đang xử lý';
+    }
+  };
+
+  const syncOrders = async () => {
+    try {
+      const token = localStorage.getItem('customer_token');
+      if (!token) return;
+
+      const response = await authService.authFetch(`${MEDUSA_BACKEND_URL}/store/orders?limit=50`);
+      if (response.ok) {
+        const { orders } = await response.json();
+        if (orders && Array.isArray(orders)) {
+          const localOrders = getRealOrders();
+          const updated = localOrders.map(localOrder => {
+            const remoteOrder = orders.find((o: any) => o.id === localOrder.orderId);
+            if (remoteOrder) {
+              return {
+                ...localOrder,
+                status: remoteOrder.status,
+                fulfillment_status: remoteOrder.fulfillment_status,
+                payment_status: remoteOrder.payment_status,
+                canceled: remoteOrder.status === 'canceled',
+                cancelReason: remoteOrder.status === 'canceled' ? (localOrder.cancelReason || 'Hệ thống/Cửa hàng hủy') : localOrder.cancelReason
+              };
+            }
+            return localOrder;
+          });
+          
+          localStorage.setItem('sprylo_orders', JSON.stringify(updated));
+          setRealOrders(updated);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to sync orders from backend:", err);
+    }
+  };
+
 
   // Profile form state
   const [firstName, setFirstName] = useState('');
@@ -212,6 +295,7 @@ const AccountPage = () => {
 
   useEffect(() => {
     fetchProfile();
+    syncOrders();
     try {
       const orders = JSON.parse(localStorage.getItem('sprylo_orders') || '[]') as any[];
       const filtered = orders.filter(o => o.orderId !== 'order_01KZVAZ2QRBPQC89BH2WV0Q26');
@@ -222,7 +306,7 @@ const AccountPage = () => {
     } catch (e) {
       console.error(e);
     }
-  }, [navigate]);
+  }, [navigate, activeTab]);
 
   // Fetch Provinces on mount (Cas AddressKit API via proxy - 2025-07-01)
   useEffect(() => {
@@ -571,13 +655,91 @@ const AccountPage = () => {
 
   const selectedRealOrder = realOrders.find(o => o.orderId === selectedOrderId);
   const selectedMockOrder = MOCK_ORDERS.find(o => o.id === selectedOrderId);
+
+  const getDynamicStatusStep = (order: any) => {
+    if (order.canceled || order.status === 'canceled') return -1;
+    if (order.status === 'completed') return 4;
+    
+    switch (order.fulfillment_status) {
+      case 'shipped':
+      case 'partially_shipped':
+        return 3;
+      case 'fulfilled':
+      case 'partially_fulfilled':
+        return 2;
+      default:
+        return 1;
+    }
+  };
+
+  const getDynamicTimeline = (order: any) => {
+    const timeline = [];
+    const dateStr = new Date(order.created_at).toLocaleString('vi-VN');
+    
+    timeline.push({
+      time: dateStr,
+      desc: 'Đã đặt hàng',
+      sub: 'Chờ xác nhận từ cửa hàng',
+      done: true
+    });
+
+    const step = getDynamicStatusStep(order);
+
+    if (step >= 1) {
+      timeline.push({
+        time: dateStr,
+        desc: 'Đã xác nhận',
+        sub: 'Cửa hàng đã xác nhận đơn hàng của bạn',
+        done: true
+      });
+    }
+
+    if (step >= 2) {
+      timeline.push({
+        time: dateStr,
+        desc: 'Đóng gói hàng',
+        sub: 'Sản phẩm đã được đóng gói và chuẩn bị gửi đi',
+        done: true
+      });
+    }
+
+    if (step >= 3) {
+      timeline.push({
+        time: new Date().toLocaleString('vi-VN'),
+        desc: 'Đang giao hàng',
+        sub: 'Đơn hàng đang được giao bởi đơn vị vận chuyển GHN',
+        done: true
+      });
+    }
+
+    if (step >= 4) {
+      timeline.push({
+        time: new Date().toLocaleString('vi-VN'),
+        desc: 'Đã nhận',
+        sub: 'Đơn hàng giao thành công',
+        done: true
+      });
+    }
+
+    if (order.canceled || order.status === 'canceled') {
+      timeline.push({
+        time: new Date().toLocaleString('vi-VN'),
+        desc: 'Đã hủy đơn hàng',
+        sub: `Lý do: ${order.cancelReason || 'Hệ thống/Cửa hàng hủy'}`,
+        done: true
+      });
+    }
+
+    return timeline;
+  };
+
   const selectedOrder = selectedRealOrder ? {
     id: selectedRealOrder.orderId,
     date: new Date(selectedRealOrder.created_at).toLocaleString('vi-VN'),
     total: selectedRealOrder.items.reduce((s: number, i: any) => s + ((i as any).price || 0) * i.qty, 0) + (selectedRealOrder.shippingFee || 35000),
     shippingFee: selectedRealOrder.shippingFee || 35000,
-    paymentStatus: selectedRealOrder.paymentMethod === 'cod' ? 'Chưa thanh toán' : 'Đã thanh toán',
-    shippingStatus: selectedRealOrder.canceled ? 'Đã hủy' : 'Đang xử lý',
+    paymentStatus: selectedRealOrder.payment_status === 'captured' ? 'Đã thanh toán' : (selectedRealOrder.paymentStatus || (selectedRealOrder.paymentMethod === 'cod' ? 'Chưa thanh toán' : 'Đã thanh toán')),
+    shippingStatus: getOrderFulfillmentBadgeText(selectedRealOrder),
     shippingAddress: {
       name: selectedRealOrder.customer?.fullName || 'Khách Hàng',
       phone: selectedRealOrder.customer?.phoneNumber || '0000000000',
@@ -591,16 +753,16 @@ const AccountPage = () => {
       price: item.price || 0,
       image: item.img || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=120&q=80'
     })),
-    timeline: selectedRealOrder.canceled ? [
-      { time: new Date(selectedRealOrder.created_at).toLocaleString('vi-VN'), desc: 'Đã đặt hàng', sub: '', done: true },
-      { time: new Date().toLocaleString('vi-VN'), desc: 'Đã hủy đơn hàng', sub: `Lý do: ${selectedRealOrder.cancelReason || 'Khách hàng yêu cầu hủy đơn'}`, done: true }
-    ] : [
-      { time: new Date(selectedRealOrder.created_at).toLocaleString('vi-VN'), desc: 'Đã đặt hàng', sub: 'Chờ xác nhận từ cửa hàng', done: true }
-    ],
-    statusStep: selectedRealOrder.canceled ? -1 : 0
+    timeline: getDynamicTimeline(selectedRealOrder),
+    statusStep: getDynamicStatusStep(selectedRealOrder),
+    trackingNumber: (selectedRealOrder as any).fulfillments?.[0]?.tracking_numbers?.[0]?.tracking_number 
+      || (selectedRealOrder as any).fulfillments?.[0]?.tracking_numbers?.[0]
+      || (selectedRealOrder as any).trackingNumber 
+      || null
   } : (selectedMockOrder ? {
     ...selectedMockOrder,
-    shippingFee: 30000
+    shippingFee: 30000,
+    trackingNumber: (selectedMockOrder as any).trackingNumber || null
   } : null);
 
   // Cancel a real order and restore inventory
@@ -616,7 +778,7 @@ const AccountPage = () => {
       if (response.ok) {
         // Mark order as canceled in localStorage
         const updated = realOrders.map(o =>
-          o.orderId === orderId ? { ...o, canceled: true, cancelReason: reason } : o
+          o.orderId === orderId ? { ...o, canceled: true, status: 'canceled', cancelReason: reason } : o
         );
         localStorage.setItem('sprylo_orders', JSON.stringify(updated));
         setRealOrders(updated);
@@ -894,18 +1056,17 @@ const AccountPage = () => {
                                 </td>
                                 <td>
                                   <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>
-                                    {order.paymentMethod === 'cod' ? 'Chưa thanh toán' : 'Đã thanh toán'}
+                                    {order.payment_status === 'captured' ? 'Đã thanh toán' : (order.paymentStatus || (order.paymentMethod === 'cod' ? 'Chưa thanh toán' : 'Đã thanh toán'))}
                                   </span>
                                 </td>
                                 <td>
-                                  <span className={order.canceled ? 'status-badge badge-cancelled' : 'status-badge badge-pending'}>
-                                    <i className={order.canceled ? 'bi bi-x-circle-fill' : 'bi bi-clock-history'}></i>
-                                    {order.canceled ? ' Đã hủy' : ' Đang xử lý'}
+                                  <span className={getOrderFulfillmentBadgeClass(order)}>
+                                    <i className={getOrderFulfillmentBadgeIcon(order)}></i> {getOrderFulfillmentBadgeText(order)}
                                   </span>
                                 </td>
                                 <td style={{ textAlign: 'right' }}>
                                   <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
-                                    {!order.canceled && (
+                                    {!order.canceled && (!order.fulfillment_status || order.fulfillment_status === 'not_fulfilled') && (
                                       <button
                                         className="btn-order-action btn-order-cancel"
                                         onClick={() => {
@@ -1048,6 +1209,28 @@ const AccountPage = () => {
                               </div>
                             </div>
                           </div>
+                          
+                          {selectedOrder.trackingNumber && (
+                            <div className="info-card">
+                              <div className="info-card-title">Mã vận đơn (GHN)</div>
+                              <div className="info-card-text">
+                                <span style={{ fontWeight: 600, display: 'block', marginBottom: '0.5rem', color: 'var(--ink)' }}>
+                                  {selectedOrder.trackingNumber}
+                                </span>
+                                <div className="flex-center text-xs" style={{ justifyContent: 'flex-start' }}>
+                                  <a 
+                                    href={`https://donhang.ghn.vn/?order_code=${selectedOrder.trackingNumber}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn-order-action btn-order-detail"
+                                    style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0.3rem 0.7rem' }}
+                                  >
+                                    <i className="bi bi-box-seam"></i> Theo dõi trên GHN
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
 
                         {/* ORDER ITEMS */}
@@ -1110,8 +1293,8 @@ const AccountPage = () => {
                               <span>{formatPrice(selectedOrder.total)}</span>
                             </div>
                           </div>
-                          {/* CANCEL BUTTON - only for real orders not yet canceled */}
-                          {selectedRealOrder && !selectedRealOrder.canceled && (
+                          {/* CANCEL BUTTON - only for real orders not yet canceled and not yet fulfilled */}
+                          {selectedRealOrder && !selectedRealOrder.canceled && (!selectedRealOrder.fulfillment_status || selectedRealOrder.fulfillment_status === 'not_fulfilled') && (
                             <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--rule)', display: 'flex', justifyContent: 'flex-end' }}>
                               <button
                                 className="btn-order-action btn-order-cancel"
