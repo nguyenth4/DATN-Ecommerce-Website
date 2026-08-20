@@ -57,29 +57,6 @@ const HomePage = () => {
 
   return (
     <main id="main">
-      {/* CATEGORIES */}
-      <section className="section" style={{ paddingTop: 'var(--s4)', paddingBottom: '0' }}>
-        <div className="container">
-          <div className="section-head">
-            <h2>Mua sắm theo danh mục</h2>
-            <Link to="/products" className="view-all">Xem tất cả sản phẩm
-              <ChevronRight size={16} />
-            </Link>
-          </div>
-          <div className="cats-grid">
-            {categories.slice(0, 5).map((c: any) => {
-              const isDienThoai = c.name?.toLowerCase() === 'điện thoại';
-              const displayName = isDienThoai ? 'Xiaomi' : c.name;
-              
-              return (
-                <Link key={c.id} to={`/products?category_id=${c.id}`} className="cat-tile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', minHeight: '60px' }}>
-                  <div className="name" style={{ fontSize: '16px', fontWeight: 600 }}>{displayName}</div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </section>
 
       {/* HERO: bento grid */}
       <section className="hero" style={{ paddingTop: 'var(--s4)' }}>
@@ -237,6 +214,30 @@ const HomePage = () => {
                 <HomePageProductCard key={p.id} p={p} compareList={compareList} wishlist={wishlist} />
               ))
             )}
+          </div>
+        </div>
+      </section>
+
+      {/* CATEGORIES */}
+      <section className="section" style={{ paddingTop: 'var(--s4)' }}>
+        <div className="container">
+          <div className="section-head">
+            <h2>Mua sắm theo danh mục</h2>
+            <Link to="/products" className="view-all">Xem tất cả sản phẩm
+              <ChevronRight size={16} />
+            </Link>
+          </div>
+          <div className="cats-grid">
+            {categories.slice(0, 5).map((c: any) => {
+              const isDienThoai = c.name?.toLowerCase() === 'điện thoại';
+              const displayName = isDienThoai ? 'Xiaomi' : c.name;
+              
+              return (
+                <Link key={c.id} to={`/products?category_id=${c.id}`} className="cat-tile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', minHeight: '60px' }}>
+                  <div className="name" style={{ fontSize: '16px', fontWeight: 600 }}>{displayName}</div>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>
