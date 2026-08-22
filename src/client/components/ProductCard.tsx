@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Heart } from 'lucide-react';
+import { Heart, Star } from 'lucide-react';
 
 import { toggleCompareProduct, isInCompareList } from '../utils/compare';
 import { toggleWishlistProduct, isInWishlist } from '../utils/wishlist';
@@ -26,6 +26,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
          || 0;
   }
 
+  const rating = Number(product.metadata?.rating || 0);
+  const ratingCount = product.metadata?.review_count || 0;
   const [isCompared, setIsCompared] = React.useState(isInCompareList(product.id));
   const [isWishlisted, setIsWishlisted] = React.useState(isInWishlist(product.id));
 
@@ -73,6 +75,20 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <Heart size={16} fill={isWishlisted ? 'var(--rose)' : 'none'} stroke={isWishlisted ? 'var(--rose)' : 'currentColor'} />
         </button>
         <div className="product-card-actions">
+          <div className="stars">
+            {ratingCount > 0 ? (
+              <>
+                <div style={{ display: 'flex', gap: '2px', color: '#fbbf24' }}>
+                  {[...Array(5)].map((_, idx) => (
+                    <Star key={idx} size={14} fill={idx < Math.round(rating) ? "#fbbf24" : "none"} />
+                  ))}
+                </div>
+                <span className="count">({ratingCount})</span>
+              </>
+            ) : (
+              <span className="count" style={{ marginLeft: 0 }}>Chưa có đánh giá</span>
+            )}
+          </div>
           <button 
             className="product-card-btn-add btn-add-cart" 
             title="Thêm vào giỏ"

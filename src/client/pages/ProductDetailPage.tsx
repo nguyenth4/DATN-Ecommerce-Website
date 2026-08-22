@@ -468,7 +468,7 @@ const ProductDetailPage = () => {
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--fg-mute, #64748b)', marginTop: '0.25rem' }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#f59e0b', fontWeight: 600 }}>
-                          ★ {seller.rating || "5.0"}
+                          ★ {seller.rating || "0.0"}
                         </span>
                         {seller.review_count && <span>({seller.review_count} đánh giá)</span>}
                         {seller.response_rate && (
@@ -500,7 +500,7 @@ const ProductDetailPage = () => {
                   category: productData.categories?.[0]?.name || "Thiết bị",
                   title: productData.title,
                   subtitle: productData.subtitle || productData.metadata?.subtitle || "",
-                  rating: Number(productData.metadata?.rating || 5.0),
+                  rating: Number(productData.metadata?.rating || 0),
                   rawProduct: productData
                 }}
                 colors={colors}
@@ -607,7 +607,7 @@ const ProductDetailPage = () => {
             <h2 style={{ fontSize: '1.5rem', marginBottom: '2rem', fontWeight: 800 }}>Đánh giá của khách hàng</h2>
             <ProductReviewsTab
               reviews={reviews}
-              rating={Number(productData.metadata?.rating || 5.0)}
+              rating={Number(productData.metadata?.rating || 0)}
               newReviewName={newReviewName}
               newReviewRating={newReviewRating}
               newReviewComment={newReviewComment}

@@ -29,9 +29,9 @@ export async function GET(
     `, [product_id]);
 
     const reviews = reviewsRes.rows || [];
-    const stats = statsRes.rows[0] || { avg_rating: 5, total_count: 0 };
+    const stats = statsRes.rows[0] || { avg_rating: 0, total_count: 0 };
     
-    const avgRating = stats.avg_rating ? parseFloat(parseFloat(stats.avg_rating).toFixed(1)) : 5.0;
+    const avgRating = stats.avg_rating ? parseFloat(parseFloat(stats.avg_rating).toFixed(1)) : 0;
     const totalCount = parseInt(stats.total_count) || 0;
 
     res.status(200).json({
@@ -130,7 +130,7 @@ export async function POST(
     `, [product_id]);
 
     const stats = statsRes.rows[0];
-    const avgRating = stats.avg_rating ? parseFloat(parseFloat(stats.avg_rating).toFixed(1)) : 5.0;
+    const avgRating = stats.avg_rating ? parseFloat(parseFloat(stats.avg_rating).toFixed(1)) : 0;
     const totalCount = parseInt(stats.total_count) || 0;
 
     // Cập nhật rating và review_count vào metadata của product

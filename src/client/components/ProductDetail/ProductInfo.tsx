@@ -92,11 +92,17 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
 
       <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', marginBottom: '1.2rem', gap: '0.8rem' }}>
         <div className="stars" style={{ color: '#ffc107', fontWeight: 'bold' }}>
-          {"★".repeat(Math.round(product.rating)) + "☆".repeat(5 - Math.round(product.rating))}
+          {reviewsCount > 0 ? (
+            "★".repeat(Math.round(product.rating)) + "☆".repeat(5 - Math.round(product.rating))
+          ) : (
+            <span style={{ fontSize: '0.9rem', color: 'var(--gray)' }}>Chưa có đánh giá</span>
+          )}
         </div>
-        <span className="text-xs text-muted" style={{ display: 'flex', alignItems: 'center' }}>
-          {product.rating} ({reviewsCount} đánh giá)
-        </span>
+        {reviewsCount > 0 && (
+          <span className="text-xs text-muted" style={{ display: 'flex', alignItems: 'center' }}>
+            {product.rating} ({reviewsCount} đánh giá)
+          </span>
+        )}
         <span style={{ width: '1px', height: '14px', background: 'var(--border)', display: 'inline-block' }}></span>
         {activeVariant.stock > 0 ? (
           <span className="text-xs text-success" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>

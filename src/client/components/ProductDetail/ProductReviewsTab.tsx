@@ -106,9 +106,9 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
       {/* Cột trái: Biểu đồ điểm số */}
       <div style={{ background: '#fafafa', padding: '2rem', borderRadius: '8px', border: '1px solid var(--border)', alignSelf: 'start', textAlign: 'center' }}>
         <h3 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem' }}>ĐÁNH GIÁ TRUNG BÌNH</h3>
-        <div style={{ fontSize: '3rem', fontWeight: 900, color: 'var(--dark)' }}>{rating}</div>
+        <div style={{ fontSize: '3rem', fontWeight: 900, color: 'var(--dark)' }}>{rating > 0 ? rating : '-'}</div>
         <div className="stars" style={{ color: '#ffc107', fontSize: '1.4rem', margin: '0.5rem 0' }}>
-          {getStarsString(rating)}
+          {rating > 0 ? getStarsString(rating) : <span style={{ fontSize: '1rem', color: 'var(--gray)' }}>Chưa có đánh giá</span>}
         </div>
         <p className="text-xs text-muted" style={{ marginBottom: '1.5rem' }}>({reviews.length} đánh giá khách hàng)</p>
         

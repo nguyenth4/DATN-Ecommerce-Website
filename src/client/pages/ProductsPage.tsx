@@ -394,12 +394,18 @@ const ProductsPage = () => {
                               {displayOldPrice && <span className="was">{displayOldPrice}</span>}
                             </div>
                             <div className="stars">
-                              <div style={{ display: 'flex', gap: '2px', color: '#fbbf24' }}>
-                                {[...Array(5)].map((_, idx) => (
-                                  <Star key={idx} size={14} fill={idx < Math.round(rating) ? "#fbbf24" : "none"} />
-                                ))}
-                              </div>
-                              <span className="count">({ratingCount})</span>
+                              {ratingCount > 0 ? (
+                                <>
+                                  <div style={{ display: 'flex', gap: '2px', color: '#fbbf24' }}>
+                                    {[...Array(5)].map((_, idx) => (
+                                      <Star key={idx} size={14} fill={idx < Math.round(rating) ? "#fbbf24" : "none"} />
+                                    ))}
+                                  </div>
+                                  <span className="count">({ratingCount})</span>
+                                </>
+                              ) : (
+                                <span className="count" style={{ marginLeft: 0 }}>Chưa có đánh giá</span>
+                              )}
                             </div>
                             <div
                               onClick={(e) => {
