@@ -150,7 +150,7 @@ export const POST = async (
 
       const paycolId = generateMedusaId("paycol")
       const orderPaycolId = generateMedusaId("orderpaycol")
-      const isPaid = amountToPay === 0 || (paymentMethod !== 'cod' && paymentMethod !== 'COD')
+      const isPaid = amountToPay === 0
       const paycolStatus = isPaid ? 'completed' : 'not_paid'
       const amountPaid = isPaid ? total : 0
 

@@ -63,6 +63,16 @@ const AccountPage = () => {
     if (order.canceled || order.status === 'canceled') return 'status-badge badge-cancelled';
     if (order.status === 'completed') return 'status-badge badge-delivered';
     
+    const customStatus = order.metadata?.custom_status;
+    if (customStatus) {
+      if (customStatus === "pending") return 'status-badge badge-pending';
+      if (customStatus === "confirmed") return 'status-badge badge-pending';
+      if (customStatus === "preparing") return 'status-badge badge-packed';
+      if (customStatus === "shipping") return 'status-badge badge-shipped';
+      if (customStatus === "delivered" || customStatus === "completed") return 'status-badge badge-delivered';
+      if (customStatus === "canceled") return 'status-badge badge-cancelled';
+    }
+    
     switch (order.fulfillment_status) {
       case 'shipped':
       case 'partially_shipped':
@@ -78,6 +88,16 @@ const AccountPage = () => {
   const getOrderFulfillmentBadgeIcon = (order: any) => {
     if (order.canceled || order.status === 'canceled') return 'bi bi-x-circle-fill';
     if (order.status === 'completed') return 'bi bi-check-circle-fill';
+    
+    const customStatus = order.metadata?.custom_status;
+    if (customStatus) {
+      if (customStatus === "pending") return 'bi bi-clock-history';
+      if (customStatus === "confirmed") return 'bi bi-check-circle';
+      if (customStatus === "preparing") return 'bi bi-box-seam';
+      if (customStatus === "shipping") return 'bi bi-truck';
+      if (customStatus === "delivered" || customStatus === "completed") return 'bi bi-check-circle-fill';
+      if (customStatus === "canceled") return 'bi bi-x-circle-fill';
+    }
     
     switch (order.fulfillment_status) {
       case 'shipped':
@@ -95,6 +115,16 @@ const AccountPage = () => {
     if (order.canceled || order.status === 'canceled') return 'Đã hủy';
     if (order.status === 'completed') return 'Đã nhận';
     
+    const customStatus = order.metadata?.custom_status;
+    if (customStatus) {
+      if (customStatus === "pending") return 'Chờ xác nhận';
+      if (customStatus === "confirmed") return 'Đã xác nhận';
+      if (customStatus === "preparing") return 'Đóng gói hàng';
+      if (customStatus === "shipping") return 'Đang giao';
+      if (customStatus === "delivered" || customStatus === "completed") return 'Đã nhận';
+      if (customStatus === "canceled") return 'Đã hủy';
+    }
+    
     switch (order.fulfillment_status) {
       case 'shipped':
       case 'partially_shipped':
@@ -103,7 +133,7 @@ const AccountPage = () => {
       case 'partially_fulfilled':
         return 'Đã đóng gói';
       default:
-        return 'Đang xử lý';
+        return 'Chờ xác nhận';
     }
   };
 
@@ -112,28 +142,66 @@ const AccountPage = () => {
       const token = localStorage.getItem('customer_token');
       if (!token) return;
 
-      const response = await authService.authFetch(`${MEDUSA_BACKEND_URL}/store/orders?limit=50`);
+      const response = await authService.authFetch(
+        `${MEDUSA_BACKEND_URL}/store/orders?limit=50&fields=id,display_id,status,fulfillment_status,payment_status,metadata,created_at,items.title,items.thumbnail,items.variant_title,items.unit_price,items.quantity`
+      );
       if (response.ok) {
         const { orders } = await response.json();
         if (orders && Array.isArray(orders)) {
           const localOrders = getRealOrders();
-          const updated = localOrders.map(localOrder => {
-            const remoteOrder = orders.find((o: any) => o.id === localOrder.orderId);
-            if (remoteOrder) {
-              return {
-                ...localOrder,
-                status: remoteOrder.status,
-                fulfillment_status: remoteOrder.fulfillment_status,
-                payment_status: remoteOrder.payment_status,
-                canceled: remoteOrder.status === 'canceled',
-                cancelReason: remoteOrder.status === 'canceled' ? (localOrder.cancelReason || 'Hệ thống/Cửa hàng hủy') : localOrder.cancelReason
-              };
-            }
-            return localOrder;
-          });
           
-          localStorage.setItem('sprylo_orders', JSON.stringify(updated));
-          setRealOrders(updated);
+          const remoteMapped = orders.map((o: any) => {
+            const items = (o.items || []).map((item: any) => ({
+              name: item.title || item.product_title || 'Sản phẩm',
+              variant: item.variant_title || '',
+              qty: item.quantity,
+              price: item.unit_price,
+              img: item.thumbnail || ''
+            }));
+            
+            return {
+              orderId: o.id,
+              display_id: o.display_id,
+              status: o.status,
+              fulfillment_status: o.fulfillment_status,
+              payment_status: o.payment_status,
+              metadata: o.metadata,
+              items,
+              customer: {
+                fullName: o.metadata?.full_name || 'Khách Hàng',
+                phoneNumber: o.metadata?.phone || ''
+              },
+              address: o.metadata?.address || '',
+              paymentMethod: o.metadata?.payment_method || 'cod',
+              shippingMethod: o.metadata?.shipping_method || 'ghn',
+              shippingFee: Number(o.metadata?.shipping_fee || 35000),
+              created_at: new Date(o.created_at).getTime(),
+              canceled: o.status === 'canceled',
+              cancelReason: o.metadata?.cancel_reason || ''
+            };
+          });
+
+          const merged = [...localOrders];
+          remoteMapped.forEach((remoteOrder: any) => {
+            const idx = merged.findIndex(o => o.orderId === remoteOrder.orderId);
+            if (idx > -1) {
+              merged[idx] = {
+                ...merged[idx],
+                ...remoteOrder,
+                cancelReason: remoteOrder.status === 'canceled'
+                  ? (remoteOrder.cancelReason || merged[idx].cancelReason || 'Hệ thống/Cửa hàng hủy')
+                  : merged[idx].cancelReason
+              };
+            } else {
+              merged.push(remoteOrder);
+            }
+          });
+
+          // Sort by created_at DESC
+          merged.sort((a, b) => b.created_at - a.created_at);
+          
+          localStorage.setItem('sprylo_orders', JSON.stringify(merged));
+          setRealOrders(merged);
         }
       }
     } catch (err) {
@@ -660,16 +728,17 @@ const AccountPage = () => {
     if (order.canceled || order.status === 'canceled') return -1;
     if (order.status === 'completed') return 4;
     
-    switch (order.fulfillment_status) {
-      case 'shipped':
-      case 'partially_shipped':
-        return 3;
-      case 'fulfilled':
-      case 'partially_fulfilled':
-        return 2;
-      default:
-        return 1;
+    // Check custom metadata status first
+    const customStatus = order.metadata?.custom_status;
+    if (customStatus) {
+      if (customStatus === "pending") return 0;
+      if (customStatus === "confirmed") return 1;
+      if (customStatus === "preparing") return 2;
+      if (customStatus === "shipping") return 3;
+      if (customStatus === "delivered" || customStatus === "completed") return 4;
     }
+    
+    return 0;
   };
 
   const getDynamicTimeline = (order: any) => {
@@ -686,8 +755,11 @@ const AccountPage = () => {
     const step = getDynamicStatusStep(order);
 
     if (step >= 1) {
+      const confirmedTime = order.metadata?.confirmed_at
+        ? new Date(order.metadata.confirmed_at).toLocaleString('vi-VN')
+        : dateStr;
       timeline.push({
-        time: dateStr,
+        time: confirmedTime,
         desc: 'Đã xác nhận',
         sub: 'Cửa hàng đã xác nhận đơn hàng của bạn',
         done: true
@@ -704,10 +776,12 @@ const AccountPage = () => {
     }
 
     if (step >= 3) {
+      const provider = (order.metadata?.shipping_provider || 'GHN').toUpperCase();
+      const tracking = order.metadata?.tracking_number ? ` (Mã vận đơn: ${order.metadata.tracking_number})` : '';
       timeline.push({
         time: new Date().toLocaleString('vi-VN'),
         desc: 'Đang giao hàng',
-        sub: 'Đơn hàng đang được giao bởi đơn vị vận chuyển GHN',
+        sub: `Đơn hàng đang được giao bởi đơn vị vận chuyển ${provider}${tracking}`,
         done: true
       });
     }
@@ -725,7 +799,7 @@ const AccountPage = () => {
       timeline.push({
         time: new Date().toLocaleString('vi-VN'),
         desc: 'Đã hủy đơn hàng',
-        sub: `Lý do: ${order.cancelReason || 'Hệ thống/Cửa hàng hủy'}`,
+        sub: `Lý do: ${order.cancelReason || order.metadata?.cancel_reason || 'Hệ thống/Cửa hàng hủy'}`,
         done: true
       });
     }
@@ -735,6 +809,7 @@ const AccountPage = () => {
 
   const selectedOrder = selectedRealOrder ? {
     id: selectedRealOrder.orderId,
+    display_id: selectedRealOrder.display_id || null,
     date: new Date(selectedRealOrder.created_at).toLocaleString('vi-VN'),
     total: selectedRealOrder.items.reduce((s: number, i: any) => s + ((i as any).price || 0) * i.qty, 0) + (selectedRealOrder.shippingFee || 35000),
     shippingFee: selectedRealOrder.shippingFee || 35000,
@@ -758,9 +833,11 @@ const AccountPage = () => {
     trackingNumber: (selectedRealOrder as any).fulfillments?.[0]?.tracking_numbers?.[0]?.tracking_number 
       || (selectedRealOrder as any).fulfillments?.[0]?.tracking_numbers?.[0]
       || (selectedRealOrder as any).trackingNumber 
+      || selectedRealOrder.metadata?.tracking_number
       || null
   } : (selectedMockOrder ? {
     ...selectedMockOrder,
+    display_id: selectedMockOrder.id,
     shippingFee: 30000,
     trackingNumber: (selectedMockOrder as any).trackingNumber || null
   } : null);
@@ -1049,7 +1126,7 @@ const AccountPage = () => {
                             {/* Real orders from localStorage */}
                             {realOrders.map((order) => (
                               <tr key={order.orderId} style={{ opacity: order.canceled ? 0.6 : 1 }}>
-                                <td style={{ fontWeight: 700, color: 'var(--ink)', fontSize: '0.8rem' }}>#{formatOrderId(order.orderId)}</td>
+                                <td style={{ fontWeight: 700, color: 'var(--ink)', fontSize: '0.8rem' }}>#{order.display_id || formatOrderId(order.orderId)}</td>
                                 <td>{new Date(order.created_at).toLocaleDateString('vi-VN')}</td>
                                 <td style={{ fontWeight: 700, color: 'var(--indigo)' }}>
                                   {formatPrice(order.items.reduce((s: number, i: any) => s + ((i as any).price || 0) * i.qty, 0) + (order.shippingFee || 35000))}
@@ -1128,7 +1205,7 @@ const AccountPage = () => {
                         <div className="order-details-header">
                           <div>
                             <h2 style={{ fontFamily: 'var(--ff-display)', fontSize: '1.5rem', fontWeight: 800 }}>
-                              Chi tiết đơn hàng #{formatOrderId(selectedOrder.id)}
+                              Chi tiết đơn hàng #{selectedOrder.display_id || formatOrderId(selectedOrder.id)}
                             </h2>
                             <p className="text-xs text-muted" style={{ marginTop: '0.2rem' }}>
                               Đặt lúc {selectedOrder.date}

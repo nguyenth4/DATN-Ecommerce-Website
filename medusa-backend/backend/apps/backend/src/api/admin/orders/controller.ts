@@ -6,15 +6,38 @@ import { IOrderModuleService, IInventoryService } from "@medusajs/framework/type
  * List orders with optional pagination and status filter.
  */
 export async function listOrders(scope: any, { limit = 20, offset = 0, status }: { limit: number; offset: number; status?: string }) {
-  const orderService: IOrderModuleService = scope.resolve(Modules.ORDER)
+  const query = scope.resolve("query")
   const filters: any = {}
   if (status) filters.status = status
-  const config = {
-    skip: offset,
-    take: limit,
-  }
-  const [orders, count] = await orderService.listAndCountOrders(filters, config)
-  return { orders, count, offset, limit }
+
+  const { data: orders, metadata: queryMetadata } = await query.graph({
+    entity: "order",
+    fields: [
+      "id",
+      "display_id",
+      "status",
+      "summary.current_order_total",
+      "summary.original_order_total",
+      "metadata",
+      "shipping_methods"
+    ],
+    filters,
+    pagination: {
+      skip: offset,
+      take: limit,
+      order: {
+        created_at: "DESC"
+      }
+    }
+  })
+
+  const mappedOrders = orders.map((o: any) => ({
+    ...o,
+    total: o.summary?.current_order_total ?? o.summary?.original_order_total ?? 0,
+    shipping_method: o.shipping_methods?.[0]?.name ?? "-"
+  }))
+
+  return { orders: mappedOrders, count: queryMetadata.count, offset, limit }
 }
 
 /** Retrieve a single order by ID */
@@ -32,7 +55,8 @@ export async function updateOrderStatus(
   scope: any,
   orderId: string,
   newStatus: string, // pending, confirmed, preparing, shipping, delivered, completed, canceled
-  shippingMethod?: string
+  shippingMethod?: string,
+  adminName?: string
 ) {
   const orderService: IOrderModuleService = scope.resolve(Modules.ORDER)
   const inventoryService: IInventoryService = scope.resolve(Modules.INVENTORY)
@@ -47,9 +71,48 @@ export async function updateOrderStatus(
 
   // Merge with existing metadata
   const existingMetadata = (order as any).metadata || {}
-  const metadata = {
+  const metadata: Record<string, any> = {
     ...existingMetadata,
     custom_status: newStatus
+  }
+
+  // If status is confirmed, log the time and the admin who confirmed it
+  if (newStatus === "confirmed") {
+    metadata.confirmed_at = new Date().toISOString()
+    metadata.confirmed_by = adminName || "System Admin"
+
+    // Log the confirmation in the Admin timeline (Hoạt động) by inserting an order_change record
+    try {
+      const db = scope.resolve("__pg_connection__")
+      
+      const generateMedusaId = (prefix: string) => {
+        const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        let result = ""
+        for (let i = 0; i < 18; i++) {
+          result += chars.charAt(Math.floor(Math.random() * chars.length))
+        }
+        return `${prefix}_01${result}`
+      }
+
+      const changeId = generateMedusaId("orch")
+      const currentVersion = (order as any).version || 1
+
+      await db.raw(`
+        INSERT INTO order_change (
+          id, order_id, version, description, status, change_type, created_by, requested_at, confirmed_at, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW(), NOW())
+      `, [
+        changeId,
+        orderId,
+        currentVersion,
+        `Đơn hàng đã được xác nhận bởi ${adminName || "System Admin"}`,
+        "confirmed",
+        "edit",
+        adminName || "System Admin"
+      ])
+    } catch (err: any) {
+      console.error("[updateOrderStatus] Failed to log order change in timeline:", err.message)
+    }
   }
 
   // Update base status and metadata
