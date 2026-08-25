@@ -58,7 +58,7 @@ export default class VnpayProviderService extends AbstractPaymentProvider<VnpayO
   async initiatePayment(input: InitiatePaymentInput): Promise<InitiatePaymentOutput> {
     const { amount, currency_code, context, data } = input
     
-    const vnpAmount = Math.round(Number(amount) * 100)
+    const vnpAmount = Number(amount)
     const tnx = (data?.session_id as string) || `tx_${Date.now()}`
     
     // IP Address might not be easily accessible in all contexts, fallback to loopback

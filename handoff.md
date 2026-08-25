@@ -3,6 +3,9 @@
 ## Tóm tắt công việc đã thực hiện
 - Đã cài đặt và tích hợp module thanh toán `payment-vnpay` (sử dụng package `vnpay` chính thức) vào Medusa v2.
 - Đã khắc phục các lỗi liên quan đến tương thích chuẩn ESM/CJS trong service provider và điều chỉnh cấu trúc trả về đúng interface của Medusa v2.
+- Đã khắc phục lỗi số tiền giao dịch không hợp lệ khi thanh toán VNPAY (bỏ logic nhân 100 ở backend vì SDK `vnpay` đã tự động xử lý).
+- Đã sửa lỗi Frontend (trang Tài khoản) luôn hiển thị "Đã thanh toán" đối với mọi đơn hàng không phải COD. Hiện tại trạng thái thanh toán được đồng bộ chính xác dựa vào `payment_status` của Medusa.
+- Dọn dẹp code dư thừa (xóa import `MEDUSA_BACKEND_URL` không sử dụng trong `VNPayReturnPage.tsx`).
 - Đã thiết lập route IPN webhook tại `src/api/store/payment/vnpay/ipn/route.ts` để nhận phản hồi từ VNPAY và cập nhật trạng thái đơn hàng.
 - Đã cập nhật file `.env` ở backend với thông tin Merchant Sandbox thực tế do bạn cung cấp (`VNPAY_TMN_CODE`, `VNPAY_SECURE_SECRET`) và chuẩn hóa `VNPAY_RETURN_URL` (`http://localhost:5174/checkout/vnpay_return`).
 - Đã đảm bảo file cấu hình `medusa-config.ts` có chứa `payment-vnpay` ở mục `modules.payment.options.providers`.
