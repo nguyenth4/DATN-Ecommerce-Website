@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
-import { MEDUSA_BACKEND_URL } from '../../config';
+
 
 const VNPayReturnPage = () => {
   const [searchParams] = useSearchParams();

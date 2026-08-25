@@ -235,8 +235,8 @@ export const POST = async (
         })
 
         const ipAddr = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1') as string
-        // VNPAY requires amount in VND * 100
-        const vnpAmount = Math.round(amountToPay * 100)
+        // VNPAY SDK auto-multiplies amount by 100, so we just pass the original amount
+        const vnpAmount = amountToPay
 
         paymentUrl = vnpay.buildPaymentUrl({
           vnp_Amount: vnpAmount,

@@ -1133,7 +1133,7 @@ const AccountPage = () => {
                                 </td>
                                 <td>
                                   <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>
-                                    {order.payment_status === 'captured' ? 'Đã thanh toán' : (order.paymentStatus || (order.paymentMethod === 'cod' ? 'Chưa thanh toán' : 'Đã thanh toán'))}
+                                    {order.payment_status === 'captured' ? 'Đã thanh toán' : 'Chưa thanh toán'}
                                   </span>
                                 </td>
                                 <td>
