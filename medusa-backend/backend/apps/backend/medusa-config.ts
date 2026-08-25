@@ -101,6 +101,23 @@ export default defineConfig({
         ],
       },
     },
+    payment: {
+      resolve: "@medusajs/medusa/payment",
+      options: {
+        providers: [
+          {
+            resolve: "./src/modules/payment-vnpay",
+            id: "vnpay",
+            options: {
+              vnpayHost: process.env.VNPAY_HOST || 'https://sandbox.vnpayment.vn',
+              tmnCode: process.env.VNPAY_TMN_CODE || 'VNPAY_TMN_CODE_PLACEHOLDER',
+              secureSecret: process.env.VNPAY_SECURE_SECRET || 'VNPAY_SECURE_SECRET_PLACEHOLDER',
+              returnUrl: process.env.VNPAY_RETURN_URL || 'http://localhost:3000/checkout/vnpay_return',
+            }
+          }
+        ]
+      }
+    },
     recommendationModuleService: {
       resolve: "./src/modules/recommendation",
     }

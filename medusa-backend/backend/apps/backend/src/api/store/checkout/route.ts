@@ -217,6 +217,40 @@ export const POST = async (
       console.error("[Checkout Route] Failed to link order and payment collection:", err.message)
     }
 
+    // If paymentMethod is vnpay and amount > 0, generate real URL
+    let paymentUrl = null
+    if (amountToPay > 0 && paymentMethod === 'vnpay') {
+      try {
+        const { VNPay } = require('vnpay')
+        const vnpayHost = process.env.VNPAY_HOST || 'https://sandbox.vnpayment.vn'
+        const tmnCode = process.env.VNPAY_TMN_CODE || 'VNPAY_TMN_CODE_PLACEHOLDER'
+        const secureSecret = process.env.VNPAY_SECURE_SECRET || 'VNPAY_SECURE_SECRET_PLACEHOLDER'
+        const returnUrl = process.env.VNPAY_RETURN_URL || 'http://localhost:5173/checkout/vnpay_return'
+
+        const vnpay = new VNPay({
+          vnpayHost,
+          tmnCode,
+          secureSecret,
+          testMode: true
+        })
+
+        const ipAddr = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1') as string
+        // VNPAY requires amount in VND * 100
+        const vnpAmount = Math.round(amountToPay * 100)
+
+        paymentUrl = vnpay.buildPaymentUrl({
+          vnp_Amount: vnpAmount,
+          vnp_IpAddr: ipAddr.split(',')[0],
+          vnp_TxnRef: orderId,
+          vnp_OrderInfo: `Thanh toan don hang ${orderId}`,
+          vnp_OrderType: 'other',
+          vnp_ReturnUrl: returnUrl,
+        })
+      } catch (err: any) {
+        console.error("[VNPay Checkout Error]:", err.message)
+      }
+    }
+
     return res.json({
       success: true,
       message: "Đặt hàng thành công",
@@ -225,8 +259,7 @@ export const POST = async (
       wallet_deducted: walletDeducted,
       amount_to_pay: amountToPay,
       paymentMethod: amountToPay === 0 ? "wallet" : paymentMethod,
-      // Return a dummy payment URL if VNPay/MoMo is selected and amount_to_pay > 0
-      paymentUrl: (amountToPay > 0 && paymentMethod !== 'cod') ? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?dummy" : null
+      paymentUrl: paymentUrl || ((amountToPay > 0 && paymentMethod !== 'cod' && paymentMethod !== 'vnpay') ? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?dummy" : null)
     })
   } catch (error: any) {
     console.error("[Checkout API Error]:", error)
