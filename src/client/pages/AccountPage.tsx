@@ -819,7 +819,7 @@ const AccountPage = () => {
     date: new Date(selectedRealOrder.created_at).toLocaleString('vi-VN'),
     total: selectedRealOrder.items.reduce((s: number, i: any) => s + ((i as any).price || 0) * i.qty, 0) + (selectedRealOrder.shippingFee || 35000),
     shippingFee: selectedRealOrder.shippingFee || 35000,
-    paymentStatus: selectedRealOrder.payment_status === 'captured' ? 'Đã thanh toán' : (selectedRealOrder.paymentStatus || (selectedRealOrder.paymentMethod === 'cod' ? 'Chưa thanh toán' : 'Đã thanh toán')),
+    paymentStatus: selectedRealOrder.payment_status === 'captured' ? 'Đã thanh toán' : 'Chưa thanh toán',
     shippingStatus: getOrderFulfillmentBadgeText(selectedRealOrder),
     shippingAddress: {
       name: selectedRealOrder.customer?.fullName || 'Khách Hàng',
