@@ -83,11 +83,8 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
       <div className="flex items-center justify-between border-b pb-4 mb-4">
         <div>
           <Heading level="h2" className="text-xl font-bold flex items-center gap-2">
-            Quy trình đơn hàng (T-95 & T-97)
+            Quy trình đơn hàng
           </Heading>
-          <Text className="text-xs text-gray-500 mt-1">
-            Điều hướng luồng trạng thái chuẩn - Chống nhảy cóc trạng thái
-          </Text>
         </div>
         <StatusBadge color={colorMap[customStatus] || "grey"}>
           {labelMap[customStatus] || customStatus}
@@ -148,6 +145,15 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
               <Text className="text-sm font-medium">Đơn vị vận chuyển: <span className="font-semibold capitalize">{meta.shipping_provider || "GHN"}</span></Text>
               <Text className="text-sm font-medium mt-1">Mã vận đơn: <span className="font-mono font-semibold text-blue-600">{meta.tracking_number}</span></Text>
               {meta.shipping_fee && <Text className="text-xs text-gray-500 mt-1">Phí giao hàng đối tác: {Number(meta.shipping_fee).toLocaleString()} ₫</Text>}
+            </div>
+          )}
+
+          {meta.delivered_at && (
+            <div className="mt-3 bg-green-50 p-3 rounded-lg border border-green-200">
+              <Text className="text-sm font-medium text-green-800">Giao hàng thành công</Text>
+              <Text className="text-xs text-gray-600 mt-1">
+                Thời gian: {new Date(meta.delivered_at).toLocaleString("vi-VN")}
+              </Text>
             </div>
           )}
         </div>

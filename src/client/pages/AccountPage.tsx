@@ -773,8 +773,11 @@ const AccountPage = () => {
     }
 
     if (step >= 2) {
+      const preparingTime = order.metadata?.preparing_at
+        ? new Date(order.metadata.preparing_at).toLocaleString('vi-VN')
+        : dateStr;
       timeline.push({
-        time: dateStr,
+        time: preparingTime,
         desc: 'Đóng gói hàng',
         sub: 'Sản phẩm đã được đóng gói và chuẩn bị gửi đi',
         done: true
@@ -784,8 +787,11 @@ const AccountPage = () => {
     if (step >= 3) {
       const provider = (order.metadata?.shipping_provider || 'GHN').toUpperCase();
       const tracking = order.metadata?.tracking_number ? ` (Mã vận đơn: ${order.metadata.tracking_number})` : '';
+      const shippedTime = order.metadata?.shipped_at
+        ? new Date(order.metadata.shipped_at).toLocaleString('vi-VN')
+        : dateStr;
       timeline.push({
-        time: new Date().toLocaleString('vi-VN'),
+        time: shippedTime,
         desc: 'Đang giao hàng',
         sub: `Đơn hàng đang được giao bởi đơn vị vận chuyển ${provider}${tracking}`,
         done: true
@@ -793,8 +799,11 @@ const AccountPage = () => {
     }
 
     if (step >= 4) {
+      const deliveredTime = order.metadata?.delivered_at
+        ? new Date(order.metadata.delivered_at).toLocaleString('vi-VN')
+        : new Date().toLocaleString('vi-VN');
       timeline.push({
-        time: new Date().toLocaleString('vi-VN'),
+        time: deliveredTime,
         desc: 'Đã nhận',
         sub: 'Đơn hàng giao thành công',
         done: true
