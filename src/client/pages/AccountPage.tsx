@@ -143,7 +143,7 @@ const AccountPage = () => {
       if (!token) return;
 
       const response = await authService.authFetch(
-        `${MEDUSA_BACKEND_URL}/store/orders?limit=50&fields=id,display_id,status,fulfillment_status,payment_status,metadata,created_at,items.title,items.thumbnail,items.variant_title,items.unit_price,items.quantity`
+        `${MEDUSA_BACKEND_URL}/store/orders?limit=50&fields=id,display_id,status,fulfillment_status,payment_status,metadata,created_at,items.title,items.thumbnail,items.variant_title,items.unit_price,items.quantity,shipping_address.*`
       );
       if (response.ok) {
         const { orders } = await response.json();
@@ -159,6 +159,12 @@ const AccountPage = () => {
               img: item.thumbnail || ''
             }));
             
+            const sa = o.shipping_address || {};
+            const fullName = [sa.first_name, sa.last_name].filter(Boolean).join(' ') || o.metadata?.full_name || 'Khách Hàng';
+            const phoneNumber = sa.phone || o.metadata?.phone || '';
+            const addressParts = [sa.address_1, sa.address_2, sa.city, sa.province].filter(part => part && part.trim() !== '');
+            const address = addressParts.join(', ') || o.metadata?.address || '';
+            
             return {
               orderId: o.id,
               display_id: o.display_id,
@@ -168,10 +174,10 @@ const AccountPage = () => {
               metadata: o.metadata,
               items,
               customer: {
-                fullName: o.metadata?.full_name || 'Khách Hàng',
-                phoneNumber: o.metadata?.phone || ''
+                fullName,
+                phoneNumber
               },
-              address: o.metadata?.address || '',
+              address,
               paymentMethod: o.metadata?.payment_method || 'cod',
               shippingMethod: o.metadata?.shipping_method || 'ghn',
               shippingFee: Number(o.metadata?.shipping_fee || 35000),

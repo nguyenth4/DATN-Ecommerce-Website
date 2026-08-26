@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 
-
 const VNPayReturnPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();

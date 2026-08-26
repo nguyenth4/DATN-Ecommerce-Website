@@ -86,9 +86,29 @@ export const POST = async (
     const orderService = req.scope.resolve(Modules.ORDER)
 
     // Parse customer name into first and last name
-    const nameParts = (customer?.fullName || "Khách Hàng").trim().split(" ")
-    const firstName = nameParts.slice(0, -1).join(" ") || nameParts[0] || "Khách"
-    const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "Hàng"
+    const fullNameInput = (customer?.fullName || "").trim()
+    const nameParts = (fullNameInput || "Khách Hàng").trim().split(" ")
+    let firstName = nameParts.slice(0, -1).join(" ") || nameParts[0] || "Khách"
+    let lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : (fullNameInput ? "" : "Hàng")
+
+    if (customerId) {
+      try {
+        const customerProfileRes = await db.raw(`
+          SELECT first_name, last_name FROM customer WHERE id = ?
+        `, [customerId])
+        if (customerProfileRes.rows.length > 0) {
+          const profile = customerProfileRes.rows[0]
+          if ((!firstName || firstName === "Khách") && profile.first_name) {
+            firstName = profile.first_name
+          }
+          if ((!lastName || lastName === "Hàng" || lastName === "") && profile.last_name) {
+            lastName = profile.last_name
+          }
+        }
+      } catch (err: any) {
+        console.warn("[Checkout Route] Failed to fetch customer profile details:", err.message)
+      }
+    }
 
     // Create order in Medusa
     const orderInput = {
@@ -130,7 +150,10 @@ export const POST = async (
         shipping_fee: Number(shippingFee || 0).toString(),
         note: note || "",
         use_wallet: use_wallet ? "true" : "false",
-        wallet_deducted: walletDeducted.toString()
+        wallet_deducted: walletDeducted.toString(),
+        full_name: customer?.fullName || `${firstName} ${lastName}`,
+        phone: customer?.phoneNumber || "0000000000",
+        address: address || "Địa chỉ mặc định"
       }
     }
 
@@ -176,6 +199,64 @@ export const POST = async (
         INSERT INTO order_payment_collection (id, order_id, payment_collection_id, created_at, updated_at)
         VALUES (?, ?, ?, NOW(), NOW())
       `, [orderPaycolId, orderId, paycolId])
+
+      if (isPaid) {
+        try {
+          const paymentSessionId = generateMedusaId("payses")
+          const paymentId = generateMedusaId("pay")
+          const trxId = generateMedusaId("ordtrx")
+
+          // 1. Insert into payment_session
+          await db.raw(`
+            INSERT INTO payment_session (
+              id, currency_code, amount, raw_amount, provider_id, 
+              data, context, status, authorized_at, payment_collection_id, metadata, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, 'wallet', '{}', '{}', 'authorized', NOW(), ?, '{}', NOW(), NOW())
+          `, [paymentSessionId, currencyCode, total, JSON.stringify(rawAmount), paycolId])
+
+          // 2. Insert into payment
+          await db.raw(`
+            INSERT INTO payment (
+              id, amount, raw_amount, currency_code, provider_id, 
+              created_at, updated_at, captured_at, payment_collection_id, payment_session_id, data, metadata
+            ) VALUES (?, ?, ?, ?, 'wallet', NOW(), NOW(), NOW(), ?, ?, '{}', '{}')
+          `, [paymentId, total, JSON.stringify(rawAmount), currencyCode, paycolId, paymentSessionId])
+
+          // 3. Insert into order_transaction
+          await db.raw(`
+            INSERT INTO order_transaction (
+              id, order_id, version, amount, raw_amount, currency_code, 
+              reference, reference_id, created_at, updated_at
+            ) VALUES (?, ?, 1, ?, ?, ?, 'capture', ?, NOW(), NOW())
+          `, [trxId, orderId, total, JSON.stringify(rawAmount), currencyCode, paymentId])
+
+          // 4. Update order_summary totals
+          const summaryRes = await db.raw(`
+            SELECT id, totals FROM order_summary WHERE order_id = ?
+          `, [orderId])
+          
+          if (summaryRes.rows.length > 0) {
+            const summary = summaryRes.rows[0]
+            const newTotals = {
+              ...summary.totals,
+              paid_total: Number(total),
+              raw_paid_total: { value: total.toString(), precision: 20 },
+              transaction_total: Number(total),
+              raw_transaction_total: { value: total.toString(), precision: 20 },
+              pending_difference: 0,
+              raw_pending_difference: { value: '0', precision: 20 }
+            }
+
+            await db.raw(`
+              UPDATE order_summary 
+              SET totals = ?, updated_at = NOW() 
+              WHERE id = ?
+            `, [JSON.stringify(newTotals), summary.id])
+          }
+        } catch (walletPayErr: any) {
+          console.error("[Checkout Route] Failed to register wallet payment tables:", walletPayErr.message)
+        }
+      }
 
       // Insert shipping method linkage for Medusa Order summary
       try {
