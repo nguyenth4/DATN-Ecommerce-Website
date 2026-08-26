@@ -12,10 +12,16 @@ export interface ProductQueryParams {
 
 export const productService = {
   // Fetch all products with optional filters
+  // NOTE: list views only ever render `thumbnail`, never the full `images` array,
+  // so we skip `*images` here to shrink the payload significantly. The detail
+  // page (getProduct below) still fetches `*images` for the product gallery.
   async getProducts(params?: ProductQueryParams) {
     try {
       const { products, count, offset, limit } = await medusa.store.product.list({
-        fields: '*variants,*variants.prices,+variants.inventory_quantity,+variants.manage_inventory,*categories,+metadata,*images', // fetch relational data
+        // List view chỉ cần thumbnail (field mặc định) để hiển thị card,
+        // không cần *images (mảng ảnh đầy đủ) — giảm payload đáng kể.
+        // *images đầy đủ chỉ cần ở trang chi tiết (getProduct).
+        fields: '*variants,*variants.prices,+variants.inventory_quantity,+variants.manage_inventory,*categories,+metadata',
         ...params,
       });
       return { products, count, offset, limit };

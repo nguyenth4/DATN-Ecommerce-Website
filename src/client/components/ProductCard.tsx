@@ -54,6 +54,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <img 
           src={image} 
           alt={name} 
+          loading="lazy"
+          decoding="async"
+          width={300}
+          height={300}
         />
         {product.badge && <span className={`product-badge ${product.badge === 'Mới' ? 'badge-new' : 'badge-sale'}`}>{product.badge}</span>}
         <button 

@@ -103,7 +103,15 @@ export const HomePageProductCard = ({ p, compareList, wishlist }: HomePageProduc
         >
           <Heart size={18} fill={wishlist.includes(p.id) ? 'var(--rose)' : 'none'} stroke={wishlist.includes(p.id) ? 'var(--rose)' : 'currentColor'} />
         </button>
-        <img src={imgUrl} alt={p.title} style={{ objectFit: 'contain' }} />
+        <img
+          src={imgUrl}
+          alt={p.title}
+          style={{ objectFit: 'contain' }}
+          loading="lazy"
+          decoding="async"
+          width={300}
+          height={300}
+        />
       </div>
       <div className="stock">
         <span className="dot" style={{ background: isInStock ? 'var(--success)' : 'var(--rose)' }}></span>
