@@ -58,35 +58,83 @@ export default function AdminOrdersPage() {
             </tr>
           </thead>
           <tbody>
-            {orders.map((o) => (
-              <tr key={o.id} className="order-row">
-                <td>{o.id}</td>
-                <td>
-                  <span className={`status-badge status-${o.status}`}>{o.status}</span>
-                </td>
-                <td>{o.total?.toLocaleString()} ₫</td>
-                <td>{o.shipping_method || "-"}</td>
-                <td>
-                  {/* Simple status change buttons for demo */}
-                  {o.status !== "fulfilled" && (
-                    <button
-                      className="action-btn"
-                      onClick={() => handleStatusChange(o.id, "fulfilled", "ghn")}
-                    >
-                      Duyệt (GHN)
-                    </button>
-                  )}
-                  {o.status !== "fulfilled" && (
-                    <button
-                      className="action-btn"
-                      onClick={() => handleStatusChange(o.id, "fulfilled", "ghtk")}
-                    >
-                      Duyệt (GHTK)
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
+            {orders.map((o) => {
+              const customStatus = o.metadata?.custom_status || o.status || "pending"
+              return (
+                <tr key={o.id} className="order-row">
+                  <td>{o.id}</td>
+                  <td>
+                    <span className={`status-badge status-${customStatus}`}>{customStatus}</span>
+                  </td>
+                  <td>{o.total?.toLocaleString()} ₫</td>
+                  <td>{o.shipping_method || "-"}</td>
+                  <td className="action-buttons-cell">
+                    {customStatus === "pending" && (
+                      <>
+                        <button className="action-btn primary" onClick={() => handleStatusChange(o.id, "confirmed")}>
+                          Xác nhận
+                        </button>
+                        <button className="action-btn danger" onClick={() => handleStatusChange(o.id, "canceled")}>
+                          Hủy
+                        </button>
+                      </>
+                    )}
+                    {customStatus === "confirmed" && (
+                      <>
+                        <button className="action-btn secondary" onClick={() => handleStatusChange(o.id, "preparing")}>
+                          Chuẩn bị
+                        </button>
+                        <button className="action-btn primary" onClick={() => handleStatusChange(o.id, "shipping", "ghn")}>
+                          GHN
+                        </button>
+                        <button className="action-btn primary" onClick={() => handleStatusChange(o.id, "shipping", "ghtk")}>
+                          GHTK
+                        </button>
+                        <button className="action-btn danger" onClick={() => handleStatusChange(o.id, "canceled")}>
+                          Hủy
+                        </button>
+                      </>
+                    )}
+                    {customStatus === "preparing" && (
+                      <>
+                        <button className="action-btn primary" onClick={() => handleStatusChange(o.id, "shipping", "ghn")}>
+                          GHN
+                        </button>
+                        <button className="action-btn primary" onClick={() => handleStatusChange(o.id, "shipping", "ghtk")}>
+                          GHTK
+                        </button>
+                        <button className="action-btn danger" onClick={() => handleStatusChange(o.id, "canceled")}>
+                          Hủy
+                        </button>
+                      </>
+                    )}
+                    {customStatus === "shipping" && (
+                      <>
+                        <button className="action-btn primary" onClick={() => handleStatusChange(o.id, "delivered")}>
+                          Đã giao
+                        </button>
+                        <button className="action-btn danger" onClick={() => handleStatusChange(o.id, "canceled")}>
+                          Hủy
+                        </button>
+                      </>
+                    )}
+                    {customStatus === "delivered" && (
+                      <>
+                        <button className="action-btn primary" onClick={() => handleStatusChange(o.id, "completed")}>
+                          Hoàn thành
+                        </button>
+                        <button className="action-btn danger" onClick={() => handleStatusChange(o.id, "canceled")}>
+                          Hủy
+                        </button>
+                      </>
+                    )}
+                    {(customStatus === "completed" || customStatus === "canceled") && (
+                      <span className="text-muted" style={{ fontSize: "12px", color: "#888" }}>Kết thúc</span>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       )}

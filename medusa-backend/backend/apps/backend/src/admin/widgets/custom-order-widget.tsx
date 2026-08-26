@@ -33,6 +33,11 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
   }
 
   const handleStatusChange = async (newStatus: string, shippingMethod?: string) => {
+    if (newStatus === "canceled") {
+      const confirmed = window.confirm("Bạn có chắc chắn muốn hủy đơn hàng này không?")
+      if (!confirmed) return
+    }
+
     setLoading(true)
     setError(null)
     try {
@@ -45,7 +50,8 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
       })
 
       if (!res.ok) {
-        throw new Error(await res.text())
+        const errJson = await res.json().catch(() => null)
+        throw new Error(errJson?.message || await res.text() || "Lỗi cập nhật trạng thái")
       }
 
       // Refresh the page to load updated details
@@ -61,15 +67,26 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
   const meta = (order.metadata || {}) as any
   const dateStr = meta.confirmed_at ? new Date(meta.confirmed_at as string).toLocaleString("vi-VN") : ""
 
+  const steps = [
+    { key: "pending", label: "Chờ xác nhận" },
+    { key: "confirmed", label: "Đã xác nhận" },
+    { key: "preparing", label: "Đang chuẩn bị" },
+    { key: "shipping", label: "Đang vận chuyển" },
+    { key: "delivered", label: "Đã giao" },
+    { key: "completed", label: "Hoàn thành" },
+  ]
+
+  const currentStepIndex = steps.findIndex(s => s.key === customStatus)
+
   return (
     <Container className="p-6 mb-4">
       <div className="flex items-center justify-between border-b pb-4 mb-4">
         <div>
           <Heading level="h2" className="text-xl font-bold flex items-center gap-2">
-            Quy trình đơn hàng (Custom)
+            Quy trình đơn hàng (T-95 & T-97)
           </Heading>
           <Text className="text-xs text-gray-500 mt-1">
-            Đồng bộ hóa trạng thái Storefront & Giao hàng (GHN / GHTK)
+            Điều hướng luồng trạng thái chuẩn - Chống nhảy cóc trạng thái
           </Text>
         </div>
         <StatusBadge color={colorMap[customStatus] || "grey"}>
@@ -77,9 +94,46 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
         </StatusBadge>
       </div>
 
+      {/* Timeline steps visualization */}
+      {customStatus !== "canceled" ? (
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
+          <Text className="text-xs font-semibold text-gray-500 uppercase mb-3">Tiến trình xử lý đơn hàng</Text>
+          <div className="flex items-center justify-between">
+            {steps.map((step, idx) => {
+              const isCompleted = idx <= currentStepIndex
+              const isCurrent = step.key === customStatus
+              return (
+                <div key={step.key} className="flex-1 flex flex-col items-center relative">
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold mb-1 transition-all ${
+                      isCurrent
+                        ? "bg-blue-600 text-white ring-4 ring-blue-100"
+                        : isCompleted
+                        ? "bg-green-500 text-white"
+                        : "bg-gray-200 text-gray-500"
+                    }`}
+                  >
+                    {idx + 1}
+                  </div>
+                  <Text className={`text-xs text-center font-medium ${isCurrent ? "text-blue-600 font-bold" : isCompleted ? "text-gray-800" : "text-gray-400"}`}>
+                    {step.label}
+                  </Text>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      ) : (
+        <div className="mb-6 p-4 bg-red-50 rounded-lg border border-red-200">
+          <Text className="text-sm font-semibold text-red-600">
+            ⚠️ Đơn hàng đã bị hủy. Mọi thao tác chuyển trạng thái bị khóa.
+          </Text>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Heading level="h3" className="text-sm font-semibold mb-2">Nhật ký xác nhận</Heading>
+          <Heading level="h3" className="text-sm font-semibold mb-2">Nhật ký & Thông tin</Heading>
           {!meta.confirmed_by && !meta.confirmed_at ? (
             <Text className="text-sm text-gray-500 italic">Chưa được xác nhận bởi admin</Text>
           ) : (
@@ -99,44 +153,134 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
         </div>
 
         <div className="flex flex-col justify-end gap-2 items-start md:items-end">
-          <Heading level="h3" className="text-sm font-semibold mb-2 md:self-end">Hành động duyệt đơn</Heading>
+          <Heading level="h3" className="text-sm font-semibold mb-2 md:self-end">Chuyển trạng thái tiếp theo</Heading>
           
-          {customStatus === "pending" && (
-            <Button
-              variant="primary"
-              onClick={() => handleStatusChange("confirmed")}
-              disabled={loading}
-              className="w-full md:w-auto"
-            >
-              {loading ? "Đang xử lý..." : "Xác nhận đơn hàng"}
-            </Button>
-          )}
+          <div className="flex flex-wrap gap-2 justify-end w-full">
+            {customStatus === "pending" && (
+              <>
+                <Button
+                  variant="primary"
+                  onClick={() => handleStatusChange("confirmed")}
+                  disabled={loading}
+                >
+                  {loading ? "Đang xử lý..." : "1. Xác nhận đơn hàng"}
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => handleStatusChange("canceled")}
+                  disabled={loading}
+                >
+                  Hủy đơn
+                </Button>
+              </>
+            )}
 
-          {customStatus === "confirmed" && (
-            <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
-              <Button
-                variant="secondary"
-                onClick={() => handleStatusChange("shipping", "ghn")}
-                disabled={loading}
-              >
-                {loading ? "Đang xử lý..." : "Duyệt đơn (Giao Hàng Nhanh)"}
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => handleStatusChange("shipping", "ghtk")}
-                disabled={loading}
-              >
-                {loading ? "Đang xử lý..." : "Duyệt đơn (Giao Hàng Tiết Kiệm)"}
-              </Button>
-            </div>
-          )}
+            {customStatus === "confirmed" && (
+              <>
+                <Button
+                  variant="secondary"
+                  onClick={() => handleStatusChange("preparing")}
+                  disabled={loading}
+                >
+                  {loading ? "Đang xử lý..." : "2. Chuẩn bị hàng"}
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => handleStatusChange("shipping", "ghn")}
+                  disabled={loading}
+                >
+                  {loading ? "Đang xử lý..." : "Giao (GHN)"}
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => handleStatusChange("shipping", "ghtk")}
+                  disabled={loading}
+                >
+                  {loading ? "Đang xử lý..." : "Giao (GHTK)"}
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => handleStatusChange("canceled")}
+                  disabled={loading}
+                >
+                  Hủy đơn
+                </Button>
+              </>
+            )}
 
-          {customStatus !== "pending" && customStatus !== "confirmed" && (
-            <Text className="text-sm text-gray-500 italic">Đơn hàng đã được duyệt và đang trong tiến trình giao hàng.</Text>
-          )}
+            {customStatus === "preparing" && (
+              <>
+                <Button
+                  variant="primary"
+                  onClick={() => handleStatusChange("shipping", "ghn")}
+                  disabled={loading}
+                >
+                  {loading ? "Đang xử lý..." : "3. Giao hàng (GHN)"}
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => handleStatusChange("shipping", "ghtk")}
+                  disabled={loading}
+                >
+                  {loading ? "Đang xử lý..." : "3. Giao hàng (GHTK)"}
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => handleStatusChange("canceled")}
+                  disabled={loading}
+                >
+                  Hủy đơn
+                </Button>
+              </>
+            )}
+
+            {customStatus === "shipping" && (
+              <>
+                <Button
+                  variant="primary"
+                  onClick={() => handleStatusChange("delivered")}
+                  disabled={loading}
+                >
+                  {loading ? "Đang xử lý..." : "4. Xác nhận đã giao hàng"}
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => handleStatusChange("canceled")}
+                  disabled={loading}
+                >
+                  Giao thất bại / Hủy
+                </Button>
+              </>
+            )}
+
+            {customStatus === "delivered" && (
+              <>
+                <Button
+                  variant="primary"
+                  onClick={() => handleStatusChange("completed")}
+                  disabled={loading}
+                >
+                  {loading ? "Đang xử lý..." : "5. Hoàn thành đơn hàng"}
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => handleStatusChange("canceled")}
+                  disabled={loading}
+                >
+                  Yêu cầu trả hàng / Hủy
+                </Button>
+              </>
+            )}
+
+            {(customStatus === "completed" || customStatus === "canceled") && (
+              <Text className="text-sm text-gray-500 italic">
+                Đơn hàng ở trạng thái kết thúc ({labelMap[customStatus] || customStatus}). Không thể chuyển tiếp.
+              </Text>
+            )}
+          </div>
 
           {error && (
-            <Text className="text-red-500 text-xs mt-1 font-semibold">{error}</Text>
+            <Text className="text-red-500 text-xs mt-2 font-semibold bg-red-50 p-2 rounded border border-red-200 w-full text-right">{error}</Text>
           )}
         </div>
       </div>

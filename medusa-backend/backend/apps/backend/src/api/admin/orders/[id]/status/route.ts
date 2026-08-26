@@ -24,6 +24,6 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     res.json(updated);
   } catch (err: any) {
     console.error("POST /admin/orders/:id/status error:", err);
-    res.status(500).json({ message: err?.message || "Internal server error" });
+    res.status(400).json({ message: err?.message || "Internal server error" });
   }
 }

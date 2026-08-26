@@ -64,6 +64,30 @@ export async function updateOrderStatus(
   // Load the order fresh
   const order = await orderService.retrieveOrder(orderId, { relations: ["items"] })
 
+  // Get current custom status
+  const currentStatus = (order as any).metadata?.custom_status || (order as any).status || "pending"
+
+  // Define allowed transitions according to T-95 / T-97 specification
+  const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+    pending: ["confirmed", "canceled"],
+    confirmed: ["preparing", "shipping", "canceled"],
+    preparing: ["shipping", "canceled"],
+    shipping: ["delivered", "canceled"],
+    delivered: ["completed", "canceled"],
+    completed: [],
+    canceled: []
+  }
+
+  // Check and block invalid status transitions (chống nhảy cóc trạng thái)
+  if (currentStatus !== newStatus) {
+    const allowed = ALLOWED_TRANSITIONS[currentStatus] || []
+    if (!allowed.includes(newStatus)) {
+      throw new Error(
+        `Không thể chuyển trạng thái từ '${currentStatus}' sang '${newStatus}'. Chuyển trạng thái nhảy cóc là trái quy tắc (T-95/T-97).`
+      )
+    }
+  }
+
   // Map to native Medusa status (pending by default)
   let medusaStatus: string = "pending"
   if (newStatus === "completed") medusaStatus = "completed"

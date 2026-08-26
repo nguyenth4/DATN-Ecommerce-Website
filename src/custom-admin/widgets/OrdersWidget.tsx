@@ -35,12 +35,12 @@ export const OrdersWidget = () => {
     fetchOrders()
   }, [page])
 
-  const handleFulfill = async (orderId: string, method: string) => {
+  const handleStatusChange = async (orderId: string, status: string, method?: string) => {
     try {
-      await adminOrders.updateStatus(orderId, "fulfilled", method)
+      await adminOrders.updateStatus(orderId, status, method)
       fetchOrders()
     } catch (e) {
-      console.error("Fulfill error", e)
+      console.error("Status update error", e)
     }
   }
 
@@ -53,23 +53,50 @@ export const OrdersWidget = () => {
       <DataTable
         columns={[
           { header: "ID", accessor: "id" },
-          { header: "Trạng thái", accessor: "status", cell: ({ value }: any) => (
-            <StatusBadge color={statusColorMap[value] || "gray"}>{value}</StatusBadge>
-          ) },
+          { 
+            header: "Trạng thái", 
+            accessor: "status", 
+            cell: ({ row }: any) => {
+              const customStatus = row.original.metadata?.custom_status || row.original.status || "pending"
+              return <StatusBadge color={statusColorMap[customStatus] || "gray"}>{customStatus}</StatusBadge>
+            } 
+          },
           { header: "Tổng tiền", accessor: "total", cell: ({ value }: any) => (
             <Text>{Number(value).toLocaleString()} ₫</Text>
           ) },
           { header: "Phương thức vận chuyển", accessor: "shipping_method" },
-          { header: "Hành động", accessor: "actions", cell: ({ row }: any) => (
-            <div className="flex gap-2">
-              {row.original.status !== "fulfilled" && (
-                <>
-                  <Button variant="secondary" onClick={() => handleFulfill(row.original.id, "ghn")}>Duyệt (GHN)</Button>
-                  <Button variant="secondary" onClick={() => handleFulfill(row.original.id, "ghtk")}>Duyệt (GHTK)</Button>
-                </>
-              )}
-            </div>
-          ) },
+          { header: "Hành động", accessor: "actions", cell: ({ row }: any) => {
+            const st = row.original.metadata?.custom_status || row.original.status || "pending"
+            return (
+              <div className="flex gap-2">
+                {st === "pending" && (
+                  <>
+                    <Button variant="secondary" onClick={() => handleStatusChange(row.original.id, "confirmed")}>Xác nhận</Button>
+                    <Button variant="transparent" className="text-red-500" onClick={() => handleStatusChange(row.original.id, "canceled")}>Hủy</Button>
+                  </>
+                )}
+                {st === "confirmed" && (
+                  <>
+                    <Button variant="secondary" onClick={() => handleStatusChange(row.original.id, "preparing")}>Chuẩn bị</Button>
+                    <Button variant="secondary" onClick={() => handleStatusChange(row.original.id, "shipping", "ghn")}>Giao (GHN)</Button>
+                    <Button variant="secondary" onClick={() => handleStatusChange(row.original.id, "shipping", "ghtk")}>Giao (GHTK)</Button>
+                  </>
+                )}
+                {st === "preparing" && (
+                  <>
+                    <Button variant="secondary" onClick={() => handleStatusChange(row.original.id, "shipping", "ghn")}>Giao (GHN)</Button>
+                    <Button variant="secondary" onClick={() => handleStatusChange(row.original.id, "shipping", "ghtk")}>Giao (GHTK)</Button>
+                  </>
+                )}
+                {st === "shipping" && (
+                  <Button variant="secondary" onClick={() => handleStatusChange(row.original.id, "delivered")}>Đã giao</Button>
+                )}
+                {st === "delivered" && (
+                  <Button variant="secondary" onClick={() => handleStatusChange(row.original.id, "completed")}>Hoàn thành</Button>
+                )}
+              </div>
+            )
+          } },
         ]}
         data={orders}
         pagination={{
