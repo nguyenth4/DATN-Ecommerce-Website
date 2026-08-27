@@ -11,3 +11,13 @@ export async function POST(
     res.status(500).json({ error: error.message });
   }
 }
+
+export async function OPTIONS(
+  req: MedusaRequest,
+  res: MedusaResponse
+) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-bypass-purchase");
+  res.status(200).send();
+}
