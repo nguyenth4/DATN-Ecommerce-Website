@@ -54,6 +54,7 @@ const AccountPage = () => {
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [realOrders, setRealOrders] = useState(getRealOrders);
   const [cancelingOrderId, setCancelingOrderId] = useState<string | null>(null);
+  const [confirmingOrderId, setConfirmingOrderId] = useState<string | null>(null);
   const [cancelModalOrderId, setCancelModalOrderId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState<string>('');
   const [customCancelReason, setCustomCancelReason] = useState<string>('');
@@ -126,7 +127,8 @@ const AccountPage = () => {
                 fulfillment_status: remoteOrder.fulfillment_status,
                 payment_status: remoteOrder.payment_status,
                 canceled: remoteOrder.status === 'canceled',
-                cancelReason: remoteOrder.status === 'canceled' ? (localOrder.cancelReason || 'Hệ thống/Cửa hàng hủy') : localOrder.cancelReason
+                cancelReason: remoteOrder.status === 'canceled' ? (localOrder.cancelReason || 'Hệ thống/Cửa hàng hủy') : localOrder.cancelReason,
+                items: remoteOrder.items || localOrder.items
               };
             }
             return localOrder;
@@ -747,11 +749,11 @@ const AccountPage = () => {
     },
     paymentMethod: selectedRealOrder.paymentMethod === 'cod' ? 'COD (Thanh toán khi nhận hàng)' : (selectedRealOrder.paymentMethod === 'wallet' ? 'Ví điện tử Sprylo' : 'VNPay'),
     items: selectedRealOrder.items.map((item: any) => ({
-      name: item.name || 'Sản phẩm',
-      variant: item.variant || '',
-      quantity: item.qty,
-      price: item.price || 0,
-      image: item.img || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=120&q=80'
+      name: item.title || item.name || 'Sản phẩm',
+      variant: item.variant?.title || item.variant || '',
+      quantity: item.qty || item.quantity,
+      price: item.unit_price || item.price || 0,
+      image: item.thumbnail || item.img || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=120&q=80'
     })),
     timeline: getDynamicTimeline(selectedRealOrder),
     statusStep: getDynamicStatusStep(selectedRealOrder),
@@ -764,6 +766,32 @@ const AccountPage = () => {
     shippingFee: 30000,
     trackingNumber: (selectedMockOrder as any).trackingNumber || null
   } : null);
+
+  const handleConfirmReceipt = async (orderId: string) => {
+    if (!window.confirm('Bạn có chắc chắn đã nhận được hàng và hài lòng với sản phẩm?')) return;
+    setConfirmingOrderId(orderId);
+    try {
+      const response = await authService.authFetch(`${MEDUSA_BACKEND_URL}/store/orders/${orderId}/confirm-receipt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (response.ok) {
+        const updated = realOrders.map(o =>
+          o.orderId === orderId ? { ...o, status: 'completed' } : o
+        );
+        localStorage.setItem('sprylo_orders', JSON.stringify(updated));
+        setRealOrders(updated);
+        alert('Đã xác nhận nhận hàng thành công. Bạn có thể đánh giá sản phẩm ngay bây giờ!');
+      } else {
+        alert('Xác nhận nhận hàng thất bại. Vui lòng thử lại.');
+      }
+    } catch (err) {
+      console.error('Confirm receipt error:', err);
+      alert('Lỗi kết nối máy chủ.');
+    } finally {
+      setConfirmingOrderId(null);
+    }
+  };
 
   // Cancel a real order and restore inventory
   const handleCancelOrder = async (orderId: string, reason: string) => {
@@ -1079,6 +1107,17 @@ const AccountPage = () => {
                                         <i className="bi bi-x-circle"></i> Hủy đơn
                                       </button>
                                     )}
+                                    {!order.canceled && order.status !== 'completed' && (order.fulfillment_status === 'shipped' || order.fulfillment_status === 'delivered') && (
+                                      <button
+                                        className="btn-order-action"
+                                        style={{ color: '#059669', borderColor: '#059669', background: '#ecfdf5' }}
+                                        onClick={() => handleConfirmReceipt(order.orderId)}
+                                        disabled={confirmingOrderId === order.orderId}
+                                        title="Xác nhận đã nhận hàng"
+                                      >
+                                        <i className="bi bi-check2-circle"></i> Đã nhận
+                                      </button>
+                                    )}
                                     <button
                                       className="btn-order-action btn-order-detail"
                                       onClick={() => setSelectedOrderId(order.orderId)}
@@ -1307,6 +1346,18 @@ const AccountPage = () => {
                                 disabled={cancelingOrderId === selectedOrderId}
                               >
                                 <i className="bi bi-x-circle" style={{ fontSize: '1rem' }}></i> Hủy đơn hàng này
+                              </button>
+                            </div>
+                          )}
+                          {selectedRealOrder && !selectedRealOrder.canceled && selectedRealOrder.status !== 'completed' && (selectedRealOrder.fulfillment_status === 'shipped' || selectedRealOrder.fulfillment_status === 'delivered') && (
+                            <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--rule)', display: 'flex', justifyContent: 'flex-end' }}>
+                              <button
+                                className="btn-order-action"
+                                style={{ padding: '0.6rem 1.5rem', borderRadius: '8px', fontSize: '0.85rem', color: '#059669', borderColor: '#059669', background: '#ecfdf5' }}
+                                onClick={() => handleConfirmReceipt(selectedOrderId!)}
+                                disabled={confirmingOrderId === selectedOrderId}
+                              >
+                                <i className="bi bi-check2-circle" style={{ fontSize: '1rem' }}></i> Xác nhận đã nhận hàng
                               </button>
                             </div>
                           )}
