@@ -17,6 +17,7 @@ import ContactPage from '../pages/ContactPage';
 import WishlistPage from '../pages/WishlistPage';
 import OAuthCallbackPage from '../pages/OAuthCallbackPage';
 import VNPayReturnPage from '../pages/VNPayReturnPage';
+import ZaloPayReturnPage from '../pages/ZaloPayReturnPage';
 
 const ClientRoutes = () => {
   return (
@@ -38,6 +39,7 @@ const ClientRoutes = () => {
 
       <Route path="checkout" element={<CheckoutPage />} />
       <Route path="checkout/vnpay_return" element={<VNPayReturnPage />} />
+      <Route path="checkout/zalopay_return" element={<ZaloPayReturnPage />} />
       <Route path="login" element={<LoginPage />} />
       <Route path="register" element={<RegisterPage />} />
       <Route path="forgot-password" element={<ForgotPasswordPage />} />
