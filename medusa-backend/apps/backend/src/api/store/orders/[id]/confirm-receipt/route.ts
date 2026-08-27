@@ -13,7 +13,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
     // Lấy thông tin đơn hàng hiện tại
     const orderRes = await db.raw(`
-      SELECT id, status, metadata 
+      SELECT id, status, fulfillment_status, metadata 
       FROM "order" 
       WHERE id = ?
     `, [id]);
@@ -34,9 +34,15 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     }
 
     const customStatus = order.metadata?.custom_status;
-    if (customStatus !== 'shipping' && customStatus !== 'delivered') {
+    const fulfillmentStatus = order.fulfillment_status;
+    if (
+      customStatus !== 'shipping' && 
+      customStatus !== 'delivered' &&
+      fulfillmentStatus !== 'shipped' && 
+      fulfillmentStatus !== 'delivered'
+    ) {
       // Cho phép linh hoạt nếu cần
-      console.warn(`[Confirm Receipt API] Order ${id} is confirmed but custom status is ${customStatus}`);
+      console.warn(`[Confirm Receipt API] Order ${id} is confirmed but status is custom_status: '${customStatus}', fulfillment_status: '${fulfillmentStatus}'`);
     }
 
     // Cập nhật trạng thái
