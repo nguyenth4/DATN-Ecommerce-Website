@@ -61,7 +61,6 @@ function buildVnpayUrl(
   const queryString = sortedKeys.map((k) => `${k}=${encodeURIComponent(params[k]).replace(/%20/g, "+")}`).join("&");
   return `${vnpUrl}?${queryString}&vnp_SecureHash=${secureHash}`;
 }
-
 // ─── Build ZALOPAY Payment URL (HMAC-SHA256) ──────────────────────────────────
 async function buildZalopayUrl(
   orderId: string,

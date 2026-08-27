@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { CheckCircle2, XCircle, Loader2, AlertCircle } from 'lucide-react';
-
 const VNPAY_RESPONSE_CODES: Record<string, string> = {
   '00': 'Giao dịch thành công',
   '07': 'Trừ tiền thành công. Giao dịch bị nghi ngờ (liên quan tới lừa đảo, giao dịch bất thường).',
