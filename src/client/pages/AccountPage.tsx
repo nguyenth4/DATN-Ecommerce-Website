@@ -841,7 +841,9 @@ const AccountPage = () => {
     if (step >= 4) {
       const deliveredTime = order.metadata?.delivered_at
         ? new Date(order.metadata.delivered_at).toLocaleString('vi-VN')
-        : new Date().toLocaleString('vi-VN');
+        : (order.updated_at
+          ? new Date(order.updated_at).toLocaleString('vi-VN')
+          : dateStr);
       timeline.push({
         time: deliveredTime,
         desc: 'Đã nhận',
@@ -851,8 +853,15 @@ const AccountPage = () => {
     }
 
     if (order.canceled || order.status === 'canceled') {
+      const canceledTime = order.metadata?.canceled_at
+        ? new Date(order.metadata.canceled_at).toLocaleString('vi-VN')
+        : (order.canceled_at
+          ? new Date(order.canceled_at).toLocaleString('vi-VN')
+          : (order.updated_at
+            ? new Date(order.updated_at).toLocaleString('vi-VN')
+            : dateStr));
       timeline.push({
-        time: new Date().toLocaleString('vi-VN'),
+        time: canceledTime,
         desc: 'Đã hủy đơn hàng',
         sub: `Lý do: ${order.cancelReason || order.metadata?.cancel_reason || 'Hệ thống/Cửa hàng hủy'}`,
         done: true
@@ -907,7 +916,7 @@ const AccountPage = () => {
       });
       if (response.ok) {
         const updated = realOrders.map(o =>
-          o.orderId === orderId ? { ...o, status: 'completed' } : o
+          o.orderId === orderId ? { ...o, status: 'completed', payment_status: 'captured' } : o
         );
         localStorage.setItem('sprylo_orders', JSON.stringify(updated));
         setRealOrders(updated);
@@ -1213,15 +1222,9 @@ const AccountPage = () => {
                                   {formatPrice(order.items.reduce((s: number, i: any) => s + ((i as any).price || 0) * i.qty, 0) + (order.shippingFee || 35000))}
                                 </td>
                                 <td>
-                                  <span style={{
-                                    fontSize: '0.8rem',
-                                    fontWeight: 600,
-                                    padding: '3px 8px',
-                                    borderRadius: '12px',
-                                    background: (order.payment_status === 'captured' || order.payment_status === 'paid') ? '#dcfce7' : '#fef9c3',
-                                    color: (order.payment_status === 'captured' || order.payment_status === 'paid') ? '#15803d' : '#a16207',
-                                  }}>
-                                    {(order.payment_status === 'captured' || order.payment_status === 'paid') ? '✓ Đã thanh toán' : 'Chưa thanh toán'}
+                                  <span className={`status-badge ${(order.payment_status === 'captured' || order.payment_status === 'paid') ? 'badge-completed' : 'badge-pending'}`}>
+                                    <i className={(order.payment_status === 'captured' || order.payment_status === 'paid') ? 'bi bi-check-circle-fill' : 'bi bi-exclamation-circle-fill'}></i>
+                                    {(order.payment_status === 'captured' || order.payment_status === 'paid') ? 'Đã thanh toán' : 'Chưa thanh toán'}
                                   </span>
                                 </td>
                                 <td>
@@ -1378,8 +1381,9 @@ const AccountPage = () => {
                               <span style={{ fontWeight: 600, display: 'block', marginBottom: '0.5rem', color: 'var(--ink)' }}>
                                 {selectedOrder.paymentMethod}
                               </span>
-                              <div className="flex-center text-xs">
-                                <span className={`status-badge ${selectedOrder.paymentStatus === 'Đã thanh toán' ? 'badge-completed' : 'badge-pending'}`} style={{ padding: '0.2rem 0.6rem' }}>
+                              <div className="flex-center text-xs" style={{ justifyContent: 'flex-start' }}>
+                                <span className={`status-badge ${selectedOrder.paymentStatus === 'Đã thanh toán' ? 'badge-completed' : 'badge-pending'}`}>
+                                  <i className={selectedOrder.paymentStatus === 'Đã thanh toán' ? 'bi bi-check-circle-fill' : 'bi bi-exclamation-circle-fill'}></i>
                                   {selectedOrder.paymentStatus}
                                 </span>
                               </div>

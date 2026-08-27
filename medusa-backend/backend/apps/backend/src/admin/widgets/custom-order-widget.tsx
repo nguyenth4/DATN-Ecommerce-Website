@@ -2,10 +2,12 @@ import { useState } from "react"
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
 import { Container, Heading, Text, Button, StatusBadge } from "@medusajs/ui"
 import { DetailWidgetProps, AdminOrder } from "@medusajs/types"
+import { useQueryClient } from "@tanstack/react-query"
 
 const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
 
   const order = data
   if (!order) return null
@@ -54,8 +56,9 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
         throw new Error(errJson?.message || await res.text() || "Lỗi cập nhật trạng thái")
       }
 
-      // Refresh the page to load updated details
-      window.location.reload()
+      // Refresh the page reactively using TanStack Query
+      queryClient.invalidateQueries({ queryKey: ["orders"] })
+      queryClient.invalidateQueries({ queryKey: ["order", order.id] })
     } catch (e: any) {
       console.error(e)
       setError(e?.message || "Lỗi cập nhật trạng thái")
