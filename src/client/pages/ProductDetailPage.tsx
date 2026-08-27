@@ -500,7 +500,7 @@ const ProductDetailPage = () => {
                   category: productData.categories?.[0]?.name || "Thiết bị",
                   title: productData.title,
                   subtitle: productData.subtitle || productData.metadata?.subtitle || "",
-                  rating: Number(productData.metadata?.rating || 0),
+                  rating: reviews.length > 0 ? Number((reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)) : 0,
                   rawProduct: productData
                 }}
                 colors={colors}
@@ -606,8 +606,9 @@ const ProductDetailPage = () => {
           <section className="section" style={{ borderTop: '1px solid var(--border)', paddingTop: '3rem', marginBottom: '2rem' }}>
             <h2 style={{ fontSize: '1.5rem', marginBottom: '2rem', fontWeight: 800 }}>Đánh giá của khách hàng</h2>
             <ProductReviewsTab
+              productId={productData.id}
               reviews={reviews}
-              rating={Number(productData.metadata?.rating || 0)}
+              rating={reviews.length > 0 ? Number((reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)) : 0}
               newReviewName={newReviewName}
               newReviewRating={newReviewRating}
               newReviewComment={newReviewComment}

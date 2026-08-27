@@ -11,6 +11,7 @@ interface Review {
 }
 
 interface ProductReviewsTabProps {
+  productId: string;
   reviews: Review[];
   rating: number;
   newReviewName: string;
@@ -25,6 +26,7 @@ interface ProductReviewsTabProps {
 }
 
 const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
+  productId,
   reviews,
   rating,
   newReviewName,
@@ -43,6 +45,8 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
   });
 
   const [testUser, setTestUser] = useState(localStorage.getItem('test_customer_id') || 'cus_01KWH0KYDJM5N7GW2G6WMXMXC4');
+  const [isEligible, setIsEligible] = useState<boolean>(false);
+  const [isCheckingEligibility, setIsCheckingEligibility] = useState<boolean>(true);
 
   useEffect(() => {
     const handleAuthChange = () => {
@@ -73,6 +77,42 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
       localStorage.setItem('test_customer_id', testUser);
     }
   }, [testUser, isLoggedIn, customerName, setNewReviewName]);
+
+  useEffect(() => {
+    const checkEligibility = async () => {
+      setIsCheckingEligibility(true);
+      try {
+        let currentCustomerId = '';
+        if (isLoggedIn && customerInfo?.id) {
+          currentCustomerId = customerInfo.id;
+        } else {
+          currentCustomerId = testUser;
+        }
+        
+        const MEDUSA_BACKEND_URL = (import.meta as any).env?.VITE_MEDUSA_BACKEND_URL || 'http://localhost:9000';
+        const PUBLISHABLE_KEY = (import.meta as any).env?.VITE_MEDUSA_PUBLISHABLE_KEY || 'pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d';
+
+        const res = await fetch(`${MEDUSA_BACKEND_URL}/store/reviews/check-eligibility?product_id=${productId}&customer_id=${currentCustomerId}`, {
+          headers: {
+            'x-publishable-api-key': PUBLISHABLE_KEY
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setIsEligible(data.isEligible);
+        } else {
+          setIsEligible(false);
+        }
+      } catch (err) {
+        setIsEligible(false);
+      } finally {
+        setIsCheckingEligibility(false);
+      }
+    };
+    if (productId) {
+      checkEligibility();
+    }
+  }, [productId, isLoggedIn, customerInfo, testUser]);
 
   const handleUserChange = (val: string) => {
     setTestUser(val);
@@ -132,6 +172,7 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
       {/* Cột phải: Viết đánh giá & Danh sách đánh giá */}
       <div>
         {/* Form viết đánh giá */}
+        {!isCheckingEligibility && isEligible && (
         <form onSubmit={onAddReview} style={{ background: '#fff', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}><i className="bi bi-pencil-square"></i> Viết đánh giá của bạn</h4>
@@ -240,6 +281,7 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
           </div>
           <button type="submit" className="btn btn-primary btn-sm" style={{ padding: '0.5rem 1.5rem' }}>Gửi đánh giá</button>
         </form>
+        )}
 
         {/* Danh sách các review */}
         <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '1rem' }}>Ý kiến khách hàng</h4>

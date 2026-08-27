@@ -101,7 +101,9 @@ export async function POST(
           FROM "order" o
           JOIN order_item oi ON oi.order_id = o.id
           JOIN order_line_item oli ON oli.id = oi.item_id
-          WHERE o.customer_id = ? AND oli.product_id = ?
+          WHERE o.customer_id = ? 
+            AND oli.product_id = ?
+            AND o.status = 'completed'
         ) AS has_purchased
       `, [customerId, product_id]);
 
