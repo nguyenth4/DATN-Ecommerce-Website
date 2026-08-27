@@ -67,67 +67,67 @@ const HomePage = () => {
               <div className="sparkle"></div>
               <div>
                 <span className="eyebrow" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Zap size={14} fill="currentColor" /> Âm thanh · Nổi bật
+                  <Zap size={14} fill="currentColor" /> Siêu phẩm · Nổi bật
                 </span>
-                <h2>Apple HomePod<br />Loa Thế hệ 2</h2>
-                <p>Hệ sinh thái Apple với khả năng phát âm thanh chất lượng cao, đồng thời là trung tâm điều khiển các thiết bị nhà thông minh. Âm thanh không gian, công nghệ cảm biến phòng.</p>
+                <h2>iPhone 16 Pro Max<br />Titan Sa Mạc</h2>
+                <p>Khám phá đỉnh cao công nghệ với chip A18 Pro vượt trội, nút điều khiển Camera Control thông minh và thiết kế khung viền Titan sang trọng bậc nhất.</p>
                 <Link to="/products" className="btn btn--paper">Mua ngay
                   <ChevronRight size={16} />
                 </Link>
                 <div className="dots"><span className="active"></span><span></span><span></span></div>
               </div>
-              <img className="product" src="https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=900&q=80&auto=format&fit=crop" alt="HomePod speaker" />
+              <img className="product" src="https://images.unsplash.com/photo-1727079547627-836b0e391f21?w=900&q=80&auto=format&fit=crop" alt="iPhone 16 Pro Max" />
             </article>
 
             <article className="bento-card bento-card--purple">
               <div className="sparkle"></div>
-              <span className="eyebrow">Thiết bị đeo</span>
-              <h3 style={{ fontSize: 'var(--text-xl)', lineHeight: 1.15 }}>Khám phá<br />Apple Watch</h3>
+              <span className="eyebrow">Đỉnh cao Apple</span>
+              <h3 style={{ fontSize: 'var(--text-xl)', lineHeight: 1.15 }}>iPhone 16 Pro<br />Titan Tự Nhiên</h3>
               <Link to="/products" className="shop-now">Mua ngay
                 <ChevronRight size={14} />
               </Link>
-              <img className="product" src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80&auto=format&fit=crop" alt="Apple Watch" />
+              <img className="product" src="https://images.unsplash.com/photo-1726732970014-f2df88c87dd3?w=600&q=80&auto=format&fit=crop" alt="iPhone 16 Pro" />
             </article>
 
             <article className="bento-card bento-card--teal">
               <div className="sparkle"></div>
-              <span className="eyebrow">Điện thoại mới nhất</span>
+              <span className="eyebrow">Flagship Galaxy AI</span>
               <h3 style={{ fontSize: 'var(--text-xl)', lineHeight: 1.15 }}>Galaxy S24<br />Ultra · 5G</h3>
               <Link to="/products" className="shop-now">Mua ngay
                 <ChevronRight size={14} />
               </Link>
-              <img className="product" src="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600&q=80&auto=format&fit=crop" alt="Samsung Galaxy phone" />
+              <img className="product" src="https://images.unsplash.com/photo-1705585175110-d25f92c183aa?w=600&q=80&auto=format&fit=crop" alt="Samsung Galaxy S24 Ultra" />
             </article>
 
             <div className="bento-row">
               <article className="bento-card bento-card--orange">
                 <div className="sparkle"></div>
-                <span className="eyebrow">Máy ảnh</span>
-                <h3 style={{ fontSize: 'var(--text-lg)', lineHeight: 1.2 }}>Samsung<br />Gear Camera</h3>
+                <span className="eyebrow">Nhiếp ảnh chuyên nghiệp</span>
+                <h3 style={{ fontSize: 'var(--text-lg)', lineHeight: 1.2 }}>OPPO Find X8<br />Camera Hasselblad</h3>
                 <Link to="/products" className="shop-now">Mua ngay
                   <ChevronRight size={14} />
                 </Link>
-                <img className="product" src="https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=500&q=80&auto=format&fit=crop" alt="Camera" />
+                <img className="product" src="https://images.unsplash.com/photo-1779171443655-da6287ba0d2e?w=500&q=80&auto=format&fit=crop" alt="OPPO Find X8" />
               </article>
 
               <article className="bento-card bento-card--green">
                 <div className="sparkle"></div>
-                <span className="eyebrow">Âm thanh</span>
-                <h3 style={{ fontSize: 'var(--text-lg)', lineHeight: 1.2 }}>Beats<br />Studio Buds</h3>
+                <span className="eyebrow">Trải nghiệm mượt mà</span>
+                <h3 style={{ fontSize: 'var(--text-lg)', lineHeight: 1.2 }}>iPhone 15 Pro<br />Titan Xanh</h3>
                 <Link to="/products" className="shop-now">Mua ngay
                   <ChevronRight size={14} />
                 </Link>
-                <img className="product" src="https://images.unsplash.com/photo-1606220945770-b5b6c2c55bf1?w=500&q=80&auto=format&fit=crop" alt="Earbuds" />
+                <img className="product" src="https://images.unsplash.com/photo-1710023038502-ba80a70a9f53?w=500&q=80&auto=format&fit=crop" alt="iPhone 15 Pro" />
               </article>
 
               <article className="bento-card bento-card--black">
                 <div className="sparkle"></div>
-                <span className="eyebrow">Máy ảnh DSLR</span>
-                <h3 style={{ fontSize: 'var(--text-lg)', lineHeight: 1.2 }}>Hero Camera<br />X-Series</h3>
+                <span className="eyebrow">Hiệu năng tối đa</span>
+                <h3 style={{ fontSize: 'var(--text-lg)', lineHeight: 1.2 }}>Xiaomi 14 Ultra<br />Màn hình Leica</h3>
                 <Link to="/products" className="shop-now">Mua ngay
                   <ChevronRight size={14} />
                 </Link>
-                <img className="product" src="https://images.unsplash.com/photo-1502920917128-1aa500764cbd?w=500&q=80&auto=format&fit=crop" alt="DSLR camera" />
+                <img className="product" src="https://images.unsplash.com/photo-1770274813875-346bfaf0ee11?w=500&q=80&auto=format&fit=crop" alt="Xiaomi 14 Ultra" />
               </article>
             </div>
 
@@ -154,50 +154,56 @@ const HomePage = () => {
             >
               Tất cả
             </button>
-            {categories.filter((cat: any) => !cat.parent_category_id).map((cat: any) => {
-              const hasChildren = cat.category_children && cat.category_children.length > 0;
-              const isCatOrChildActive = selectedCatId === cat.id || cat.category_children?.some((c: any) => c.id === selectedCatId);
+            {categories
+              .filter((cat: any) => {
+                if (cat.parent_category_id) return false;
+                const name = cat.name?.toLowerCase() || '';
+                return !['laptop', 'phụ kiện', 'accessories', 'đồng hồ', 'watch', 'sạc', 'cáp', 'tai nghe', 'loa', 'âm thanh'].some(term => name.includes(term));
+              })
+              .map((cat: any) => {
+                const hasChildren = cat.category_children && cat.category_children.length > 0;
+                const isCatOrChildActive = selectedCatId === cat.id || cat.category_children?.some((c: any) => c.id === selectedCatId);
 
-              if (!hasChildren) {
+                if (!hasChildren) {
+                  return (
+                    <button
+                      key={cat.id}
+                      className={`tab${selectedCatId === cat.id ? ' is-active' : ''}`}
+                      role="tab"
+                      aria-selected={selectedCatId === cat.id}
+                      onClick={() => setSelectedCatId(cat.id)}
+                    >
+                      {cat.name}
+                    </button>
+                  );
+                }
+
                 return (
-                  <button
-                    key={cat.id}
-                    className={`tab${selectedCatId === cat.id ? ' is-active' : ''}`}
-                    role="tab"
-                    aria-selected={selectedCatId === cat.id}
-                    onClick={() => setSelectedCatId(cat.id)}
-                  >
-                    {cat.name}
-                  </button>
-                );
-              }
+                  <div key={cat.id} className="tab-dropdown-wrap" style={{ position: 'relative', display: 'inline-block' }}>
+                    <button
+                      className={`tab${isCatOrChildActive ? ' is-active' : ''}`}
+                      role="tab"
+                      onClick={() => setSelectedCatId(cat.id)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                    >
+                      {cat.name}
+                      <ChevronRight size={14} style={{ transform: 'rotate(90deg)', transition: 'transform 0.2s' }} />
+                    </button>
 
-              return (
-                <div key={cat.id} className="tab-dropdown-wrap" style={{ position: 'relative', display: 'inline-block' }}>
-                  <button
-                    className={`tab${isCatOrChildActive ? ' is-active' : ''}`}
-                    role="tab"
-                    onClick={() => setSelectedCatId(cat.id)}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                  >
-                    {cat.name}
-                    <ChevronRight size={14} style={{ transform: 'rotate(90deg)', transition: 'transform 0.2s' }} />
-                  </button>
-
-                  <div className="tab-dropdown-menu">
-                    {cat.category_children.map((child: any) => (
-                      <button
-                        key={child.id}
-                        className={`tab-dropdown-item${selectedCatId === child.id ? ' is-selected' : ''}`}
-                        onClick={() => setSelectedCatId(child.id)}
-                      >
-                        {child.name}
-                      </button>
-                    ))}
+                    <div className="tab-dropdown-menu">
+                      {cat.category_children.map((child: any) => (
+                        <button
+                          key={child.id}
+                          className={`tab-dropdown-item${selectedCatId === child.id ? ' is-selected' : ''}`}
+                          onClick={() => setSelectedCatId(child.id)}
+                        >
+                          {child.name}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
 
           <div className="products">
@@ -228,39 +234,41 @@ const HomePage = () => {
             </Link>
           </div>
           <div className="cats-grid">
-            {categories.slice(0, 5).map((c: any) => {
-              const isDienThoai = c.name?.toLowerCase() === 'điện thoại';
-              const displayName = isDienThoai ? 'Xiaomi' : c.name;
-              
-              return (
-                <Link key={c.id} to={`/products?category_id=${c.id}`} className="cat-tile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', minHeight: '60px' }}>
-                  <div className="name" style={{ fontSize: '16px', fontWeight: 600 }}>{displayName}</div>
-                </Link>
-              );
-            })}
+            {categories
+              .filter((c: any) => {
+                const name = c.name?.toLowerCase() || '';
+                return !['laptop', 'phụ kiện', 'accessories', 'đồng hồ', 'watch', 'sạc', 'cáp', 'tai nghe', 'loa', 'âm thanh'].some(term => name.includes(term));
+              })
+              .slice(0, 5)
+              .map((c: any) => {
+                return (
+                  <Link key={c.id} to={`/products?category_id=${c.id}`} className="cat-tile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', minHeight: '60px' }}>
+                    <div className="name" style={{ fontSize: '16px', fontWeight: 600 }}>{c.name}</div>
+                  </Link>
+                );
+              })}
           </div>
         </div>
       </section>
 
-      {/* DISCOUNT BANNERS */}
       <section className="section" style={{ paddingTop: 0 }}>
         <div className="container">
           <div className="discount-row">
             <article className="discount-card discount-card--watch">
-              <span className="meta">CHỈ TRONG TUẦN NÀY</span>
-              <h3>Ưu Đãi Lớn<br /><span className="pct">Giảm 50%</span></h3>
+              <span className="meta">ƯU ĐÃI LỚN GALAXY</span>
+              <h3>Galaxy S24 Series<br /><span className="pct">Giảm 20%</span></h3>
               <Link to="/products" className="shop-now">Mua ngay
                 <ChevronRight size={14} />
               </Link>
-              <img className="product" src="https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=500&q=80&auto=format&fit=crop" alt="Smart watch" />
+              <img className="product" src="https://images.unsplash.com/photo-1705585175110-d25f92c183aa?w=500&q=80&auto=format&fit=crop" alt="Galaxy S24" />
             </article>
             <article className="discount-card discount-card--airpods">
-              <span className="meta">PHIÊN BẢN GIỚI HẠN</span>
-              <h3>Studio Buds Pro<br /><span className="pct">Giảm 30%</span></h3>
+              <span className="meta">ĐỈNH CAO APPLE</span>
+              <h3>iPhone 15 Pro<br /><span className="pct">Giảm 15%</span></h3>
               <Link to="/products" className="shop-now">Mua ngay
                 <ChevronRight size={14} />
               </Link>
-              <img className="product" src="https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=500&q=80&auto=format&fit=crop" alt="Earbuds" />
+              <img className="product" src="https://images.unsplash.com/photo-1710023038502-ba80a70a9f53?w=500&q=80&auto=format&fit=crop" alt="iPhone 15 Pro" />
             </article>
           </div>
         </div>

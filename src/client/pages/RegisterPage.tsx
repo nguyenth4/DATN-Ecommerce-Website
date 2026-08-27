@@ -205,7 +205,7 @@ const RegisterPage = () => {
       <div className="auth-visual">
         <div className="auth-visual-img">
           <img
-            src="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=900&q=80"
+            src="https://images.unsplash.com/photo-1759588073186-1d4ac7e33623?w=900&q=80&auto=format&fit=crop"
             alt="Tech Studio Headphones"
           />
           <div className="auth-visual-overlay"></div>
