@@ -741,6 +741,21 @@ const AccountPage = () => {
     return 0;
   };
 
+  // Cancel is only allowed before shipping starts (pending/confirmed/preparing)
+  const canCancelOrder = (order: any) => {
+    if (order.canceled || order.status === 'canceled') return false;
+    const step = getDynamicStatusStep(order);
+    return step >= 0 && step < 3;
+  };
+
+  const getCancelBlockedReason = (order: any) => {
+    if (order.canceled || order.status === 'canceled') return null;
+    const step = getDynamicStatusStep(order);
+    if (step >= 4) return 'Đơn hàng đã hoàn tất, không thể hủy.';
+    if (step === 3) return 'Đơn hàng đang được vận chuyển, không thể hủy.';
+    return null;
+  };
+
   const getDynamicTimeline = (order: any) => {
     const timeline = [];
     const dateStr = new Date(order.created_at).toLocaleString('vi-VN');
@@ -1143,7 +1158,7 @@ const AccountPage = () => {
                                 </td>
                                 <td style={{ textAlign: 'right' }}>
                                   <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
-                                    {!order.canceled && (!order.fulfillment_status || order.fulfillment_status === 'not_fulfilled') && (
+                                    {canCancelOrder(order) ? (
                                       <button
                                         className="btn-order-action btn-order-cancel"
                                         onClick={() => {
@@ -1155,7 +1170,15 @@ const AccountPage = () => {
                                       >
                                         <i className="bi bi-x-circle"></i> Hủy đơn
                                       </button>
-                                    )}
+                                    ) : getCancelBlockedReason(order) ? (
+                                      <span
+                                        className="cancel-blocked-note"
+                                        title={getCancelBlockedReason(order) || undefined}
+                                        style={{ fontSize: '0.75rem', color: 'var(--text-muted, #888)', fontStyle: 'italic' }}
+                                      >
+                                        <i className="bi bi-info-circle"></i> {getCancelBlockedReason(order)}
+                                      </span>
+                                    ) : null}
                                     <button
                                       className="btn-order-action btn-order-detail"
                                       onClick={() => setSelectedOrderId(order.orderId)}
@@ -1370,8 +1393,8 @@ const AccountPage = () => {
                               <span>{formatPrice(selectedOrder.total)}</span>
                             </div>
                           </div>
-                          {/* CANCEL BUTTON - only for real orders not yet canceled and not yet fulfilled */}
-                          {selectedRealOrder && !selectedRealOrder.canceled && (!selectedRealOrder.fulfillment_status || selectedRealOrder.fulfillment_status === 'not_fulfilled') && (
+                          {/* CANCEL BUTTON - only allowed before shipping starts (pending/confirmed/preparing) */}
+                          {selectedRealOrder && canCancelOrder(selectedRealOrder) && (
                             <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--rule)', display: 'flex', justifyContent: 'flex-end' }}>
                               <button
                                 className="btn-order-action btn-order-cancel"
@@ -1385,6 +1408,13 @@ const AccountPage = () => {
                               >
                                 <i className="bi bi-x-circle" style={{ fontSize: '1rem' }}></i> Hủy đơn hàng này
                               </button>
+                            </div>
+                          )}
+                          {selectedRealOrder && !canCancelOrder(selectedRealOrder) && getCancelBlockedReason(selectedRealOrder) && (
+                            <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--rule)', display: 'flex', justifyContent: 'flex-end' }}>
+                              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted, #888)', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <i className="bi bi-info-circle"></i> {getCancelBlockedReason(selectedRealOrder)}
+                              </span>
                             </div>
                           )}
 

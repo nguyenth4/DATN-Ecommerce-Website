@@ -32,6 +32,16 @@ export const POST = async (
       })
     }
 
+    // Cancellation only allowed before "shipping" starts (pending/confirmed/preparing)
+    const CANCELABLE_STATUSES = ["pending", "confirmed", "preparing"]
+    const customStatus = (order.metadata || {}).custom_status
+    if (customStatus && !CANCELABLE_STATUSES.includes(customStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: "Đơn hàng đang được vận chuyển hoặc đã hoàn tất, không thể hủy."
+      })
+    }
+
     // Update order status to canceled
     await db.raw(`
       UPDATE "order" 
