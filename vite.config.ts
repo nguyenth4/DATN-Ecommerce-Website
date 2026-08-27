@@ -5,6 +5,8 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    port: 5174,
+    strictPort: true, // Lỗi ngay nếu port bị chiếm, thay vì dùng port ngẫu nhiên
     proxy: {
       '/admin': {
         target: 'http://localhost:9000',
@@ -18,3 +20,4 @@ export default defineConfig({
     }
   }
 })
+

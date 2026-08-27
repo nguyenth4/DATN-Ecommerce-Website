@@ -306,7 +306,9 @@ export const POST = async (
         const vnpayHost = process.env.VNPAY_HOST || 'https://sandbox.vnpayment.vn'
         const tmnCode = process.env.VNPAY_TMN_CODE || 'VNPAY_TMN_CODE_PLACEHOLDER'
         const secureSecret = process.env.VNPAY_SECURE_SECRET || 'VNPAY_SECURE_SECRET_PLACEHOLDER'
-        const returnUrl = process.env.VNPAY_RETURN_URL || 'http://localhost:5173/checkout/vnpay_return'
+        const returnUrl = process.env.VNPAY_RETURN_URL || 'http://localhost:5174/checkout/vnpay_return'
+        // IPN URL: VNPAY gọi server-to-server để xác nhận giao dịch
+        const ipnUrl = process.env.VNPAY_IPN_URL || 'http://localhost:9000/store/payment/vnpay/ipn'
 
         const vnpay = new VNPay({
           vnpayHost,
@@ -327,6 +329,8 @@ export const POST = async (
           vnp_OrderType: 'other',
           vnp_ReturnUrl: returnUrl,
         })
+
+        console.log(`[Checkout] ✅ VNPAY URL built for order ${orderId}, amount: ${vnpAmount}, IPN: ${ipnUrl}`)
       } catch (err: any) {
         console.error("[VNPay Checkout Error]:", err.message)
       }

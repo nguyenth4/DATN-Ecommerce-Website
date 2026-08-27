@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import '../styles/account.css';
 import '../styles/order-tracking.css';
@@ -48,7 +48,16 @@ const formatOrderId = (id: string) => {
 const AccountPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'addresses' | 'wishlist' | 'wallet' | 'password' | 'policies'>('profile');
+  const [searchParamsQ] = useSearchParams();
+
+  // Đọc ?tab= từ URL để tự động mở tab đúng (ví dụ: /account?tab=orders từ VNPayReturnPage)
+  const initialTab = (() => {
+    const t = searchParamsQ.get('tab');
+    const valid = ['profile', 'orders', 'addresses', 'wishlist', 'wallet', 'password', 'policies'];
+    return valid.includes(t || '') ? (t as any) : 'profile';
+  })();
+
+  const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'addresses' | 'wishlist' | 'wallet' | 'password' | 'policies'>(initialTab);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [walletData, setWalletData] = useState<any>(null);
   const [customerId, setCustomerId] = useState<string | null>(null);
@@ -859,7 +868,7 @@ const AccountPage = () => {
     date: new Date(selectedRealOrder.created_at).toLocaleString('vi-VN'),
     total: selectedRealOrder.items.reduce((s: number, i: any) => s + ((i as any).price || 0) * i.qty, 0) + (selectedRealOrder.shippingFee || 35000),
     shippingFee: selectedRealOrder.shippingFee || 35000,
-    paymentStatus: selectedRealOrder.payment_status === 'captured' ? 'Đã thanh toán' : 'Chưa thanh toán',
+    paymentStatus: (selectedRealOrder.payment_status === 'captured' || selectedRealOrder.payment_status === 'paid') ? 'Đã thanh toán' : 'Chưa thanh toán',
     shippingStatus: getOrderFulfillmentBadgeText(selectedRealOrder),
     shippingAddress: {
       name: selectedRealOrder.customer?.fullName || 'Khách Hàng',
@@ -1204,8 +1213,15 @@ const AccountPage = () => {
                                   {formatPrice(order.items.reduce((s: number, i: any) => s + ((i as any).price || 0) * i.qty, 0) + (order.shippingFee || 35000))}
                                 </td>
                                 <td>
-                                  <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>
-                                    {order.payment_status === 'captured' ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                                  <span style={{
+                                    fontSize: '0.8rem',
+                                    fontWeight: 600,
+                                    padding: '3px 8px',
+                                    borderRadius: '12px',
+                                    background: (order.payment_status === 'captured' || order.payment_status === 'paid') ? '#dcfce7' : '#fef9c3',
+                                    color: (order.payment_status === 'captured' || order.payment_status === 'paid') ? '#15803d' : '#a16207',
+                                  }}>
+                                    {(order.payment_status === 'captured' || order.payment_status === 'paid') ? '✓ Đã thanh toán' : 'Chưa thanh toán'}
                                   </span>
                                 </td>
                                 <td>

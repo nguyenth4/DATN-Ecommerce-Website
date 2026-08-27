@@ -1,5 +1,66 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { Modules } from "@medusajs/framework/utils";
+import crypto from "crypto";
+
+// ─── Build VNPAY Payment URL (HMAC-SHA512) ───────────────────────────────────
+function buildVnpayUrl(
+  orderId: string,
+  amount: number, // VND (số nguyên)
+  orderInfo: string,
+  ipAddr: string
+): string {
+  const tmnCode = process.env.VNPAY_TMN_CODE || "CGPNVLJA";
+  const hashSecret = process.env.VNPAY_HASH_SECRET || "RAOEXHYVSDDIIENYWSLDIIZTANXUXZFJ";
+  const vnpUrl = process.env.VNPAY_URL || "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
+  const returnUrl = process.env.VNPAY_RETURN_URL || "http://localhost:9000/store/payment/vnpay/callback";
+
+  const now = new Date();
+  // Format: YYYYMMDDHHmmss (Vietnam time UTC+7)
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  const vnpCreateDate =
+    now.getFullYear().toString() +
+    pad(now.getMonth() + 1) +
+    pad(now.getDate()) +
+    pad(now.getHours()) +
+    pad(now.getMinutes()) +
+    pad(now.getSeconds());
+
+  // Expire in 15 minutes
+  const expireTime = new Date(now.getTime() + 15 * 60 * 1000);
+  const vnpExpireDate =
+    expireTime.getFullYear().toString() +
+    pad(expireTime.getMonth() + 1) +
+    pad(expireTime.getDate()) +
+    pad(expireTime.getHours()) +
+    pad(expireTime.getMinutes()) +
+    pad(expireTime.getSeconds());
+
+  const params: Record<string, string> = {
+    vnp_Version: "2.1.0",
+    vnp_Command: "pay",
+    vnp_TmnCode: tmnCode,
+    vnp_Amount: (amount * 100).toString(), // VNPAY nhân x100
+    vnp_CreateDate: vnpCreateDate,
+    vnp_CurrCode: "VND",
+    vnp_IpAddr: ipAddr,
+    vnp_Locale: "vn",
+    vnp_OrderInfo: orderInfo.substring(0, 255),
+    vnp_OrderType: "other",
+    vnp_ReturnUrl: returnUrl,
+    vnp_TxnRef: orderId,
+    vnp_ExpireDate: vnpExpireDate,
+  };
+
+  // Sắp xếp params theo key (A-Z) trước khi ký
+  const sortedKeys = Object.keys(params).sort();
+  const signData = sortedKeys.map((k) => `${k}=${encodeURIComponent(params[k]).replace(/%20/g, "+")}`).join("&");
+
+  const hmac = crypto.createHmac("sha512", hashSecret);
+  const secureHash = hmac.update(Buffer.from(signData, "utf-8")).digest("hex");
+
+  const queryString = sortedKeys.map((k) => `${k}=${encodeURIComponent(params[k]).replace(/%20/g, "+")}`).join("&");
+  return `${vnpUrl}?${queryString}&vnp_SecureHash=${secureHash}`;
+}
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   try {
@@ -100,13 +161,25 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       });
     }
 
+
     // 2. Generate Payment Gateway URLs
     let paymentUrl: string | null = null;
     const baseUrl = "http://localhost:9000/store/payment";
 
+    // Lấy IP của client (dùng cho vnp_IpAddr)
+    const clientIp =
+      (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ||
+      req.socket?.remoteAddress ||
+      "127.0.0.1";
+
+    // Lấy tổng tiền từ payload (đơn vị VND)
+    const totalAmount: number = payload.totalAmount || 0;
+
     if (paymentMethod === 'vnpay') {
-      // Mock VNPay URL
-      paymentUrl = `https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?vnp_TxnRef=${mockOrderId}&vnp_ReturnUrl=${encodeURIComponent(`${baseUrl}/vnpay/callback`)}`;
+      // ✅ Tạo URL VNPAY thật với chữ ký HMAC-SHA512
+      const orderInfo = `Thanh toan don hang ${mockOrderId}`;
+      paymentUrl = buildVnpayUrl(mockOrderId, totalAmount, orderInfo, clientIp);
+      console.log(`[Checkout API] ✅ VNPAY URL generated for order ${mockOrderId}, amount: ${totalAmount}`);
     } else if (paymentMethod === 'momo') {
       // Mock MoMo URL
       paymentUrl = `https://test-payment.momo.vn/v2/gateway/api/create?orderId=${mockOrderId}&redirectUrl=${encodeURIComponent(`${baseUrl}/momo/callback`)}`;
@@ -114,9 +187,10 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       // Mock ZaloPay URL
       paymentUrl = `https://sb-openapi.zalopay.vn/v2/create?app_trans_id=${mockOrderId}&callback_url=${encodeURIComponent(`${baseUrl}/zalopay/callback`)}`;
     } else {
-      // Fallback or unknown payment method
-      paymentUrl = `https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?vnp_TxnRef=${mockOrderId}`;
+      // Fallback
+      paymentUrl = null;
     }
+
 
     return res.status(200).json({
       message: "Checkout initiated successfully",
