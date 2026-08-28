@@ -77,9 +77,27 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     // ─── Deduct Inventory on Order Placement ───────────────────────────────
     const productModuleService = req.scope.resolve(Modules.PRODUCT);
     if (productModuleService && Array.isArray(items) && items.length > 0) {
-      console.log(`[Checkout API] Deducting inventory for ${items.length} item(s)...`);
+      // 1. Kiểm tra tồn kho của tất cả sản phẩm trước khi trừ
       for (const item of items) {
-        // item.id = variant_id, item.qty = quantity ordered
+        if (item.id && item.qty) {
+          try {
+            const variant = (await productModuleService.retrieveProductVariant(item.id)) as any;
+            if (variant && variant.manage_inventory !== false && typeof variant.inventory_quantity === "number") {
+              if (item.qty > variant.inventory_quantity) {
+                return res.status(400).json({
+                  message: `Sản phẩm ${item.name || 'chọn'} không đủ số lượng! Chỉ còn ${variant.inventory_quantity} trong kho.`
+                });
+              }
+            }
+          } catch (invErr) {
+            console.error(`[Checkout API] Lỗi kiểm tra tồn kho variant ${item.id}:`, invErr);
+          }
+        }
+      }
+
+      // 2. Trừ tồn kho nếu tất cả đều hợp lệ
+      console.log(`[Checkout API] Đang trừ kho cho ${items.length} mặt hàng...`);
+      for (const item of items) {
         if (item.id && item.qty) {
           try {
             const variant = (await productModuleService.retrieveProductVariant(item.id)) as any;
@@ -89,12 +107,12 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
                 inventory_quantity: newQuantity,
               } as any);
               console.log(
-                `[Checkout API] Deducted ${item.qty} from variant ${item.id}. New stock: ${newQuantity}`
+                `[Checkout API] Đã trừ ${item.qty} cho variant ${item.id}. Tồn kho mới: ${newQuantity}`
               );
             }
           } catch (invErr) {
             console.error(
-              `[Checkout API] Failed to deduct inventory for variant ${item.id}:`,
+              `[Checkout API] Lỗi trừ kho variant ${item.id}:`,
               invErr
             );
           }

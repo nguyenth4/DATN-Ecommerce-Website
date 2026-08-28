@@ -240,9 +240,9 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
           />
           <button 
             className="qty-btn" 
-            style={{ width: '36px', height: '36px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.1rem', opacity: qty >= 10 ? 0.5 : 1 }}
+            style={{ width: '36px', height: '36px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.1rem', opacity: qty >= activeVariant.stock ? 0.5 : 1 }}
             onClick={() => onQtyChange('inc')}
-            disabled={qty >= 10}
+            disabled={qty >= activeVariant.stock}
           >
             <i className="bi bi-plus"></i>
           </button>
@@ -278,6 +278,7 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
               height: product.rawProduct?.height || 5,
               length: product.rawProduct?.length || 10,
               width: product.rawProduct?.width || 10,
+              stock: activeVariant.stock,
             });
           }}
         >
@@ -302,7 +303,7 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
           }}
           onClick={() => {
             const variantDetails = [selectedColor, selectedStorage].filter(Boolean).join(' · ');
-            const added = addToCart({
+            const buyNowItem = {
               id: activeVariant.id || `mock-${activeVariant.sku}`,
               productId: product.rawProduct?.id || 'mock-prod-id',
               name: product.title,
@@ -314,8 +315,9 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
               height: product.rawProduct?.height || 5,
               length: product.rawProduct?.length || 10,
               width: product.rawProduct?.width || 10,
-            });
-            if (added) navigate('/checkout');
+              stock: activeVariant.stock,
+            };
+            navigate('/checkout', { state: { buyNowItem } });
           }}
         >
           <i className="bi bi-lightning-charge"></i> Mua ngay

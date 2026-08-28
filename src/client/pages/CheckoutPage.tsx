@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   ShieldCheck, 
@@ -76,8 +76,14 @@ const CheckoutPage = () => {
   const [paymentMethod, setPaymentMethod] = useState('vnpay');
   const [shippingMethod, setShippingMethod] = useState('ghn');
 
+  const location = useLocation();
+  const buyNowItem = location.state?.buyNowItem;
+
   // Cart & Stock State
-  const [cartItems] = useState<CartItem[]>(() => getCart());
+  const [cartItems] = useState<CartItem[]>(() => {
+    if (buyNowItem) return [buyNowItem];
+    return getCart();
+  });
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // Validate stock when cart items change
@@ -91,7 +97,7 @@ const CheckoutPage = () => {
 
   // Auth & Guest States
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isGuestCheckout, setIsGuestCheckout] = useState(false);
+  const [isGuestCheckout, setIsGuestCheckout] = useState(!!location.state?.buyNowItem);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [customer, setCustomer] = useState<MedusaCustomer | null>(null);
   const [useWallet, setUseWallet] = useState(false);
@@ -216,7 +222,7 @@ const CheckoutPage = () => {
         await fetchCustomerProfile();
       } else {
         setIsLoggedIn(false);
-        navigate('/login?redirect=/checkout');
+        // Bỏ redirect để có thể sử dụng màn hình Checkout dạng Guest / Form đăng nhập nội tuyến
       }
       setIsLoadingProfile(false);
     };
@@ -656,6 +662,12 @@ const CheckoutPage = () => {
       });
       const data = await response.json();
       
+      if (!response.ok) {
+        showToast(data.message || 'Thanh toán thất bại', 'error');
+        setIsProcessing(false);
+        return;
+      }
+
       // Save orderId + items to localStorage for potential cancellation rollback
       if (data.orderId) {
         const orderRecord = {
@@ -683,14 +695,18 @@ const CheckoutPage = () => {
         localStorage.setItem('sprylo_last_order', JSON.stringify(orderRecord));
       }
 
-      clearCart();
+      if (!buyNowItem) {
+        clearCart();
+      }
       if (data.paymentUrl) {
         window.location.href = data.paymentUrl;
         return;
       }
     } catch (error) {
       console.error("Checkout failed:", error);
-      clearCart();
+      showToast('Đã có lỗi xảy ra trong quá trình xử lý đơn hàng.', 'error');
+      setIsProcessing(false);
+      return;
     }
 
     setTimeout(() => {

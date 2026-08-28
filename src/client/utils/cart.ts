@@ -14,6 +14,7 @@ export interface CartItem {
   height?: number;
   length?: number;
   width?: number;
+  stock?: number;
 }
 
 /** Kiểm tra người dùng đã đăng nhập chưa */
@@ -73,9 +74,21 @@ export const addToCart = (item: CartItem): boolean => {
 
   const cart = getCart();
   const existing = cart.find(i => i.id === item.id);
+  
   if (existing) {
-    existing.qty += item.qty;
+    const newQty = existing.qty + item.qty;
+    const maxStock = item.stock ?? 10; // Giả sử max là 10 nếu không có stock
+    if (newQty > maxStock) {
+      showToast(`Không đủ số lượng trong kho! Chỉ còn ${maxStock} sản phẩm.`, 'error');
+      return false;
+    }
+    existing.qty = newQty;
   } else {
+    const maxStock = item.stock ?? 10;
+    if (item.qty > maxStock) {
+      showToast(`Không đủ số lượng trong kho! Chỉ còn ${maxStock} sản phẩm.`, 'error');
+      return false;
+    }
     cart.push(item);
   }
   saveCart(cart);
@@ -87,7 +100,13 @@ export const updateCartQty = (id: string, qty: number) => {
   const cart = getCart();
   const item = cart.find(i => i.id === id);
   if (item) {
-    item.qty = Math.max(1, qty);
+    const maxStock = item.stock ?? 10;
+    if (qty > maxStock) {
+      showToast(`Kho chỉ còn ${maxStock} sản phẩm.`, 'error');
+      item.qty = maxStock;
+    } else {
+      item.qty = Math.max(1, qty);
+    }
     saveCart(cart);
   }
 };

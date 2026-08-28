@@ -75,7 +75,7 @@ const CartPage = () => {
   const updateQty = (id: string, delta: number) => {
     const updated = items.map(item => {
       if (item.id === id) {
-        const maxStock = stockInfo[id] ?? 10;
+        const maxStock = stockInfo[id] ?? item.stock ?? 10;
         const newQty = Math.min(maxStock, Math.max(1, item.qty + delta));
         updateCartQty(id, newQty);
         return { ...item, qty: newQty };
