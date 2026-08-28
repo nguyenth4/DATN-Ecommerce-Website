@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
-import { addToCart } from '../utils/cart';
+import { addToCart, isLoggedIn } from '../utils/cart';
 import { getCompareList, toggleCompareProduct } from '../utils/compare';
 import { getWishlist, toggleWishlistProduct } from '../utils/wishlist';
 import {
@@ -473,6 +473,7 @@ const ProductsPage = () => {
                                   qty: 1,
                                   img: imgUrl2,
                                 });
+                                if (!isLoggedIn()) return;
                                 window.dispatchEvent(new Event('cart-updated'));
                                 navigate('/checkout');
                               }}

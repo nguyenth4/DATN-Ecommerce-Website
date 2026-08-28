@@ -302,7 +302,7 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
           }}
           onClick={() => {
             const variantDetails = [selectedColor, selectedStorage].filter(Boolean).join(' · ');
-            addToCart({
+            const added = addToCart({
               id: activeVariant.id || `mock-${activeVariant.sku}`,
               productId: product.rawProduct?.id || 'mock-prod-id',
               name: product.title,
@@ -315,7 +315,7 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
               length: product.rawProduct?.length || 10,
               width: product.rawProduct?.width || 10,
             });
-            navigate('/checkout');
+            if (added) navigate('/checkout');
           }}
         >
           <i className="bi bi-lightning-charge"></i> Mua ngay

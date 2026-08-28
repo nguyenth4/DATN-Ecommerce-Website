@@ -706,16 +706,15 @@ const CheckoutPage = () => {
   const insuranceValue = cartItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
-  const [shippingFee, setShippingFee] = useState(35000);
+  const [ghnExpressFee, setGhnExpressFee] = useState(35000);
+  const [ghnEconomyFee, setGhnEconomyFee] = useState(25000);
+  const shippingFee = shippingMethod === 'ghn' ? ghnExpressFee : ghnEconomyFee;
   const [resolvedGhnDistrictId, setResolvedGhnDistrictId] = useState<number | null>(null);
   const [resolvedGhnWardCode, setResolvedGhnWardCode] = useState<string | null>(null);
   
   useEffect(() => {
     // Call Shipping Fee API when district/ward changes
     if (selectedDistrict && selectedWard) {
-      // 2: Nhanh (Express), 5: Tiết kiệm (Economy - using GHN API as proxy for economy rates)
-      const serviceTypeId = shippingMethod === 'ghn' ? 2 : 5;
-      
       let provinceName = '';
       let wardName = '';
 
@@ -737,64 +736,69 @@ const CheckoutPage = () => {
         selectedDistrict, 
         selectedWard, 
         provinceName,
-        wardName,
-        serviceTypeId 
+        wardName
       });
 
-      fetch(`${MEDUSA_BACKEND_URL}/store/ghn/fee`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-publishable-api-key': PUBLISHABLE_KEY
-        },
-        body: JSON.stringify({
-          from_district_id: 1442,
-          from_ward_code: "21211",
-          service_type_id: serviceTypeId,
-          to_district_id: parseInt(selectedDistrict) || 1442,
-          to_ward_code: selectedWard || "21211",
-          province_name: provinceName,
-          ward_name: wardName,
-          height: totalHeight || 10,
-          length: maxLength || 10,
-          weight: totalWeight || 200,
-          width: maxWidth || 10,
-          insurance_value: insuranceValue > 5000000 ? 5000000 : insuranceValue, // GHN insurance limit 
-          cod_failed_amount: 2000,
-          coupon: null
-        })
-      })
-      .then(res => {
-        console.log("Fee API Response Status:", res.status);
-        return res.json();
-      })
-      .then(data => {
-        console.log("Fee API Response Data:", data);
-        if (data.data?.total) {
-          setShippingFee(data.data.total);
-          if (data.data.resolved_district_id && data.data.resolved_ward_code) {
-            setResolvedGhnDistrictId(data.data.resolved_district_id);
-            setResolvedGhnWardCode(data.data.resolved_ward_code);
+      const fetchFee = (serviceTypeId: number) => {
+        return fetch(`${MEDUSA_BACKEND_URL}/store/ghn/fee`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-publishable-api-key': PUBLISHABLE_KEY
+          },
+          body: JSON.stringify({
+            from_district_id: 1442,
+            from_ward_code: "21211",
+            service_type_id: serviceTypeId,
+            to_district_id: parseInt(selectedDistrict) || 1442,
+            to_ward_code: selectedWard || "21211",
+            province_name: provinceName,
+            ward_name: wardName,
+            height: totalHeight || 10,
+            length: maxLength || 10,
+            weight: totalWeight || 200,
+            width: maxWidth || 10,
+            insurance_value: insuranceValue > 5000000 ? 5000000 : insuranceValue, // GHN insurance limit 
+            cod_failed_amount: 2000,
+            coupon: null
+          })
+        }).then(res => res.json());
+      };
+
+      Promise.all([fetchFee(2), fetchFee(5)])
+        .then(([expressData, economyData]) => {
+          if (expressData.data?.total) {
+            setGhnExpressFee(expressData.data.total);
+            if (expressData.data.resolved_district_id && expressData.data.resolved_ward_code) {
+              setResolvedGhnDistrictId(expressData.data.resolved_district_id);
+              setResolvedGhnWardCode(expressData.data.resolved_ward_code);
+            }
+          } else {
+            setGhnExpressFee(0);
           }
-        } else {
-          setShippingFee(0);
-        }
-      })
-      .catch(error => {
-        console.error("Fee API error:", error);
-        setShippingFee(0);
-      });
+
+          if (economyData.data?.total) {
+            setGhnEconomyFee(economyData.data.total);
+          } else {
+            setGhnEconomyFee(0);
+          }
+        })
+        .catch(error => {
+          console.error("Fee API error:", error);
+          setGhnExpressFee(0);
+          setGhnEconomyFee(0);
+        });
     } else {
       console.log("Skipping shipping fee fetch - missing IDs:", { selectedDistrict, selectedWard });
       // Default initial prices before location is selected
       setTimeout(() => {
-        setShippingFee(0);
+        setGhnExpressFee(0);
+        setGhnEconomyFee(0);
       }, 0);
     }
   }, [
     selectedDistrict, 
     selectedWard, 
-    shippingMethod, 
     totalHeight, 
     maxLength, 
     totalWeight, 
@@ -1356,8 +1360,8 @@ const CheckoutPage = () => {
                       onClick={() => setShippingMethod('ghn')}
                     >
                       <div className="option-card-header">
-                        <span className="option-name">Giao hàng Nhanh</span>
-                        <span className="option-price">{shippingMethod === 'ghn' && shippingFee > 0 ? `${shippingFee.toLocaleString('vi-VN')}đ` : 'Chưa tính'}</span>
+                        <span className="option-name">Giao hàng Nhanh (Express)</span>
+                        <span className="option-price">{ghnExpressFee > 0 ? `${ghnExpressFee.toLocaleString('vi-VN')}đ` : 'Chưa tính'}</span>
                       </div>
                       <span className="option-desc">Giao tốc hành 1-2 ngày</span>
                       {shippingMethod === 'ghn' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
@@ -1367,8 +1371,8 @@ const CheckoutPage = () => {
                       onClick={() => setShippingMethod('ghtk')}
                     >
                       <div className="option-card-header">
-                        <span className="option-name">Giao hàng Tiết kiệm</span>
-                        <span className="option-price">{shippingMethod === 'ghtk' && shippingFee > 0 ? `${shippingFee.toLocaleString('vi-VN')}đ` : 'Chưa tính'}</span>
+                        <span className="option-name">Giao hàng Tiết kiệm (Economy)</span>
+                        <span className="option-price">{ghnEconomyFee > 0 ? `${ghnEconomyFee.toLocaleString('vi-VN')}đ` : 'Chưa tính'}</span>
                       </div>
                       <span className="option-desc">Giao tiêu chuẩn 3-4 ngày</span>
                       {shippingMethod === 'ghtk' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
