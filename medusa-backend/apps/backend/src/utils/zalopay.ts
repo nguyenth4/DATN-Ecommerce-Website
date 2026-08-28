@@ -1,0 +1,51 @@
+import crypto from 'crypto';
+
+export async function buildZalopayUrl(orderId: string, amount: number, orderInfo: string) {
+  const config = {
+    app_id: process.env.ZALOPAY_APP_ID || "2553",
+    key1: process.env.ZALOPAY_KEY1 || "Pc94W2rvqAee8DhF2rBegigwkgho0AcZ",
+    endpoint: process.env.ZALOPAY_ENDPOINT || "https://sb-openapi.zalopay.vn/v2/create",
+    callback_url: process.env.ZALOPAY_RETURN_URL || "http://localhost:9000/store/payment/zalopay/callback"
+  };
+
+  const embed_data = {
+    redirecturl: config.callback_url
+  };
+  
+  const items: any[] = [];
+  const transID = Math.floor(Math.random() * 1000000);
+  const app_trans_id = `${new Date().toISOString().slice(2, 4)}${new Date().toISOString().slice(5, 7)}${new Date().toISOString().slice(8, 10)}_${transID}`;
+
+  const order = {
+    app_id: config.app_id,
+    app_trans_id: app_trans_id,
+    app_user: "DATN_User",
+    app_time: Date.now(),
+    item: JSON.stringify(items),
+    embed_data: JSON.stringify(embed_data),
+    amount: amount,
+    description: orderInfo,
+    bank_code: "",
+    mac: ""
+  };
+
+  const data = config.app_id + "|" + order.app_trans_id + "|" + order.app_user + "|" + order.amount + "|" + order.app_time + "|" + order.embed_data + "|" + order.item;
+  order.mac = crypto.createHmac('sha256', config.key1).update(data).digest('hex');
+
+  try {
+    const res = await fetch(config.endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(order)
+    });
+    const result = await res.json();
+    if (result.return_code === 1) {
+      return result.order_url;
+    }
+  } catch (error) {
+    console.error("Zalopay create order error:", error);
+  }
+  return null;
+}

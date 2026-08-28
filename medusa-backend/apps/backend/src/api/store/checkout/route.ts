@@ -1,6 +1,7 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { Modules } from "@medusajs/framework/utils";
 import crypto from "crypto";
+import { buildZalopayUrl } from "../../../utils/zalopay";
 
 // ─── Build VNPAY Payment URL (HMAC-SHA512) ───────────────────────────────────
 function buildVnpayUrl(

@@ -5,19 +5,19 @@ loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 module.exports = defineConfig({
   admin: {
     path: "/app",
-    vite: (config: any) => {
-      return {
-        ...config,
-        server: {
-          ...config.server,
-          host: '0.0.0.0',
-          port: 7001,
-          hmr: {
-            clientPort: 7001,
-          }
-        }
-      }
-    }
+    // vite: (config: any) => {
+    //   return {
+    //     ...config,
+    //     server: {
+    //       ...config.server,
+    //       host: '0.0.0.0',
+    //       port: 7001,
+    //       hmr: {
+    //         clientPort: 7001,
+    //       }
+    //     }
+    //   }
+    // }
   },
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
