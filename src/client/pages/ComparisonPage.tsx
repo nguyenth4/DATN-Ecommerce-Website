@@ -56,7 +56,11 @@ const ComparisonPage = () => {
           title: p.title,
           thumbnail: p.thumbnail,
           price: p.variants?.[0]?.prices?.[0]?.amount || 0,
-          specs: specs
+          specs: {
+            ...specs,
+            "Kích thước (D x R x C)": (p.length && p.width && p.height) ? `${p.length} x ${p.width} x ${p.height} cm` : undefined,
+            "Trọng lượng": p.weight ? `${p.weight} g` : undefined
+          }
         };
       });
   }, [productsData, compareIds]);
@@ -78,6 +82,10 @@ const ComparisonPage = () => {
     {
       title: "Pin & Sạc",
       keys: ["Dung lượng pin", "Sạc", "Công nghệ pin"]
+    },
+    {
+      title: "Thiết kế & Trọng lượng",
+      keys: ["Kích thước (D x R x C)", "Trọng lượng"]
     }
   ];
 
