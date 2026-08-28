@@ -2,6 +2,70 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules } from "@medusajs/framework/utils"
 import WalletModuleService from "../../../modules/wallet/service"
 import { WALLET_MODULE } from "../../../modules/wallet"
+import crypto from "crypto"
+
+// ─── Build ZALOPAY Payment URL (HMAC-SHA256) ──────────────────────────────────
+async function buildZalopayUrl(
+  orderId: string,
+  amount: number, // VND
+  orderInfo: string
+): Promise<string> {
+  const appId = parseInt(process.env.ZALOPAY_APP_ID || "2553");
+  const key1 = process.env.ZALOPAY_KEY1 || "Pc94W2rvqAee8DhF2rBegigwkgho0AcZ";
+  const endpoint = process.env.ZALOPAY_ENDPOINT || "https://sb-openapi.zalopay.vn/v2/create";
+  const returnUrl = process.env.ZALOPAY_RETURN_URL || "http://localhost:9000/store/payment/zalopay/callback";
+
+  // AppTransId format: YYMMDD_orderId (e.g. 260828_order_123456)
+  const now = new Date();
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  const dateStr =
+    now.getFullYear().toString().slice(2) +
+    pad(now.getMonth() + 1) +
+    pad(now.getDate());
+  const cleanOrderRef = orderId.replace(/[^a-zA-Z0-9_]/g, '');
+  const appTransId = `${dateStr}_${cleanOrderRef}`;
+
+  const embedData = JSON.stringify({
+    redirecturl: `${returnUrl}?apptransid=${appTransId}&amount=${amount}`,
+  });
+  const items = JSON.stringify([]);
+  const appTime = Date.now();
+
+  const data = `${appId}|${appTransId}|demo|${amount}|${appTime}|${embedData}|${items}`;
+  const mac = crypto.createHmac("sha256", key1).update(data).digest("hex");
+
+  const orderPayload = {
+    app_id: appId,
+    app_trans_id: appTransId,
+    app_user: "demo",
+    app_time: appTime,
+    item: items,
+    embed_data: embedData,
+    amount: amount,
+    description: orderInfo.substring(0, 255),
+    bank_code: "",
+    mac: mac,
+  };
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams(orderPayload as any).toString(),
+    });
+    const result = (await response.json()) as any;
+    console.log("[ZaloPay API] Create order response:", result);
+    if (result && result.return_code === 1 && result.order_url) {
+      return result.order_url;
+    }
+  } catch (err) {
+    console.error("[ZaloPay API] Error creating order:", err);
+  }
+
+  // Fallback direct redirect to callback URL if sandbox API call fails or for offline test
+  return `${returnUrl}?apptransid=${appTransId}&status=1&amount=${amount}`;
+}
+
 
 export const POST = async (
   req: MedusaRequest,
@@ -86,9 +150,29 @@ export const POST = async (
     const orderService = req.scope.resolve(Modules.ORDER)
 
     // Parse customer name into first and last name
-    const nameParts = (customer?.fullName || "Khách Hàng").trim().split(" ")
-    const firstName = nameParts.slice(0, -1).join(" ") || nameParts[0] || "Khách"
-    const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "Hàng"
+    const fullNameInput = (customer?.fullName || "").trim()
+    const nameParts = (fullNameInput || "Khách Hàng").trim().split(" ")
+    let firstName = nameParts.slice(0, -1).join(" ") || nameParts[0] || "Khách"
+    let lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : (fullNameInput ? "" : "Hàng")
+
+    if (customerId) {
+      try {
+        const customerProfileRes = await db.raw(`
+          SELECT first_name, last_name FROM customer WHERE id = ?
+        `, [customerId])
+        if (customerProfileRes.rows.length > 0) {
+          const profile = customerProfileRes.rows[0]
+          if ((!firstName || firstName === "Khách") && profile.first_name) {
+            firstName = profile.first_name
+          }
+          if ((!lastName || lastName === "Hàng" || lastName === "") && profile.last_name) {
+            lastName = profile.last_name
+          }
+        }
+      } catch (err: any) {
+        console.warn("[Checkout Route] Failed to fetch customer profile details:", err.message)
+      }
+    }
 
     // Create order in Medusa
     const orderInput = {
@@ -130,7 +214,10 @@ export const POST = async (
         shipping_fee: Number(shippingFee || 0).toString(),
         note: note || "",
         use_wallet: use_wallet ? "true" : "false",
-        wallet_deducted: walletDeducted.toString()
+        wallet_deducted: walletDeducted.toString(),
+        full_name: customer?.fullName || `${firstName} ${lastName}`,
+        phone: customer?.phoneNumber || "0000000000",
+        address: address || "Địa chỉ mặc định"
       }
     }
 
@@ -150,7 +237,7 @@ export const POST = async (
 
       const paycolId = generateMedusaId("paycol")
       const orderPaycolId = generateMedusaId("orderpaycol")
-      const isPaid = amountToPay === 0 || (paymentMethod !== 'cod' && paymentMethod !== 'COD')
+      const isPaid = amountToPay === 0
       const paycolStatus = isPaid ? 'completed' : 'not_paid'
       const amountPaid = isPaid ? total : 0
 
@@ -176,6 +263,64 @@ export const POST = async (
         INSERT INTO order_payment_collection (id, order_id, payment_collection_id, created_at, updated_at)
         VALUES (?, ?, ?, NOW(), NOW())
       `, [orderPaycolId, orderId, paycolId])
+
+      if (isPaid) {
+        try {
+          const paymentSessionId = generateMedusaId("payses")
+          const paymentId = generateMedusaId("pay")
+          const trxId = generateMedusaId("ordtrx")
+
+          // 1. Insert into payment_session
+          await db.raw(`
+            INSERT INTO payment_session (
+              id, currency_code, amount, raw_amount, provider_id, 
+              data, context, status, authorized_at, payment_collection_id, metadata, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, 'wallet', '{}', '{}', 'authorized', NOW(), ?, '{}', NOW(), NOW())
+          `, [paymentSessionId, currencyCode, total, JSON.stringify(rawAmount), paycolId])
+
+          // 2. Insert into payment
+          await db.raw(`
+            INSERT INTO payment (
+              id, amount, raw_amount, currency_code, provider_id, 
+              created_at, updated_at, captured_at, payment_collection_id, payment_session_id, data, metadata
+            ) VALUES (?, ?, ?, ?, 'wallet', NOW(), NOW(), NOW(), ?, ?, '{}', '{}')
+          `, [paymentId, total, JSON.stringify(rawAmount), currencyCode, paycolId, paymentSessionId])
+
+          // 3. Insert into order_transaction
+          await db.raw(`
+            INSERT INTO order_transaction (
+              id, order_id, version, amount, raw_amount, currency_code, 
+              reference, reference_id, created_at, updated_at
+            ) VALUES (?, ?, 1, ?, ?, ?, 'capture', ?, NOW(), NOW())
+          `, [trxId, orderId, total, JSON.stringify(rawAmount), currencyCode, paymentId])
+
+          // 4. Update order_summary totals
+          const summaryRes = await db.raw(`
+            SELECT id, totals FROM order_summary WHERE order_id = ?
+          `, [orderId])
+          
+          if (summaryRes.rows.length > 0) {
+            const summary = summaryRes.rows[0]
+            const newTotals = {
+              ...summary.totals,
+              paid_total: Number(total),
+              raw_paid_total: { value: total.toString(), precision: 20 },
+              transaction_total: Number(total),
+              raw_transaction_total: { value: total.toString(), precision: 20 },
+              pending_difference: 0,
+              raw_pending_difference: { value: '0', precision: 20 }
+            }
+
+            await db.raw(`
+              UPDATE order_summary 
+              SET totals = ?, updated_at = NOW() 
+              WHERE id = ?
+            `, [JSON.stringify(newTotals), summary.id])
+          }
+        } catch (walletPayErr: any) {
+          console.error("[Checkout Route] Failed to register wallet payment tables:", walletPayErr.message)
+        }
+      }
 
       // Insert shipping method linkage for Medusa Order summary
       try {
@@ -217,6 +362,52 @@ export const POST = async (
       console.error("[Checkout Route] Failed to link order and payment collection:", err.message)
     }
 
+    // Generate Payment Gateway URLs
+    let paymentUrl: string | null = null
+    if (amountToPay > 0 && paymentMethod === 'vnpay') {
+      try {
+        const { VNPay } = require('vnpay')
+        const vnpayHost = process.env.VNPAY_HOST || 'https://sandbox.vnpayment.vn'
+        const tmnCode = process.env.VNPAY_TMN_CODE || 'VNPAY_TMN_CODE_PLACEHOLDER'
+        const secureSecret = process.env.VNPAY_SECURE_SECRET || 'VNPAY_SECURE_SECRET_PLACEHOLDER'
+        const returnUrl = process.env.VNPAY_RETURN_URL || 'http://localhost:5173/checkout/vnpay_return'
+        // IPN URL: VNPAY gọi server-to-server để xác nhận giao dịch
+        const ipnUrl = process.env.VNPAY_IPN_URL || 'http://localhost:9000/store/payment/vnpay/ipn'
+
+        const vnpay = new VNPay({
+          vnpayHost,
+          tmnCode,
+          secureSecret,
+          testMode: true
+        })
+
+        const ipAddr = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1') as string
+        // VNPAY SDK auto-multiplies amount by 100, so we just pass the original amount
+        const vnpAmount = amountToPay
+
+        paymentUrl = vnpay.buildPaymentUrl({
+          vnp_Amount: vnpAmount,
+          vnp_IpAddr: (ipAddr as string).split(',')[0],
+          vnp_TxnRef: orderId,
+          vnp_OrderInfo: `Thanh toan don hang ${orderId}`,
+          vnp_OrderType: 'other',
+          vnp_ReturnUrl: returnUrl,
+        })
+
+        console.log(`[Checkout] ✅ VNPAY URL built for order ${orderId}, amount: ${vnpAmount}, IPN: ${ipnUrl}`)
+      } catch (err: any) {
+        console.error("[VNPay Checkout Error]:", err.message)
+      }
+    } else if (amountToPay > 0 && paymentMethod === 'zalopay') {
+      try {
+        const orderInfo = `Thanh toan don hang ${orderId}`;
+        paymentUrl = await buildZalopayUrl(orderId, amountToPay, orderInfo);
+        console.log(`[Checkout] ✅ ZALOPAY URL generated for order ${orderId}, amount: ${amountToPay}`);
+      } catch (err: any) {
+        console.error("[ZaloPay Checkout Error]:", err.message);
+      }
+    }
+
     return res.json({
       success: true,
       message: "Đặt hàng thành công",
@@ -225,8 +416,7 @@ export const POST = async (
       wallet_deducted: walletDeducted,
       amount_to_pay: amountToPay,
       paymentMethod: amountToPay === 0 ? "wallet" : paymentMethod,
-      // Return a dummy payment URL if VNPay/MoMo is selected and amount_to_pay > 0
-      paymentUrl: (amountToPay > 0 && paymentMethod !== 'cod') ? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?dummy" : null
+      paymentUrl: paymentUrl
     })
   } catch (error: any) {
     console.error("[Checkout API Error]:", error)

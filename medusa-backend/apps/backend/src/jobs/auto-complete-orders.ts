@@ -12,7 +12,12 @@ export default async function autoCompleteOrdersJob(
     const res = await db.raw(`
       UPDATE "order"
       SET status = 'completed', updated_at = NOW()
-      WHERE (fulfillment_status = 'shipped' OR fulfillment_status = 'delivered')
+      WHERE (
+        metadata->>'custom_status' = 'shipping' 
+        OR metadata->>'custom_status' = 'delivered'
+        OR fulfillment_status = 'shipped' 
+        OR fulfillment_status = 'delivered'
+      )
         AND status != 'completed'
         AND status != 'canceled'
         AND updated_at < NOW() - INTERVAL '3 days'

@@ -35,9 +35,17 @@ export const adminOrders = {
 
   /** Update order status and optionally set shipping method */
   async updateStatus(id: string, status: string, shippingMethod?: string) {
-    const payload: any = { status };
-    if (shippingMethod) payload.metadata = { shipping_method: shippingMethod };
-    const response = await medusa.admin.order.update(id, payload);
-    return response;
+    const res = await fetch(`${MEDUSA_BACKEND_URL}/admin/orders/${id}/status`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ status, shipping_method: shippingMethod })
+    });
+    if (!res.ok) {
+      throw new Error(await res.text());
+    }
+    return res.json();
   },
 };

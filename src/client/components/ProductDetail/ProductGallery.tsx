@@ -134,7 +134,15 @@ const ProductGallery: React.FC<ProductGalleryProps> = ({
             }}
             onClick={() => onImageClick(img)}
           >
-            <img src={img} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+            <img
+              src={img}
+              alt=""
+              style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+              loading="lazy"
+              decoding="async"
+              width={76}
+              height={76}
+            />
           </div>
         ))}
       </div>

@@ -183,7 +183,7 @@ const LoginPage = () => {
       <div className="auth-visual">
         <div className="auth-visual-img">
           <img
-            src="https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=900&q=80"
+            src="https://images.unsplash.com/photo-1759588073186-1d4ac7e33623?w=900&q=80&auto=format&fit=crop"
             alt="Tech Gadgets"
           />
           <div className="auth-visual-overlay"></div>
@@ -300,12 +300,12 @@ const LoginPage = () => {
 
             {/* Password */}
             <div className="form-group">
-              <label className="form-label flex-between" htmlFor="login-pw">
-                Mật khẩu *
+              <div className="form-label-row">
+                <label className="form-label" htmlFor="login-pw">Mật khẩu *</label>
                 <Link to="/forgot-password" className="form-link text-sm" style={{ fontWeight: 500 }}>
                   Quên mật khẩu?
                 </Link>
-              </label>
+              </div>
               <div className="input-icon-wrap">
                 <Lock size={18} className="bi" />
                 <input
