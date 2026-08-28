@@ -61,66 +61,6 @@ function buildVnpayUrl(
   const queryString = sortedKeys.map((k) => `${k}=${encodeURIComponent(params[k]).replace(/%20/g, "+")}`).join("&");
   return `${vnpUrl}?${queryString}&vnp_SecureHash=${secureHash}`;
 }
-// ─── Build ZALOPAY Payment URL (HMAC-SHA256) ──────────────────────────────────
-async function buildZalopayUrl(
-  orderId: string,
-  amount: number, // VND
-  orderInfo: string
-): Promise<string> {
-  const appId = parseInt(process.env.ZALOPAY_APP_ID || "2553");
-  const key1 = process.env.ZALOPAY_KEY1 || "Pc94W2rvqAee8DhF2rBegigwkgho0AcZ";
-  const endpoint = process.env.ZALOPAY_ENDPOINT || "https://sb-openapi.zalopay.vn/v2/create";
-  const returnUrl = process.env.ZALOPAY_RETURN_URL || "http://localhost:9000/store/payment/zalopay/callback";
-
-  // AppTransId format: YYMMDD_orderId (e.g. 260827_order_123456)
-  const now = new Date();
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  const dateStr =
-    now.getFullYear().toString().slice(2) +
-    pad(now.getMonth() + 1) +
-    pad(now.getDate());
-  const appTransId = `${dateStr}_${orderId}`;
-
-  const embedData = JSON.stringify({
-    redirecturl: `${returnUrl}?apptransid=${appTransId}&amount=${amount}`,
-  });
-  const items = JSON.stringify([]);
-  const appTime = Date.now();
-
-  const data = `${appId}|${appTransId}|demo|${amount}|${appTime}|${embedData}|${items}`;
-  const mac = crypto.createHmac("sha256", key1).update(data).digest("hex");
-
-  const orderPayload = {
-    app_id: appId,
-    app_trans_id: appTransId,
-    app_user: "demo",
-    app_time: appTime,
-    item: items,
-    embed_data: embedData,
-    amount: amount,
-    description: orderInfo.substring(0, 255),
-    bank_code: "",
-    mac: mac,
-  };
-
-  try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams(orderPayload as any).toString(),
-    });
-    const result = (await response.json()) as any;
-    console.log("[ZaloPay API] Create order response:", result);
-    if (result && result.return_code === 1 && result.order_url) {
-      return result.order_url;
-    }
-  } catch (err) {
-    console.error("[ZaloPay API] Error creating order:", err);
-  }
-
-  // Fallback direct redirect to callback URL if sandbox API call fails or for offline test
-  return `${returnUrl}?apptransid=${appTransId}&status=1&amount=${amount}`;
-}
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   try {

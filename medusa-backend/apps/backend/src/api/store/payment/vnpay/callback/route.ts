@@ -7,7 +7,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     const query = req.query as Record<string, string>;
     console.log("[VNPay Callback] Received query params:", query);
 
-    const FRONTEND_URL = process.env.STORE_FRONTEND_URL || "http://localhost:5173";
+    const FRONTEND_URL = process.env.STORE_FRONTEND_URL || "http://localhost:5174";
 
     const orderId = query.vnp_TxnRef;
     const responseCode = query.vnp_ResponseCode;
@@ -51,7 +51,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     }
   } catch (error) {
     console.error("[VNPay Callback] Error:", error);
-    const FRONTEND_URL = process.env.STORE_FRONTEND_URL || "http://localhost:5173";
+    const FRONTEND_URL = process.env.STORE_FRONTEND_URL || "http://localhost:5174";
     return res.redirect(302, `${FRONTEND_URL}/checkout`);
   }
 }

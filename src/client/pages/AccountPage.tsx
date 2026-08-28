@@ -1222,9 +1222,15 @@ const AccountPage = () => {
                                   {formatPrice(order.items.reduce((s: number, i: any) => s + ((i as any).price || 0) * i.qty, 0) + (order.shippingFee || 35000))}
                                 </td>
                                 <td>
-                                  <span className={`status-badge ${(order.payment_status === 'captured' || order.payment_status === 'paid') ? 'badge-completed' : 'badge-pending'}`}>
-                                    <i className={(order.payment_status === 'captured' || order.payment_status === 'paid') ? 'bi bi-check-circle-fill' : 'bi bi-exclamation-circle-fill'}></i>
-                                    {(order.payment_status === 'captured' || order.payment_status === 'paid') ? 'Đã thanh toán' : 'Chưa thanh toán'}
+                                  <span style={{
+                                    fontSize: '0.8rem',
+                                    fontWeight: 600,
+                                    padding: '3px 8px',
+                                    borderRadius: '12px',
+                                    background: (order.payment_status === 'captured' || order.payment_status === 'paid') ? '#dcfce7' : '#fef9c3',
+                                    color: (order.payment_status === 'captured' || order.payment_status === 'paid') ? '#15803d' : '#a16207',
+                                  }}>
+                                    {(order.payment_status === 'captured' || order.payment_status === 'paid') ? '✓ Đã thanh toán' : 'Chưa thanh toán'}
                                   </span>
                                 </td>
                                 <td>
@@ -1234,7 +1240,7 @@ const AccountPage = () => {
                                 </td>
                                 <td style={{ textAlign: 'right' }}>
                                   <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
-                                    {canCancelOrder(order) && (
+                                    {canCancelOrder(order) ? (
                                       <button
                                         className="btn-order-action btn-order-cancel"
                                         onClick={() => {
@@ -1246,18 +1252,15 @@ const AccountPage = () => {
                                       >
                                         <i className="bi bi-x-circle"></i> Hủy đơn
                                       </button>
-                                    )}
-                                    {!order.canceled && order.status !== 'completed' && (order.fulfillment_status === 'shipped' || order.fulfillment_status === 'delivered') && (
-                                      <button
-                                        className="btn-order-action"
-                                        style={{ color: '#059669', borderColor: '#059669', background: '#ecfdf5' }}
-                                        onClick={() => handleConfirmReceipt(order.orderId)}
-                                        disabled={confirmingOrderId === order.orderId}
-                                        title="Xác nhận đã nhận hàng"
+                                    ) : getCancelBlockedReason(order) ? (
+                                      <span
+                                        className="cancel-blocked-note"
+                                        title={getCancelBlockedReason(order) || undefined}
+                                        style={{ fontSize: '0.75rem', color: 'var(--text-muted, #888)', fontStyle: 'italic' }}
                                       >
-                                        <i className="bi bi-check2-circle"></i> Đã nhận
-                                      </button>
-                                    )}
+                                        <i className="bi bi-info-circle"></i> {getCancelBlockedReason(order)}
+                                      </span>
+                                    ) : null}
                                     <button
                                       className="btn-order-action btn-order-detail"
                                       onClick={() => setSelectedOrderId(order.orderId)}
@@ -1490,16 +1493,11 @@ const AccountPage = () => {
                               </button>
                             </div>
                           )}
-                          {selectedRealOrder && !selectedRealOrder.canceled && selectedRealOrder.status !== 'completed' && (selectedRealOrder.fulfillment_status === 'shipped' || selectedRealOrder.fulfillment_status === 'delivered') && (
+                          {selectedRealOrder && !canCancelOrder(selectedRealOrder) && getCancelBlockedReason(selectedRealOrder) && (
                             <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--rule)', display: 'flex', justifyContent: 'flex-end' }}>
-                              <button
-                                className="btn-order-action"
-                                style={{ padding: '0.6rem 1.5rem', borderRadius: '8px', fontSize: '0.85rem', color: '#059669', borderColor: '#059669', background: '#ecfdf5' }}
-                                onClick={() => handleConfirmReceipt(selectedOrderId!)}
-                                disabled={confirmingOrderId === selectedOrderId}
-                              >
-                                <i className="bi bi-check2-circle" style={{ fontSize: '1rem' }}></i> Xác nhận đã nhận hàng
-                              </button>
+                              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted, #888)', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <i className="bi bi-info-circle"></i> {getCancelBlockedReason(selectedRealOrder)}
+                              </span>
                             </div>
                           )}
 
