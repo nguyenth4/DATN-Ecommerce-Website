@@ -527,7 +527,16 @@ const ProductDetailPage = () => {
                   if (colorImg) setActiveImage(colorImg);
                 }}
                 onStorageChange={(storageName) => setSelectedStorage(storageName)}
-                onQtyChange={(action) => setQty(q => action === 'inc' ? Math.min(10, q + 1) : Math.max(1, q - 1))}
+                onQtyChange={(action) => {
+                  const computedStock = activeVariant.manage_inventory === false
+                    ? 999 
+                    : (activeVariant.inventory_quantity !== undefined && activeVariant.inventory_quantity !== null)
+                      ? activeVariant.inventory_quantity
+                      : ((activeVariant.stock !== undefined && activeVariant.stock !== null)
+                          ? activeVariant.stock
+                          : 0);
+                  setQty(q => action === 'inc' ? Math.min(computedStock, q + 1) : Math.max(1, q - 1));
+                }}
               />
             </div>
           </section>
