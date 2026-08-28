@@ -16,6 +16,26 @@ export interface CartItem {
   width?: number;
 }
 
+/** Kiểm tra người dùng đã đăng nhập chưa */
+export const isLoggedIn = (): boolean => {
+  try {
+    const token = localStorage.getItem('customer_token');
+    const info = localStorage.getItem('customer_info');
+    return !!(token && info);
+  } catch (e) {
+    return false;
+  }
+};
+
+/** Yêu cầu đăng nhập — hiện toast và chuyển hướng đến /login */
+export const requireLogin = (): false => {
+  showToast('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng', 'error');
+  setTimeout(() => {
+    window.location.href = '/login';
+  }, 1200);
+  return false;
+};
+
 export const getActiveCartKey = (): string => {
   try {
     const info = localStorage.getItem('customer_info');
@@ -45,7 +65,12 @@ export const saveCart = (cart: CartItem[]) => {
   window.dispatchEvent(new Event('cart-updated'));
 };
 
-export const addToCart = (item: CartItem) => {
+export const addToCart = (item: CartItem): boolean => {
+  // Chặn nếu chưa đăng nhập
+  if (!isLoggedIn()) {
+    return requireLogin();
+  }
+
   const cart = getCart();
   const existing = cart.find(i => i.id === item.id);
   if (existing) {
@@ -55,6 +80,7 @@ export const addToCart = (item: CartItem) => {
   }
   saveCart(cart);
   showToast(`Đã thêm ${item.name} vào giỏ hàng`, 'success');
+  return true;
 };
 
 export const updateCartQty = (id: string, qty: number) => {
