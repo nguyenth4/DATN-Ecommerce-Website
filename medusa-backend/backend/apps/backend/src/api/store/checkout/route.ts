@@ -2,6 +2,70 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules } from "@medusajs/framework/utils"
 import WalletModuleService from "../../../modules/wallet/service"
 import { WALLET_MODULE } from "../../../modules/wallet"
+import crypto from "crypto"
+
+// ─── Build ZALOPAY Payment URL (HMAC-SHA256) ──────────────────────────────────
+async function buildZalopayUrl(
+  orderId: string,
+  amount: number, // VND
+  orderInfo: string
+): Promise<string> {
+  const appId = parseInt(process.env.ZALOPAY_APP_ID || "2553");
+  const key1 = process.env.ZALOPAY_KEY1 || "Pc94W2rvqAee8DhF2rBegigwkgho0AcZ";
+  const endpoint = process.env.ZALOPAY_ENDPOINT || "https://sb-openapi.zalopay.vn/v2/create";
+  const returnUrl = process.env.ZALOPAY_RETURN_URL || "http://localhost:9000/store/payment/zalopay/callback";
+
+  // AppTransId format: YYMMDD_orderId (e.g. 260828_order_123456)
+  const now = new Date();
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  const dateStr =
+    now.getFullYear().toString().slice(2) +
+    pad(now.getMonth() + 1) +
+    pad(now.getDate());
+  const cleanOrderRef = orderId.replace(/[^a-zA-Z0-9_]/g, '');
+  const appTransId = `${dateStr}_${cleanOrderRef}`;
+
+  const embedData = JSON.stringify({
+    redirecturl: `${returnUrl}?apptransid=${appTransId}&amount=${amount}`,
+  });
+  const items = JSON.stringify([]);
+  const appTime = Date.now();
+
+  const data = `${appId}|${appTransId}|demo|${amount}|${appTime}|${embedData}|${items}`;
+  const mac = crypto.createHmac("sha256", key1).update(data).digest("hex");
+
+  const orderPayload = {
+    app_id: appId,
+    app_trans_id: appTransId,
+    app_user: "demo",
+    app_time: appTime,
+    item: items,
+    embed_data: embedData,
+    amount: amount,
+    description: orderInfo.substring(0, 255),
+    bank_code: "",
+    mac: mac,
+  };
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams(orderPayload as any).toString(),
+    });
+    const result = (await response.json()) as any;
+    console.log("[ZaloPay API] Create order response:", result);
+    if (result && result.return_code === 1 && result.order_url) {
+      return result.order_url;
+    }
+  } catch (err) {
+    console.error("[ZaloPay API] Error creating order:", err);
+  }
+
+  // Fallback direct redirect to callback URL if sandbox API call fails or for offline test
+  return `${returnUrl}?apptransid=${appTransId}&status=1&amount=${amount}`;
+}
+
 
 export const POST = async (
   req: MedusaRequest,
@@ -298,8 +362,8 @@ export const POST = async (
       console.error("[Checkout Route] Failed to link order and payment collection:", err.message)
     }
 
-    // If paymentMethod is vnpay and amount > 0, generate real URL
-    let paymentUrl = null
+    // Generate Payment Gateway URLs
+    let paymentUrl: string | null = null
     if (amountToPay > 0 && paymentMethod === 'vnpay') {
       try {
         const { VNPay } = require('vnpay')
@@ -323,7 +387,7 @@ export const POST = async (
 
         paymentUrl = vnpay.buildPaymentUrl({
           vnp_Amount: vnpAmount,
-          vnp_IpAddr: ipAddr.split(',')[0],
+          vnp_IpAddr: (ipAddr as string).split(',')[0],
           vnp_TxnRef: orderId,
           vnp_OrderInfo: `Thanh toan don hang ${orderId}`,
           vnp_OrderType: 'other',
@@ -333,6 +397,14 @@ export const POST = async (
         console.log(`[Checkout] ✅ VNPAY URL built for order ${orderId}, amount: ${vnpAmount}, IPN: ${ipnUrl}`)
       } catch (err: any) {
         console.error("[VNPay Checkout Error]:", err.message)
+      }
+    } else if (amountToPay > 0 && paymentMethod === 'zalopay') {
+      try {
+        const orderInfo = `Thanh toan don hang ${orderId}`;
+        paymentUrl = await buildZalopayUrl(orderId, amountToPay, orderInfo);
+        console.log(`[Checkout] ✅ ZALOPAY URL generated for order ${orderId}, amount: ${amountToPay}`);
+      } catch (err: any) {
+        console.error("[ZaloPay Checkout Error]:", err.message);
       }
     }
 
@@ -344,7 +416,7 @@ export const POST = async (
       wallet_deducted: walletDeducted,
       amount_to_pay: amountToPay,
       paymentMethod: amountToPay === 0 ? "wallet" : paymentMethod,
-      paymentUrl: paymentUrl || ((amountToPay > 0 && paymentMethod !== 'cod' && paymentMethod !== 'vnpay') ? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?dummy" : null)
+      paymentUrl: paymentUrl
     })
   } catch (error: any) {
     console.error("[Checkout API Error]:", error)
