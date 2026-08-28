@@ -6,7 +6,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     const query = req.query as Record<string, string>;
     console.log("[ZaloPay Callback] Received query params:", query);
 
-    const FRONTEND_URL = process.env.STORE_FRONTEND_URL || "http://localhost:5174";
+    const FRONTEND_URL = process.env.STORE_FRONTEND_URL || "http://localhost:5173";
 
     const appTransId = query.apptransid || query.app_trans_id || query.vnp_TxnRef || "";
     const status = query.status;
@@ -53,7 +53,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
     }
   } catch (error) {
     console.error("[ZaloPay Callback] Error:", error);
-    const FRONTEND_URL = process.env.STORE_FRONTEND_URL || "http://localhost:5174";
+    const FRONTEND_URL = process.env.STORE_FRONTEND_URL || "http://localhost:5173";
     return res.redirect(302, `${FRONTEND_URL}/checkout`);
   }
 }
