@@ -1234,7 +1234,7 @@ const AccountPage = () => {
                                 </td>
                                 <td style={{ textAlign: 'right' }}>
                                   <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
-                                    {canCancelOrder(order) ? (
+                                    {canCancelOrder(order) && (
                                       <button
                                         className="btn-order-action btn-order-cancel"
                                         onClick={() => {
