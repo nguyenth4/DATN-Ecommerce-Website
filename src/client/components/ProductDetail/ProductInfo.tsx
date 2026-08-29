@@ -55,9 +55,10 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
     };
   }, []);
 
-  const discountPercent = Math.round(
-    ((activeVariant.oldPrice - activeVariant.price) / activeVariant.oldPrice) * 100
-  );
+  const hasDiscount = activeVariant.oldPrice && activeVariant.oldPrice > activeVariant.price;
+  const discountPercent = hasDiscount
+    ? Math.round(((activeVariant.oldPrice - activeVariant.price) / activeVariant.oldPrice) * 100)
+    : 0;
 
   // Lấy giá cho từng tuỳ chọn màu sắc (dựa vào dung lượng đang được chọn)
   const getColorPrice = (colorName: string) => {
@@ -118,12 +119,16 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
       {/* DYNAMIC PRICE */}
       <div className="product-detail-price" style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--accent)', marginBottom: '1.5rem' }}>
         {activeVariant.price.toLocaleString('vi-VN')}đ{" "}
-        <span style={{ fontSize: '1.1rem', textDecoration: 'line-through', color: 'var(--gray)', fontWeight: 500, marginLeft: '0.5rem' }}>
-          {activeVariant.oldPrice.toLocaleString('vi-VN')}đ
-        </span>
-        <span className="text-xs" style={{ background: 'var(--accent)', color: 'white', padding: '0.25rem 0.5rem', borderRadius: '4px', fontWeight: 700, verticalAlign: 'middle', marginLeft: '0.8rem', fontSize: '0.75rem' }}>
-          -{discountPercent}%
-        </span>
+        {hasDiscount && activeVariant.oldPrice && (
+          <>
+            <span style={{ fontSize: '1.1rem', textDecoration: 'line-through', color: 'var(--gray)', fontWeight: 500, marginLeft: '0.5rem' }}>
+              {activeVariant.oldPrice.toLocaleString('vi-VN')}đ
+            </span>
+            <span className="text-xs" style={{ background: 'var(--accent)', color: 'white', padding: '0.25rem 0.5rem', borderRadius: '4px', fontWeight: 700, verticalAlign: 'middle', marginLeft: '0.8rem', fontSize: '0.75rem' }}>
+              -{discountPercent}%
+            </span>
+          </>
+        )}
       </div>
 
       {/* DYNAMIC STORAGE SELECTION (CellphoneS Style) */}

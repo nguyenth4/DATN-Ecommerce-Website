@@ -13,7 +13,12 @@ import {
 import { getCart, updateCartQty, removeFromCart } from '../utils/cart';
 import type { CartItem } from '../utils/cart';
 
-const PROMO_DISCOUNT = 56000;
+const MEDUSA_BACKEND_URL =
+  (import.meta as any).env?.VITE_MEDUSA_BACKEND_URL || 'http://localhost:9000';
+
+const PUBLISHABLE_KEY =
+  (import.meta as any).env?.VITE_MEDUSA_PUBLISHABLE_KEY ||
+  'pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d';
 
 const CartPage = () => {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -68,9 +73,147 @@ const CartPage = () => {
     
     return () => { isMounted = false; };
   }, [items]);
-  const [promoApplied, setPromoApplied] = useState(false);
+  const [promoCodeInput, setPromoCodeInput] = useState('');
+  const [appliedPromoCode, setAppliedPromoCode] = useState(() => localStorage.getItem('applied_promo_code') || '');
+  const [discount, setDiscount] = useState(() => Number(localStorage.getItem('applied_promo_discount') || 0));
+  const [promoError, setPromoError] = useState('');
+  const [promoSuccess, setPromoSuccess] = useState('');
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [isAutomatic, setIsAutomatic] = useState(() => !localStorage.getItem('applied_promo_code_manual') && !!localStorage.getItem('applied_promo_code'));
+  const [autoPromoDismissed, setAutoPromoDismissed] = useState(false);
 
   const shippingFee = 0;
+
+  const validatePromo = async (codeToValidate: string, isManualCheck = true) => {
+    if (!codeToValidate.trim() || items.length === 0) return;
+    setPromoLoading(true);
+    setPromoError('');
+    setPromoSuccess('');
+    try {
+      const response = await fetch(`${MEDUSA_BACKEND_URL}/store/promotions/validate`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-publishable-api-key': PUBLISHABLE_KEY
+        },
+        body: JSON.stringify({
+          code: codeToValidate.trim(),
+          items: items.map(item => ({
+            id: item.id,
+            productId: item.productId,
+            price: item.price,
+            qty: item.qty
+          }))
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setDiscount(data.discount);
+        setAppliedPromoCode(data.code);
+        setIsAutomatic(!!data.isAutomatic);
+        
+        if (data.isAutomatic) {
+          setPromoSuccess(`Khuyến mãi tự động (${data.code}): Giảm ${(data.discount).toLocaleString('vi-VN')}đ`);
+          localStorage.removeItem('applied_promo_code_manual');
+        } else {
+          setPromoSuccess(`Áp dụng thành công mã ${data.code}: Giảm ${(data.discount).toLocaleString('vi-VN')}đ`);
+          localStorage.setItem('applied_promo_code_manual', data.code);
+        }
+        localStorage.setItem('applied_promo_code', data.code);
+        localStorage.setItem('applied_promo_discount', data.discount.toString());
+      } else {
+        if (isManualCheck) {
+          setPromoError(data.message || 'Mã giảm giá không hợp lệ.');
+        }
+        if (isManualCheck) {
+          setDiscount(0);
+          setAppliedPromoCode('');
+          setIsAutomatic(false);
+          localStorage.removeItem('applied_promo_code');
+          localStorage.removeItem('applied_promo_discount');
+          localStorage.removeItem('applied_promo_code_manual');
+          checkForAutoPromo();
+        } else {
+          setDiscount(0);
+          setAppliedPromoCode('');
+          setIsAutomatic(false);
+          localStorage.removeItem('applied_promo_code');
+          localStorage.removeItem('applied_promo_discount');
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      if (isManualCheck) {
+        setPromoError('Lỗi kết nối khi xác thực mã.');
+      }
+      setDiscount(0);
+      setAppliedPromoCode('');
+      setIsAutomatic(false);
+      localStorage.removeItem('applied_promo_code');
+      localStorage.removeItem('applied_promo_discount');
+      localStorage.removeItem('applied_promo_code_manual');
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
+  const checkForAutoPromo = async () => {
+    if (items.length === 0 || autoPromoDismissed) return;
+    try {
+      const response = await fetch(`${MEDUSA_BACKEND_URL}/store/promotions/validate`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-publishable-api-key': PUBLISHABLE_KEY
+        },
+        body: JSON.stringify({
+          code: "",
+          items: items.map(item => ({
+            id: item.id,
+            productId: item.productId,
+            price: item.price,
+            qty: item.qty
+          }))
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok && data.success && data.isAutomatic) {
+        setDiscount(data.discount);
+        setAppliedPromoCode(data.code);
+        setIsAutomatic(true);
+        setPromoSuccess(`Khuyến mãi tự động (${data.code}): Giảm ${(data.discount).toLocaleString('vi-VN')}đ`);
+        localStorage.setItem('applied_promo_code', data.code);
+        localStorage.setItem('applied_promo_discount', data.discount.toString());
+        localStorage.removeItem('applied_promo_code_manual');
+      } else {
+        setDiscount(0);
+        setAppliedPromoCode('');
+        setIsAutomatic(false);
+        localStorage.removeItem('applied_promo_code');
+        localStorage.removeItem('applied_promo_discount');
+      }
+    } catch (err) {
+      console.error("Failed to check automatic promotion:", err);
+    }
+  };
+
+  useEffect(() => {
+    const manualCode = localStorage.getItem('applied_promo_code_manual');
+    if (manualCode && items.length > 0) {
+      validatePromo(manualCode, true);
+    } else if (items.length > 0 && !autoPromoDismissed) {
+      checkForAutoPromo();
+    } else {
+      setDiscount(0);
+      setAppliedPromoCode('');
+      setIsAutomatic(false);
+      localStorage.removeItem('applied_promo_code');
+      localStorage.removeItem('applied_promo_discount');
+      localStorage.removeItem('applied_promo_code_manual');
+    }
+  }, [items, autoPromoDismissed]);
 
   const updateQty = (id: string, delta: number) => {
     const updated = items.map(item => {
@@ -90,13 +233,8 @@ const CartPage = () => {
     setItems(items.filter(item => item.id !== id));
   };
 
-  const applyPromo = () => {
-    setPromoApplied(true);
-  };
-
   const itemCount = items.reduce((sum, i) => sum + i.qty, 0);
   const subtotal = items.reduce((sum, i) => sum + i.price * i.qty, 0);
-  const discount = promoApplied ? PROMO_DISCOUNT : 0;
   const total = subtotal + shippingFee - discount;
 
 
@@ -226,12 +364,99 @@ const CartPage = () => {
                 <h3 style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '16px', color: '#111' }}>Thông tin đơn hàng</h3>
 
                 {/* Promo Box */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8f9fa', padding: '12px 16px', borderRadius: '8px', marginBottom: '20px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ background: '#f8f9fa', padding: '16px', borderRadius: '8px', marginBottom: '20px', border: '1px solid #e5e7eb' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                     <Ticket size={20} fill="#2563eb" color="#2563eb" style={{ transform: 'rotate(-45deg)' }} />
-                    <span style={{ fontSize: '14px', color: '#333' }}>Áp dụng mã giảm giá</span>
+                    <span style={{ fontSize: '14px', fontWeight: 600, color: '#111' }}>Mã khuyến mãi</span>
                   </div>
-                  <button onClick={applyPromo} style={{ background: '#eff6ff', color: '#2563eb', border: 'none', padding: '4px 16px', borderRadius: '16px', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>Chọn</button>
+
+                  {appliedPromoCode && !isAutomatic ? (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#eff6ff', border: '1px dashed #3b82f6', padding: '10px 12px', borderRadius: '6px' }}>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#2563eb' }}>{appliedPromoCode}</div>
+                        <div style={{ fontSize: '11px', color: '#1d4ed8', marginTop: '2px' }}>Giảm {discount.toLocaleString('vi-VN')}đ</div>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          setAppliedPromoCode('');
+                          setDiscount(0);
+                          setPromoSuccess('');
+                          setPromoError('');
+                          setPromoCodeInput('');
+                          localStorage.removeItem('applied_promo_code');
+                          localStorage.removeItem('applied_promo_discount');
+                          localStorage.removeItem('applied_promo_code_manual');
+                          checkForAutoPromo();
+                        }} 
+                        style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Gỡ bỏ
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      {appliedPromoCode && isAutomatic && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f0fdf4', border: '1px dashed #22c55e', padding: '10px 12px', borderRadius: '6px', marginBottom: '12px' }}>
+                          <div>
+                            <div style={{ fontSize: '12px', fontWeight: 700, color: '#16a34a' }}>🎉 Tự động áp dụng: {appliedPromoCode}</div>
+                            <div style={{ fontSize: '11px', color: '#15803d', marginTop: '2px' }}>Giảm {discount.toLocaleString('vi-VN')}đ</div>
+                          </div>
+                          <button 
+                            onClick={() => {
+                              setAutoPromoDismissed(true);
+                              setAppliedPromoCode('');
+                              setDiscount(0);
+                              setPromoSuccess('');
+                              setPromoError('');
+                              localStorage.removeItem('applied_promo_code');
+                              localStorage.removeItem('applied_promo_discount');
+                            }} 
+                            style={{ background: 'none', border: 'none', color: '#6b7280', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}
+                          >
+                            Tắt
+                          </button>
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input 
+                          type="text" 
+                          placeholder="Nhập mã giảm giá khác..." 
+                          value={promoCodeInput}
+                          onChange={(e) => setPromoCodeInput(e.target.value)}
+                          style={{ flex: 1, padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '13px', outline: 'none' }}
+                          disabled={promoLoading}
+                        />
+                        <button 
+                          onClick={() => validatePromo(promoCodeInput, true)}
+                          disabled={promoLoading || !promoCodeInput.trim()}
+                          style={{ 
+                            background: '#2563eb', 
+                            color: '#fff', 
+                            border: 'none', 
+                            padding: '8px 16px', 
+                            borderRadius: '6px', 
+                            fontSize: '13px', 
+                            fontWeight: 600, 
+                            cursor: (promoLoading || !promoCodeInput.trim()) ? 'not-allowed' : 'pointer',
+                            opacity: (promoLoading || !promoCodeInput.trim()) ? 0.7 : 1
+                          }}
+                        >
+                          {promoLoading ? 'Đang áp dụng...' : 'Áp dụng'}
+                        </button>
+                      </div>
+                      {promoError && (
+                        <div style={{ color: '#ef4444', fontSize: '12px', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span>⚠️</span> {promoError}
+                        </div>
+                      )}
+                      {promoSuccess && !isAutomatic && (
+                        <div style={{ color: '#16a34a', fontSize: '12px', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span>✅</span> {promoSuccess}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Summary Lines */}
@@ -248,9 +473,9 @@ const CartPage = () => {
                     <span>Phí vận chuyển</span>
                     <span style={{ fontWeight: 600, color: '#111' }}>{shippingFee > 0 ? `${shippingFee.toLocaleString('vi-VN')}đ` : 'Miễn phí'}</span>
                   </div>
-                  {promoApplied && (
+                  {appliedPromoCode && discount > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#444' }}>
-                      <span>Khuyến mãi</span>
+                      <span>Khuyến mãi ({appliedPromoCode})</span>
                       <span style={{ fontWeight: 600, color: '#2563eb' }}>−{discount.toLocaleString('vi-VN')}đ</span>
                     </div>
                   )}

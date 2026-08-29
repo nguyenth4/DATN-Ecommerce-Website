@@ -72,12 +72,121 @@ export const POST = async (
   res: MedusaResponse
 ) => {
   try {
-    const { customer, items, paymentMethod, use_wallet, customer_id, address, shippingMethod, note, shippingFee } = req.body as any
+    const db = req.scope.resolve("__pg_connection__")
+    const { customer, items, paymentMethod, use_wallet, customer_id, address, shippingMethod, note, shippingFee, promo_code } = req.body as any
     
     // Calculate subtotal from items
     const subtotal = items.reduce((acc: number, item: any) => acc + (item.price * item.qty), 0)
-    // Total includes subtotal + shippingFee
-    const total = subtotal + Number(shippingFee || 0)
+
+    // Calculate discount amount from promo_code if provided
+    let discountAmount = 0
+    let promotionId: string | null = null
+
+    if (promo_code) {
+      try {
+        const promoRes = await db.raw(`
+          SELECT p.*, am.id as app_method_id, am.type as app_method_type, am.value as app_method_value, am.allocation, am.max_quantity, am.currency_code
+          FROM promotion p
+          LEFT JOIN promotion_application_method am ON p.id = am.promotion_id
+          WHERE UPPER(p.code) = UPPER(?) AND p.deleted_at IS NULL AND p.status = 'active'
+        `, [promo_code.trim()])
+
+        if (promoRes.rows.length > 0) {
+          const promo = promoRes.rows[0]
+          
+          let isCampaignActive = true
+          if (promo.campaign_id) {
+            const campaignRes = await db.raw(`
+              SELECT * FROM promotion_campaign WHERE id = ? AND deleted_at IS NULL
+            `, [promo.campaign_id])
+            if (campaignRes.rows.length > 0) {
+              const campaign = campaignRes.rows[0]
+              const now = new Date()
+              if ((campaign.starts_at && new Date(campaign.starts_at) > now) || (campaign.ends_at && new Date(campaign.ends_at) < now)) {
+                isCampaignActive = false
+              }
+            }
+          }
+
+          if (isCampaignActive) {
+            promotionId = promo.id
+
+            const rulesRes = await db.raw(`
+              SELECT r.id, r.attribute, r.operator, rv.value as rule_value
+              FROM application_method_target_rules amtr
+              JOIN promotion_rule r ON amtr.promotion_rule_id = r.id
+              JOIN promotion_rule_value rv ON r.id = rv.promotion_rule_id
+              WHERE amtr.application_method_id = ? AND r.deleted_at IS NULL AND rv.deleted_at IS NULL
+            `, [promo.app_method_id])
+            const rules = rulesRes.rows
+
+            const productIds = items.map((i: any) => i.productId).filter(Boolean)
+            const productCollections: Record<string, string> = {}
+            
+            if (productIds.length > 0) {
+              const prodRes = await db.raw(`
+                SELECT id, collection_id FROM product WHERE id = ANY(?)
+              `, [productIds])
+              prodRes.rows.forEach((row: any) => {
+                productCollections[row.id] = row.collection_id
+              })
+            }
+
+            const eligibleItems = items.filter((item: any) => {
+              if (rules.length === 0) return true
+              return rules.every((rule: any) => {
+                if (rule.attribute === 'items.product.collection_id') {
+                  const itemCollectionId = productCollections[item.productId]
+                  if (rule.operator === 'eq') {
+                    return itemCollectionId === rule.rule_value
+                  } else if (rule.operator === 'in') {
+                    const allowedCollections = rule.rule_value.split(',').map((v: string) => v.trim())
+                    return itemCollectionId && allowedCollections.includes(itemCollectionId)
+                  }
+                }
+                return true
+              })
+            })
+
+            if (eligibleItems.length > 0) {
+              const totalEligiblePrice = eligibleItems.reduce((sum: number, item: any) => sum + (item.price * item.qty), 0)
+
+              if (promo.app_method_type === 'fixed') {
+                const value = Number(promo.app_method_value)
+                if (promo.allocation === 'each') {
+                  let maxQtyToDiscount = promo.max_quantity || 999999
+                  eligibleItems.forEach((item: any) => {
+                    const qtyToDiscount = Math.min(item.qty, maxQtyToDiscount)
+                    discountAmount += value * qtyToDiscount
+                    maxQtyToDiscount -= qtyToDiscount
+                  })
+                } else {
+                  discountAmount = Math.min(totalEligiblePrice, value)
+                }
+              } else if (promo.app_method_type === 'percentage') {
+                const percentage = Number(promo.app_method_value)
+                if (promo.allocation === 'each') {
+                  let maxQtyToDiscount = promo.max_quantity || 999999
+                  eligibleItems.forEach((item: any) => {
+                    const qtyToDiscount = Math.min(item.qty, maxQtyToDiscount)
+                    discountAmount += Math.round((item.price * qtyToDiscount) * (percentage / 100))
+                    maxQtyToDiscount -= qtyToDiscount
+                  })
+                } else {
+                  discountAmount = Math.round(totalEligiblePrice * (percentage / 100))
+                }
+              }
+              discountAmount = Math.min(discountAmount, totalEligiblePrice)
+            }
+          }
+        }
+      } catch (err: any) {
+        console.error("[Checkout Route] Error calculating discount:", err.message)
+      }
+    }
+
+    // Total includes subtotal + shippingFee - discountAmount
+    const total = Math.max(0, subtotal + Number(shippingFee || 0) - discountAmount)
     
     const walletService: WalletModuleService = req.scope.resolve(WALLET_MODULE)
     const customerId = customer_id || null
@@ -108,8 +217,6 @@ export const POST = async (
       }
     }
 
-    const db = req.scope.resolve("__pg_connection__")
-    
     // Get region and currency dynamically, prioritizing VND
     const regionRes = await db.raw(`
       SELECT id, currency_code FROM region ORDER BY (currency_code = 'vnd') DESC LIMIT 1
@@ -217,7 +324,9 @@ export const POST = async (
         wallet_deducted: walletDeducted.toString(),
         full_name: customer?.fullName || `${firstName} ${lastName}`,
         phone: customer?.phoneNumber || "0000000000",
-        address: address || "Địa chỉ mặc định"
+        address: address || "Địa chỉ mặc định",
+        promo_code: promo_code || "",
+        discount_amount: discountAmount.toString()
       }
     }
 
@@ -362,41 +471,101 @@ export const POST = async (
       console.error("[Checkout Route] Failed to link order and payment collection:", err.message)
     }
 
-    // If paymentMethod is vnpay and amount > 0, generate real URL
-    let paymentUrl = null
-    if (amountToPay > 0 && paymentMethod === 'vnpay') {
+    // Link promotion to the order if applied and update summary
+    if (promotionId && orderId) {
       try {
-        const { VNPay } = require('vnpay')
-        const vnpayHost = process.env.VNPAY_HOST || 'https://sandbox.vnpayment.vn'
-        const tmnCode = process.env.VNPAY_TMN_CODE || 'VNPAY_TMN_CODE_PLACEHOLDER'
-        const secureSecret = process.env.VNPAY_SECURE_SECRET || 'VNPAY_SECURE_SECRET_PLACEHOLDER'
-        const returnUrl = process.env.VNPAY_RETURN_URL || 'http://localhost:5174/checkout/vnpay_return'
-        // IPN URL: VNPAY gọi server-to-server để xác nhận giao dịch
-        const ipnUrl = process.env.VNPAY_IPN_URL || 'http://localhost:9000/store/payment/vnpay/ipn'
+        const generateMedusaIdLocal = (prefix: string) => {
+          const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+          let result = ""
+          for (let i = 0; i < 18; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length))
+          }
+          return `${prefix}_01${result}`
+        }
 
-        const vnpay = new VNPay({
-          vnpayHost,
-          tmnCode,
-          secureSecret,
-          testMode: true
-        })
+        const ordPromoId = generateMedusaIdLocal("ordpromo")
+        await db.raw(`
+          INSERT INTO order_promotion (id, order_id, promotion_id, created_at, updated_at)
+          VALUES (?, ?, ?, NOW(), NOW())
+        `, [ordPromoId, orderId, promotionId])
 
-        const ipAddr = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1') as string
-        // VNPAY SDK auto-multiplies amount by 100, so we just pass the original amount
-        const vnpAmount = amountToPay
+        // Increment promotion used count
+        await db.raw(`
+          UPDATE promotion SET used = used + 1 WHERE id = ?
+        `, [promotionId])
 
-        paymentUrl = vnpay.buildPaymentUrl({
-          vnp_Amount: vnpAmount,
-          vnp_IpAddr: ipAddr.split(',')[0],
-          vnp_TxnRef: orderId,
-          vnp_OrderInfo: `Thanh toan don hang ${orderId}`,
-          vnp_OrderType: 'other',
-          vnp_ReturnUrl: returnUrl,
-        })
+        // Adjust order_summary totals
+        const summaryRes = await db.raw(`
+          SELECT id, totals FROM order_summary WHERE order_id = ?
+        `, [orderId])
+        
+        if (summaryRes.rows.length > 0) {
+          const summary = summaryRes.rows[0]
+          const adjustedTotals = {
+            ...summary.totals,
+            current_order_total: Number(total),
+            raw_current_order_total: { value: total.toString(), precision: 20 },
+            accounting_total: Number(total),
+            raw_accounting_total: { value: total.toString(), precision: 20 },
+            pending_difference: Number(total) - Number(summary.totals.paid_total || 0),
+            raw_pending_difference: { value: (Number(total) - Number(summary.totals.paid_total || 0)).toString(), precision: 20 }
+          }
 
-        console.log(`[Checkout] ✅ VNPAY URL built for order ${orderId}, amount: ${vnpAmount}, IPN: ${ipnUrl}`)
-      } catch (err: any) {
-        console.error("[VNPay Checkout Error]:", err.message)
+          await db.raw(`
+            UPDATE order_summary 
+            SET totals = ?, updated_at = NOW() 
+            WHERE id = ?
+          `, [JSON.stringify(adjustedTotals), summary.id])
+        }
+      } catch (promoErr: any) {
+        console.error("[Checkout Route] Failed to link order and promotion:", promoErr.message)
+      }
+    }
+
+    // Generate Payment Gateway URLs
+    let paymentUrl: string | null = null
+    if (amountToPay > 0) {
+      if (paymentMethod === 'vnpay') {
+        try {
+          const { VNPay } = require('vnpay')
+          const vnpayHost = process.env.VNPAY_HOST || 'https://sandbox.vnpayment.vn'
+          const tmnCode = process.env.VNPAY_TMN_CODE || 'VNPAY_TMN_CODE_PLACEHOLDER'
+          const secureSecret = process.env.VNPAY_SECURE_SECRET || 'VNPAY_SECURE_SECRET_PLACEHOLDER'
+          const returnUrl = process.env.VNPAY_RETURN_URL || 'http://localhost:5174/checkout/vnpay_return'
+          // IPN URL: VNPAY gọi server-to-server để xác nhận giao dịch
+          const ipnUrl = process.env.VNPAY_IPN_URL || 'http://localhost:9000/store/payment/vnpay/ipn'
+
+          const vnpay = new VNPay({
+            vnpayHost,
+            tmnCode,
+            secureSecret,
+            testMode: true
+          })
+
+          const ipAddr = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1') as string
+          // VNPAY SDK auto-multiplies amount by 100, so we just pass the original amount
+          const vnpAmount = amountToPay
+
+          paymentUrl = vnpay.buildPaymentUrl({
+            vnp_Amount: vnpAmount,
+            vnp_IpAddr: ipAddr.split(',')[0],
+            vnp_TxnRef: orderId,
+            vnp_OrderInfo: `Thanh toan don hang ${orderId}`,
+            vnp_OrderType: 'other',
+            vnp_ReturnUrl: returnUrl,
+          })
+
+          console.log(`[Checkout] ✅ VNPAY URL built for order ${orderId}, amount: ${vnpAmount}, IPN: ${ipnUrl}`)
+        } catch (err: any) {
+          console.error("[VNPay Checkout Error]:", err.message)
+        }
+      } else if (paymentMethod === 'zalopay') {
+        try {
+          paymentUrl = await buildZalopayUrl(orderId, amountToPay, `Thanh toan don hang ${orderId}`)
+          console.log(`[Checkout] ✅ ZaloPay URL built for order ${orderId}, amount: ${amountToPay}`)
+        } catch (err: any) {
+          console.error("[ZaloPay Checkout Error]:", err.message)
+        }
       }
     }
 
@@ -408,7 +577,7 @@ export const POST = async (
       wallet_deducted: walletDeducted,
       amount_to_pay: amountToPay,
       paymentMethod: amountToPay === 0 ? "wallet" : paymentMethod,
-      paymentUrl: paymentUrl || ((amountToPay > 0 && paymentMethod !== 'cod' && paymentMethod !== 'vnpay') ? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?dummy" : null)
+      paymentUrl: paymentUrl || ((amountToPay > 0 && paymentMethod !== 'cod' && paymentMethod !== 'vnpay' && paymentMethod !== 'zalopay') ? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?dummy" : null)
     })
   } catch (error: any) {
     console.error("[Checkout API Error]:", error)

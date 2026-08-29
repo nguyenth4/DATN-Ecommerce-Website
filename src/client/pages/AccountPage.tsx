@@ -160,22 +160,7 @@ const AccountPage = () => {
         const { orders } = await response.json();
         if (orders && Array.isArray(orders)) {
           const localOrders = getRealOrders();
-          const updated = localOrders.map(localOrder => {
-            const remoteOrder = orders.find((o: any) => o.id === localOrder.orderId);
-            if (remoteOrder) {
-              return {
-                ...localOrder,
-                status: remoteOrder.status,
-                fulfillment_status: remoteOrder.fulfillment_status,
-                payment_status: remoteOrder.payment_status,
-                canceled: remoteOrder.status === 'canceled',
-                cancelReason: remoteOrder.status === 'canceled' ? (localOrder.cancelReason || 'Hệ thống/Cửa hàng hủy') : localOrder.cancelReason,
-                items: remoteOrder.items || localOrder.items
-              };
-            }
-            return localOrder;
-          });
-          
+
           const remoteMapped = orders.map((o: any) => {
             const items = (o.items || []).map((item: any) => ({
               name: item.title || item.product_title || 'Sản phẩm',
@@ -780,13 +765,7 @@ const AccountPage = () => {
     return step >= 0 && step < 3;
   };
 
-  const getCancelBlockedReason = (order: any) => {
-    if (order.canceled || order.status === 'canceled') return null;
-    const step = getDynamicStatusStep(order);
-    if (step >= 4) return 'Đơn hàng đã hoàn tất, không thể hủy.';
-    if (step === 3) return 'Đơn hàng đang được vận chuyển, không thể hủy.';
-    return null;
-  };
+
 
   const getDynamicTimeline = (order: any) => {
     const timeline = [];
