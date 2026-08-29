@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
-import { Container, Heading, Text, Button, StatusBadge } from "@medusajs/ui"
+import { Container, Heading, Text, Button, StatusBadge, Copy } from "@medusajs/ui"
 import { DetailWidgetProps, AdminOrder } from "@medusajs/types"
 import { useQueryClient } from "@tanstack/react-query"
 
@@ -88,6 +88,12 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
           <Heading level="h2" className="text-xl font-bold flex items-center gap-2">
             Quy trình đơn hàng
           </Heading>
+          <div className="flex items-center gap-2 mt-1">
+            <Text className="text-xs text-gray-500 font-mono">
+              Mã đơn hàng:
+            </Text>
+            <Copy content={order.id} className="text-xs font-mono" />
+          </div>
         </div>
         <StatusBadge color={colorMap[customStatus] || "grey"}>
           {labelMap[customStatus] || customStatus}

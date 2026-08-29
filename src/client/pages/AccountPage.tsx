@@ -67,6 +67,7 @@ const AccountPage = () => {
   const [cancelModalOrderId, setCancelModalOrderId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState<string>('');
   const [customCancelReason, setCustomCancelReason] = useState<string>('');
+  const [copiedOrderId, setCopiedOrderId] = useState<string | null>(null);
 
   // Dynamic badge helpers for orders
   const getOrderFulfillmentBadgeClass = (order: any) => {
@@ -1315,6 +1316,45 @@ const AccountPage = () => {
                             <p className="text-xs text-muted" style={{ marginTop: '0.2rem' }}>
                               Đặt lúc {selectedOrder.date}
                             </p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500 }}>Mã đơn hàng:</span>
+                              <div style={{ 
+                                display: 'inline-flex', 
+                                alignItems: 'center', 
+                                gap: '0.5rem', 
+                                background: 'var(--bg)', 
+                                padding: '3px 8px', 
+                                borderRadius: '6px', 
+                                border: '1px solid var(--rule)',
+                                fontFamily: 'monospace',
+                                fontSize: '0.8rem',
+                                color: 'var(--ink)'
+                              }}>
+                                <span>{selectedOrder.id}</span>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(selectedOrder.id);
+                                    setCopiedOrderId(selectedOrder.id);
+                                    setTimeout(() => setCopiedOrderId(null), 2000);
+                                  }}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    padding: '0 2px',
+                                    cursor: 'pointer',
+                                    color: copiedOrderId === selectedOrder.id ? '#10b981' : 'var(--text-muted)',
+                                    fontSize: '0.85rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'color 0.2s ease'
+                                  }}
+                                  title="Sao chép mã đơn hàng"
+                                >
+                                  <i className={copiedOrderId === selectedOrder.id ? "bi bi-clipboard-check-fill" : "bi bi-clipboard"}></i>
+                                </button>
+                              </div>
+                            </div>
                           </div>
                           <span className={getShippingBadgeClass(selectedOrder.shippingStatus)} style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>
                             <i className={getShippingBadgeIcon(selectedOrder.shippingStatus)}></i> {selectedOrder.shippingStatus}
