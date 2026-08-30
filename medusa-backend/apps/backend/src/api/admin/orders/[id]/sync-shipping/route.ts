@@ -220,58 +220,116 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       items = [{ name: "Mock Product", quantity: 1, weight: 250 }];
     }
     
-    const totalWeight = items.reduce((acc, item) => acc + (item.weight * item.quantity), 0) || 200;
-
-    const ghnBody = {
-      to_name: address.first_name,
-      to_phone: address.phone,
-      to_address: address.address_1,
-      to_ward_code: to_ward_code,
-      to_district_id: to_district_id,
-      weight: totalWeight,
-      length: 15,
-      width: 10,
-      height: 10,
-      service_type_id: 2,
-      payment_type_id: 1,
-      required_note: "CHOXEMHANGKHONGTHU",
-      items: items
-    };
-
-    let trackingCode = `GHN_MOCK_${Date.now()}`;
+    const reqBody = req.body as any || {};
+    const provider = (reqBody.provider || "ghn").toLowerCase();
+    
+    let trackingCode = "";
     let isMock = true;
 
-    if (token && shopId) {
-      isMock = false;
-      const ghnRes = await fetch("https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Token": token,
-          "ShopId": shopId,
-        },
-        body: JSON.stringify(ghnBody),
-      });
-      const ghnData = await ghnRes.json();
+    if (provider === "ghtk") {
+      console.log(`[Admin] Syncing with GHTK...`);
+      const ghtkToken = process.env.GHTK_API_TOKEN || "";
       
-      if (ghnData.code === 200 && ghnData.data) {
-        trackingCode = ghnData.data.order_code;
+      const totalValue = order?.total || 300000;
+      
+      const ghtkBody = {
+        products: items.map(i => ({
+          name: i.name || "Sản phẩm",
+          weight: (i.weight || 250) / 1000, // GHTK expects weight in kg
+          quantity: i.quantity || 1
+        })),
+        order: {
+          id: id,
+          pick_name: "Cửa hàng DATN",
+          pick_address: "123 Đường Test",
+          pick_province: "TP. Hồ Chí Minh",
+          pick_district: "Quận 1",
+          pick_ward: "Phường Bến Nghé",
+          pick_tel: "0901234567",
+          tel: address.phone || "0987654321",
+          name: address.first_name || "Khách hàng",
+          address: address.address_1 || "Địa chỉ khách hàng",
+          province: address.province || "Hà Nội",
+          is_freeship: "1",
+          pick_money: 0,
+          value: totalValue
+        }
+      };
+
+      trackingCode = `GHTK_MOCK_${Date.now()}`;
+
+      if (ghtkToken) {
+        isMock = false;
+        const ghtkRes = await fetch("https://services.giaohangtietkiem.vn/services/shipment/order/?ver=1.5", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Token": ghtkToken,
+          },
+          body: JSON.stringify(ghtkBody),
+        });
+        const ghtkData = await ghtkRes.json();
+        
+        if (ghtkData.success && ghtkData.order) {
+          trackingCode = ghtkData.order.label || ghtkData.order.tracking_id || trackingCode;
+        } else {
+          console.error("[Admin] GHTK API Error:", ghtkData);
+        }
       } else {
-        console.error("[Admin] GHN API Error:", ghnData);
-        // We can throw here, or just continue with mock code for resilience in dev
-        // throw new Error(ghnData.message || "Failed to create GHN order");
+        console.log("[Admin] GHTK_API_TOKEN missing. Simulating GHTK API success.");
       }
     } else {
-      console.log("[Admin] GHN_TOKEN or GHN_SHOP_ID missing. Simulating GHN API success.");
+      // GHN Logic
+      console.log(`[Admin] Syncing with GHN...`);
+      const totalWeight = items.reduce((acc, item) => acc + (item.weight * item.quantity), 0) || 200;
+
+      const ghnBody = {
+        to_name: address.first_name,
+        to_phone: address.phone,
+        to_address: address.address_1,
+        to_ward_code: to_ward_code,
+        to_district_id: to_district_id,
+        weight: totalWeight,
+        length: 15,
+        width: 10,
+        height: 10,
+        service_type_id: 2,
+        payment_type_id: 1,
+        required_note: "CHOXEMHANGKHONGTHU",
+        items: items
+      };
+
+      trackingCode = `GHN_MOCK_${Date.now()}`;
+
+      if (token && shopId) {
+        isMock = false;
+        const ghnRes = await fetch("https://dev-online-gateway.ghn.vn/shiip/public-api/v2/shipping-order/create", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Token": token,
+            "ShopId": shopId,
+          },
+          body: JSON.stringify(ghnBody),
+        });
+        const ghnData = await ghnRes.json();
+        
+        if (ghnData.code === 200 && ghnData.data) {
+          trackingCode = ghnData.data.order_code;
+        } else {
+          console.error("[Admin] GHN API Error:", ghnData);
+        }
+      } else {
+        console.log("[Admin] GHN_TOKEN or GHN_SHOP_ID missing. Simulating GHN API success.");
+      }
     }
 
     // 3. Save Tracking Code to Order Metadata
     try {
-      // Use Medusa v2 method to update metadata
       await orderService.updateOrders(id, {
         metadata: {
           tracking_code: trackingCode,
-          shipping_provider: "GHN"
+          shipping_provider: provider.toUpperCase()
         }
       });
       console.log(`[Admin] Saved tracking code ${trackingCode} to order ${id}`);
@@ -286,7 +344,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     });
 
   } catch (error: any) {
-    console.error(`[Admin] GHN Sync Error:`, error);
+    console.error(`[Admin] Shipping Sync Error:`, error);
     return res.status(500).json({ error: error.message || "Failed to sync shipping" });
   }
 }
