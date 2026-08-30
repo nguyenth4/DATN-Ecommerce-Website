@@ -5,7 +5,7 @@ export async function buildZalopayUrl(orderId: string, amount: number, orderInfo
     app_id: 2554,
     key1: "sdngKKJmqEMzvh5QQcdD2A9XBSKUNaYn",
     endpoint: process.env.ZALOPAY_ENDPOINT || "https://sb-openapi.zalopay.vn/v2/create",
-    callback_url: process.env.ZALOPAY_RETURN_URL || "http://localhost:9000/store/payment/zalopay/callback"
+    callback_url: process.env.ZALOPAY_RETURN_URL || "http://localhost:9000/payment/zalopay/callback"
   };
 
   const embed_data = {

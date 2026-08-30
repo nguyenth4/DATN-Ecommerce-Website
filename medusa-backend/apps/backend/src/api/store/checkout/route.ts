@@ -13,7 +13,7 @@ function buildVnpayUrl(
   const tmnCode = process.env.VNPAY_TMN_CODE || "CGPNVLJA";
   const hashSecret = process.env.VNPAY_SECURE_SECRET || process.env.VNPAY_HASH_SECRET || "RAOEXHYVSDDIIENYWSLDIIZTANXUXZFJ";
   const vnpUrl = process.env.VNPAY_URL || "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
-  const returnUrl = process.env.VNPAY_RETURN_URL || "http://localhost:9000/store/payment/vnpay/callback";
+  const returnUrl = process.env.VNPAY_RETURN_URL || "http://localhost:9000/payment/vnpay/callback";
 
   const now = new Date();
   // Format: YYYYMMDDHHmmss (Vietnam time UTC+7)
@@ -126,6 +126,13 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     (global as any).__pendingOrders = (global as any).__pendingOrders || new Map();
     (global as any).__pendingOrders.set(mockOrderId, {
       items,
+      customer: payload.customer,
+      customer_id: payload.customer_id,
+      address: payload.address,
+      addressComponents: payload.addressComponents,
+      shippingMethod: payload.shippingMethod,
+      shippingFee: payload.shippingFee,
+      totalAmount: payload.totalAmount,
       created_at: Date.now(),
     });
 
@@ -166,11 +173,68 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         }
       }
       
-      // Emit order placed event to trigger GHN sync
-      await eventBus.emit({
-        name: "order.placed",
-        data: { id: mockOrderId, payment_status: status, method: paymentMethod },
-      });
+
+
+      // ─── INSERT INTO MEDUSA DB ───────────────────────────
+      try {
+        const orderService = req.scope.resolve(Modules.ORDER);
+        const createdOrders = await orderService.createOrders([{
+          currency_code: "VND",
+          email: payload.customer?.email || "guest@example.com",
+          customer_id: payload.customer_id || undefined,
+          metadata: { 
+            external_id: mockOrderId,
+            payment_method: paymentMethod,
+            shipping_method: payload.shippingMethod,
+            customer_name: payload.customer?.fullName,
+            customer_phone: payload.customer?.phoneNumber
+          },
+          items: items.map((i: any) => ({
+            title: i.name || "Unknown item",
+            unit_price: i.price || 0,
+            quantity: i.qty || 1,
+            variant_title: i.variant || "",
+            thumbnail: i.img || "",
+            variant_id: i.id || "", // this is actually variant id
+          })),
+        }]);
+        
+        if (isWallet && createdOrders && createdOrders.length > 0) {
+          const medusaOrderId = createdOrders[0].id;
+          try {
+            const { createOrderPaymentCollectionWorkflow, markPaymentCollectionAsPaid } = require("@medusajs/core-flows");
+            
+            const { result: paymentCollections } = await createOrderPaymentCollectionWorkflow(req.scope).run({
+              input: {
+                order_id: medusaOrderId,
+                amount: payload.totalAmount || 0,
+              }
+            });
+            
+            if (paymentCollections && paymentCollections.length > 0) {
+              await markPaymentCollectionAsPaid(req.scope).run({
+                input: {
+                  order_id: medusaOrderId,
+                  payment_collection_id: paymentCollections[0].id,
+                }
+              });
+              console.log(`[Checkout API] Marked Medusa order ${medusaOrderId} as Paid for Wallet!`);
+            }
+          } catch (updateErr: any) {
+            console.warn(`[Checkout API] Could not mark order as paid for ${medusaOrderId}:`, updateErr.message);
+          }
+        }
+        
+        console.log(`[Checkout API] Successfully created Medusa order for ${mockOrderId}`);
+
+        // Emit order placed event to trigger GHN sync and Emails
+        await eventBus.emit({
+          name: "order.placed",
+          data: { id: mockOrderId, payment_status: status, method: paymentMethod },
+        });
+      } catch (err) {
+        console.error(`[Checkout API] Failed to create Medusa order for ${mockOrderId}:`, err);
+      }
 
       return res.status(200).json({
         message: `${paymentMethod.toUpperCase()} order created successfully`,
