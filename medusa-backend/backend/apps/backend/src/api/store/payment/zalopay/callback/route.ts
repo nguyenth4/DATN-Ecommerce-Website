@@ -1,6 +1,8 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { Modules } from "@medusajs/framework/utils";
 
+export const AUTHENTICATE = false;
+
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
   try {
     const query = req.query as Record<string, string>;
