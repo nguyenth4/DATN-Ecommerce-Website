@@ -11,7 +11,7 @@ function buildVnpayUrl(
   ipAddr: string
 ): string {
   const tmnCode = process.env.VNPAY_TMN_CODE || "CGPNVLJA";
-  const hashSecret = process.env.VNPAY_HASH_SECRET || "RAOEXHYVSDDIIENYWSLDIIZTANXUXZFJ";
+  const hashSecret = process.env.VNPAY_SECURE_SECRET || process.env.VNPAY_HASH_SECRET || "RAOEXHYVSDDIIENYWSLDIIZTANXUXZFJ";
   const vnpUrl = process.env.VNPAY_URL || "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
   const returnUrl = process.env.VNPAY_RETURN_URL || "http://localhost:9000/store/payment/vnpay/callback";
 
@@ -192,7 +192,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       "127.0.0.1";
 
     // Lấy tổng tiền từ payload (đơn vị VND)
-    const totalAmount: number = payload.totalAmount || 0;
+    const totalAmount: number = payload.totalAmount || payload.total || 0;
 
     if (paymentMethod === 'vnpay') {
       // ✅ Tạo URL VNPAY thật với chữ ký HMAC-SHA512
