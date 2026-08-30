@@ -214,11 +214,17 @@ const AccountPage = () => {
 
           const merged = [...localOrders];
           remoteMapped.forEach((remoteOrder: any) => {
-            const idx = merged.findIndex(o => o.orderId === remoteOrder.orderId);
+            const idx = merged.findIndex(o => 
+              o.orderId === remoteOrder.orderId || 
+              (remoteOrder.metadata?.external_id && remoteOrder.metadata.external_id === o.orderId)
+            );
+            
             if (idx > -1) {
               merged[idx] = {
                 ...merged[idx],
                 ...remoteOrder,
+                // Giữ nguyên mã đơn hàng từ Medusa (orderId, display_id) thay vì mã tạm 1788...
+                orderId: remoteOrder.orderId,
                 cancelReason: remoteOrder.status === 'canceled'
                   ? (remoteOrder.cancelReason || merged[idx].cancelReason || 'Hệ thống/Cửa hàng hủy')
                   : merged[idx].cancelReason
