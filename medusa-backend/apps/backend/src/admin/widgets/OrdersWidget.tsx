@@ -19,7 +19,7 @@ export const OrdersWidget = () => {
   const fetchOrders = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`/admin/orders?limit=${limit}&offset=${page * limit}`);
+      const response = await fetch(`/admin/orders?limit=${limit}&offset=${page * limit}&order=-created_at&status=pending`);
       if (response.ok) {
         const data = await response.json();
         setOrders(data.orders || []);
@@ -38,7 +38,7 @@ export const OrdersWidget = () => {
     setLoading(true)
     try {
       // 1. Call sync-shipping endpoint (GHN/GHTK)
-      await fetch(`/admin/orders/${orderId}/sync-shipping`, {
+      const syncRes = await fetch(`/admin/orders/${orderId}/sync-shipping`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -46,19 +46,47 @@ export const OrdersWidget = () => {
         body: JSON.stringify({ provider: method })
       });
 
-      // 2. Update status of the order in Medusa
-      await fetch(`/admin/orders/${orderId}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          status: "fulfilled",
-          metadata: {
-            shipping_method: method
+      if (!syncRes.ok) {
+        const errText = await syncRes.text();
+        alert(`Lỗi đồng bộ ${method}: ${errText}`);
+        setLoading(false);
+        return;
+      }
+
+      // 2. Create fulfillment in Medusa
+      const order = orders.find((o) => o.id === orderId);
+      if (order && order.items) {
+        // Get stock location
+        let locationId = undefined;
+        try {
+          const locRes = await fetch("/admin/stock-locations");
+          if (locRes.ok) {
+            const locData = await locRes.json();
+            if (locData.stock_locations && locData.stock_locations.length > 0) {
+              locationId = locData.stock_locations[0].id;
+            }
           }
-        })
-      });
+        } catch (e) {
+          console.error("Failed to fetch stock locations", e);
+        }
+
+        await fetch(`/admin/orders/${orderId}/fulfillments`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            items: order.items.map((item: any) => ({
+              id: item.id,
+              quantity: item.quantity,
+            })),
+            location_id: locationId,
+            metadata: {
+              shipping_method: method
+            }
+          })
+        });
+      }
 
       fetchOrders()
     } catch (e) {
