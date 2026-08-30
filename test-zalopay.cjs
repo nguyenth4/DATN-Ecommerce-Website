@@ -1,28 +1,17 @@
-import crypto from 'crypto';
+const crypto = require('crypto');
 
-export async function buildZalopayUrl(orderId: string, amount: number, orderInfo: string) {
+async function testZaloPay() {
   const config = {
-    app_id: 2554,
-    key1: "sdngKKJmqEMzvh5QQcdD2A9XBSKUNaYn",
+    app_id: process.env.ZALOPAY_APP_ID || "2553",
+    key1: process.env.ZALOPAY_KEY1 || "Pc94W2rvqAee8DhF2rBegigwkgho0AcZ",
     endpoint: process.env.ZALOPAY_ENDPOINT || "https://sb-openapi.zalopay.vn/v2/create",
     callback_url: process.env.ZALOPAY_RETURN_URL || "http://localhost:9000/store/payment/zalopay/callback"
   };
 
-  const embed_data = {
-    redirecturl: config.callback_url
-  };
-  
-  const items: any[] = [];
+  const embed_data = { redirecturl: config.callback_url };
+  const items = [];
   const transID = Math.floor(Math.random() * 1000000);
-  
-  // ZaloPay requires YYMMDD based on Vietnam Timezone
-  const d = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Ho_Chi_Minh"}));
-  const yy = d.getFullYear().toString().slice(-2);
-  const mm = (d.getMonth() + 1).toString().padStart(2, '0');
-  const dd = d.getDate().toString().padStart(2, '0');
-  const vnDate = `${yy}${mm}${dd}`;
-
-  const app_trans_id = `${vnDate}_${transID}`;
+  const app_trans_id = `${new Date().toISOString().slice(2, 4)}${new Date().toISOString().slice(5, 7)}${new Date().toISOString().slice(8, 10)}_${transID}`;
 
   const order = {
     app_id: config.app_id,
@@ -31,8 +20,8 @@ export async function buildZalopayUrl(orderId: string, amount: number, orderInfo
     app_time: Date.now(),
     item: JSON.stringify(items),
     embed_data: JSON.stringify(embed_data),
-    amount: amount,
-    description: orderInfo,
+    amount: 50000,
+    description: "Thanh toan don hang test",
     bank_code: "",
     mac: ""
   };
@@ -40,20 +29,25 @@ export async function buildZalopayUrl(orderId: string, amount: number, orderInfo
   const data = config.app_id + "|" + order.app_trans_id + "|" + order.app_user + "|" + order.amount + "|" + order.app_time + "|" + order.embed_data + "|" + order.item;
   order.mac = crypto.createHmac('sha256', config.key1).update(data).digest('hex');
 
+  // Convert to x-www-form-urlencoded
+  const formParams = new URLSearchParams();
+  for (const key in order) {
+    formParams.append(key, order[key]);
+  }
+
   try {
     const res = await fetch(config.endpoint, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/x-www-form-urlencoded'
       },
-      body: JSON.stringify(order)
+      body: formParams.toString()
     });
     const result = await res.json();
-    if (result.return_code === 1) {
-      return result.order_url;
-    }
+    console.log("ZaloPay response:", result);
   } catch (error) {
     console.error("Zalopay create order error:", error);
   }
-  return null;
 }
+
+testZaloPay();
