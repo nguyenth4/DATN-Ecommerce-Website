@@ -732,7 +732,14 @@ const CheckoutPage = () => {
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.qty, 0);
   const [ghnExpressFee, setGhnExpressFee] = useState(35000);
   const [ghnEconomyFee, setGhnEconomyFee] = useState(25000);
-  const shippingFee = shippingMethod === 'ghn' ? ghnExpressFee : ghnEconomyFee;
+  const [ghtkFee, setGhtkFee] = useState(30000);
+  // Determine shipping fee based on selected method
+  const shippingFee =
+    shippingMethod === 'ghn'
+      ? ghnExpressFee
+      : shippingMethod === 'ghtk'
+      ? ghtkFee
+      : ghnEconomyFee;
   const [resolvedGhnDistrictId, setResolvedGhnDistrictId] = useState<number | null>(null);
   const [resolvedGhnWardCode, setResolvedGhnWardCode] = useState<string | null>(null);
   
