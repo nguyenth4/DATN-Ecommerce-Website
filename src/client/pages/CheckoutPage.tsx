@@ -129,12 +129,20 @@ const CheckoutPage = () => {
   const [selectedDistrict, setSelectedDistrict] = useState<string>('');
   const [selectedWard, setSelectedWard] = useState<string>('');
   
-  // Customer & Address State
-  const [fullName, setFullName] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [email, setEmail] = useState('');
-  const [detailAddress, setDetailAddress] = useState('');
-  const [note, setNote] = useState('');
+  // Customer & Address State (Persistent)
+  const [fullName, setFullName] = useState(() => localStorage.getItem('checkout_fullName') || '');
+  const [phoneNumber, setPhoneNumber] = useState(() => localStorage.getItem('checkout_phoneNumber') || '');
+  const [email, setEmail] = useState(() => localStorage.getItem('checkout_email') || '');
+  const [detailAddress, setDetailAddress] = useState(() => localStorage.getItem('checkout_detailAddress') || '');
+  const [note, setNote] = useState(() => localStorage.getItem('checkout_note') || '');
+
+  useEffect(() => {
+    localStorage.setItem('checkout_fullName', fullName);
+    localStorage.setItem('checkout_phoneNumber', phoneNumber);
+    localStorage.setItem('checkout_email', email);
+    localStorage.setItem('checkout_detailAddress', detailAddress);
+    localStorage.setItem('checkout_note', note);
+  }, [fullName, phoneNumber, email, detailAddress, note]);
   
   // Saved Addresses State
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
@@ -832,6 +840,22 @@ const CheckoutPage = () => {
   const walletDeduction = useWallet ? Math.min(walletBalance, total) : 0;
   const remainingTotal = total - walletDeduction;
 
+  if (cartItems.length === 0) {
+    return (
+      <div className="checkout-page" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc' }}>
+        <div style={{ backgroundColor: '#fff', padding: '40px', borderRadius: '16px', textAlign: 'center', boxShadow: '0 4px 24px rgba(15,23,42,0.1)' }}>
+          <ShoppingBag size={64} color="#cbd5e1" style={{ margin: '0 auto 20px' }} />
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1e293b', marginBottom: '10px' }}>Giỏ hàng đang trống</h2>
+          <p style={{ color: '#64748b', marginBottom: '30px' }}>Bạn chưa có sản phẩm nào trong giỏ hàng để thanh toán.</p>
+          <Link to="/cart" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', backgroundColor: '#4f46e5', color: '#fff', padding: '12px 24px', borderRadius: '8px', fontWeight: 600, textDecoration: 'none' }}>
+            <ChevronLeft size={20} />
+            Quay lại mua sắm
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="checkout-page">
       <header className="checkout-header">
@@ -1416,16 +1440,6 @@ const CheckoutPage = () => {
                       </div>
                       <span className="option-desc">Thẻ ATM/QR Code/Visa</span>
                       {paymentMethod === 'vnpay' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
-                    </div>
-                    <div 
-                      className={`option-card ${paymentMethod === 'momo' ? 'selected' : ''}`}
-                      onClick={() => setPaymentMethod('momo')}
-                    >
-                      <div className="option-card-header">
-                        <span className="option-name">Ví MoMo</span>
-                      </div>
-                      <span className="option-desc">Thanh toán qua ví MoMo</span>
-                      {paymentMethod === 'momo' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
                     </div>
                     <div 
                       className={`option-card ${paymentMethod === 'zalopay' ? 'selected' : ''}`}
