@@ -98,6 +98,10 @@ export default defineConfig({
             resolve: "./src/modules/ghn-fulfillment",
             id: "ghn",
           },
+          {
+            resolve: "./src/modules/ghtk-fulfillment",
+            id: "ghtk",
+          },
         ],
       },
     },
