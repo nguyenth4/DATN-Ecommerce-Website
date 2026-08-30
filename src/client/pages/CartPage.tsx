@@ -81,6 +81,27 @@ const CartPage = () => {
   const [promoLoading, setPromoLoading] = useState(false);
   const [isAutomatic, setIsAutomatic] = useState(() => !localStorage.getItem('applied_promo_code_manual') && !!localStorage.getItem('applied_promo_code'));
   const [autoPromoDismissed, setAutoPromoDismissed] = useState(false);
+  const [availablePromotions, setAvailablePromotions] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchPromotions = async () => {
+      try {
+        const res = await fetch(`${MEDUSA_BACKEND_URL}/store/promotions`, {
+          headers: {
+            'x-publishable-api-key': PUBLISHABLE_KEY
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setAvailablePromotions(data.promotions || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch promotions:", err);
+      }
+    };
+    fetchPromotions();
+  }, []);
+
 
   const shippingFee = 0;
 
@@ -198,6 +219,28 @@ const CartPage = () => {
       console.error("Failed to check automatic promotion:", err);
     }
   };
+
+  const getPromotionRuleLabel = (promo: any) => {
+    if (!promo.target_rules || promo.target_rules.length === 0) {
+      return promo.is_automatic ? 'Tự động áp dụng' : 'Mã giảm giá';
+    }
+    
+    const rulesText = promo.target_rules.map((rule: any) => {
+      if (rule.collection_title) {
+        return `dòng ${rule.collection_title}`;
+      }
+      if (rule.product_title) {
+        return `sản phẩm ${rule.product_title}`;
+      }
+      return '';
+    }).filter(Boolean).join(', ');
+
+    if (rulesText) {
+      return `Chỉ áp dụng cho ${rulesText}`;
+    }
+    return promo.is_automatic ? 'Tự động áp dụng' : 'Mã giảm giá';
+  };
+
 
   useEffect(() => {
     const manualCode = localStorage.getItem('applied_promo_code_manual');
@@ -455,6 +498,95 @@ const CartPage = () => {
                           <span>✅</span> {promoSuccess}
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* Suggestion list of available promotions */}
+                  {availablePromotions.length > 0 && (
+                    <div style={{ marginTop: '16px', borderTop: '1px dashed #e5e7eb', paddingTop: '12px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: '#4b5563', marginBottom: '8px' }}>
+                        Khuyến mãi dành cho bạn:
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {availablePromotions.map((promo) => {
+                          const valueFormatted = promo.app_method_type === 'percentage' 
+                            ? `${promo.app_method_value}%` 
+                            : `${Number(promo.app_method_value).toLocaleString('vi-VN')}đ`;
+                          
+                          const isApplied = appliedPromoCode === promo.code;
+
+                          return (
+                            <div 
+                              key={promo.id} 
+                              style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'space-between', 
+                                background: '#fff', 
+                                border: isApplied ? '1px solid #3b82f6' : '1px solid #e5e7eb', 
+                                borderRadius: '6px', 
+                                padding: '8px 10px',
+                                boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
+                              }}
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ 
+                                  background: promo.is_automatic ? '#f0fdf4' : '#eff6ff', 
+                                  color: promo.is_automatic ? '#16a34a' : '#2563eb', 
+                                  padding: '2px 6px', 
+                                  borderRadius: '4px', 
+                                  fontSize: '11px', 
+                                  fontWeight: 700,
+                                  border: promo.is_automatic ? '1px solid #bbf7d0' : '1px solid #bfdbfe'
+                                }}>
+                                  {promo.code}
+                                </span>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#1f2937' }}>
+                                    Giảm {valueFormatted}
+                                  </span>
+                                  <span style={{ fontSize: '10px', color: '#6b7280' }}>
+                                    {getPromotionRuleLabel(promo)}
+                                  </span>
+                                </div>
+                              </div>
+                              {!promo.is_automatic && (
+                                <button
+                                  onClick={() => {
+                                    if (isApplied) {
+                                      // Gỡ bỏ
+                                      setAppliedPromoCode('');
+                                      setDiscount(0);
+                                      setPromoSuccess('');
+                                      setPromoError('');
+                                      setPromoCodeInput('');
+                                      localStorage.removeItem('applied_promo_code');
+                                      localStorage.removeItem('applied_promo_discount');
+                                      localStorage.removeItem('applied_promo_code_manual');
+                                      checkForAutoPromo();
+                                    } else {
+                                      setPromoCodeInput(promo.code);
+                                      validatePromo(promo.code, true);
+                                    }
+                                  }}
+                                  style={{ 
+                                    background: isApplied ? '#ef4444' : '#2563eb', 
+                                    color: '#fff', 
+                                    border: 'none', 
+                                    padding: '4px 10px', 
+                                    borderRadius: '4px', 
+                                    fontSize: '11px', 
+                                    fontWeight: 600, 
+                                    cursor: 'pointer' 
+                                  }}
+                                >
+                                  {isApplied ? 'Gỡ bỏ' : 'Áp dụng'}
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>
