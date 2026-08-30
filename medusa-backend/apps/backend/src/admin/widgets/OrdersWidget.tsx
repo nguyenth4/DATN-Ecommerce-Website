@@ -39,7 +39,11 @@ export const OrdersWidget = () => {
     try {
       // 1. Call sync-shipping endpoint (GHN/GHTK)
       await fetch(`/admin/orders/${orderId}/sync-shipping`, {
-        method: "POST"
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ provider: method })
       });
 
       // 2. Update status of the order in Medusa
