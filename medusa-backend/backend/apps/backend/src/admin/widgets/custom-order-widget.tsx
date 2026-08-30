@@ -90,7 +90,7 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
           </Heading>
           <div className="flex items-center gap-2 mt-1">
             <Text className="text-xs text-gray-500 font-mono">
-              Mã đơn hàng:
+              Mã đơn hàng: <span className="text-gray-900 font-semibold select-all">{order.id}</span>
             </Text>
             <Copy content={order.id} className="text-xs font-mono" />
           </div>

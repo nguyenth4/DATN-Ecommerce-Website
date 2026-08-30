@@ -765,6 +765,14 @@ const AccountPage = () => {
     return step >= 0 && step < 3;
   };
 
+  const getCancelBlockedReason = (order: any) => {
+    if (order.canceled || order.status === 'canceled') return null;
+    const step = getDynamicStatusStep(order);
+    if (step === 3) return 'Đơn hàng đang giao, không thể hủy';
+    if (step >= 4) return 'Đơn hàng đã hoàn thành';
+    return null;
+  };
+
 
 
   const getDynamicTimeline = (order: any) => {
@@ -1202,16 +1210,15 @@ const AccountPage = () => {
                                   {formatPrice(order.items.reduce((s: number, i: any) => s + ((i as any).price || 0) * i.qty, 0) + (order.shippingFee || 35000))}
                                 </td>
                                 <td>
-                                  <span style={{
-                                    fontSize: '0.8rem',
-                                    fontWeight: 600,
-                                    padding: '3px 8px',
-                                    borderRadius: '12px',
-                                    background: (order.payment_status === 'captured' || order.payment_status === 'paid') ? '#dcfce7' : '#fef9c3',
-                                    color: (order.payment_status === 'captured' || order.payment_status === 'paid') ? '#15803d' : '#a16207',
-                                  }}>
-                                    {(order.payment_status === 'captured' || order.payment_status === 'paid') ? '✓ Đã thanh toán' : 'Chưa thanh toán'}
-                                  </span>
+                                  {(order.payment_status === 'captured' || order.payment_status === 'paid') ? (
+                                    <span className="status-badge badge-completed">
+                                      <i className="bi bi-check-circle-fill"></i> Đã thanh toán
+                                    </span>
+                                  ) : (
+                                    <span className="status-badge badge-pending">
+                                      <i className="bi bi-exclamation-circle-fill"></i> Chưa thanh toán
+                                    </span>
+                                  )}
                                 </td>
                                 <td>
                                   <span className={getOrderFulfillmentBadgeClass(order)}>
@@ -1258,7 +1265,15 @@ const AccountPage = () => {
                                 <td>{order.date.split(' – ')[0]}</td>
                                 <td style={{ fontWeight: 700, color: 'var(--indigo)' }}>{formatPrice(order.total)}</td>
                                 <td>
-                                  <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>{order.paymentStatus}</span>
+                                  {order.paymentStatus === 'Đã thanh toán' ? (
+                                    <span className="status-badge badge-completed">
+                                      <i className="bi bi-check-circle-fill"></i> Đã thanh toán
+                                    </span>
+                                  ) : (
+                                    <span className="status-badge badge-pending">
+                                      <i className="bi bi-exclamation-circle-fill"></i> Chưa thanh toán
+                                    </span>
+                                  )}
                                 </td>
                                 <td>
                                   <span className={getShippingBadgeClass(order.shippingStatus)}>
