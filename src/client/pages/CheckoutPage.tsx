@@ -747,6 +747,7 @@ const CheckoutPage = () => {
     // Call Shipping Fee API when district/ward changes
     if (selectedDistrict && selectedWard) {
       let provinceName = '';
+      let districtName = '';
       let wardName = '';
 
       if (addressMode === 'saved' && selectedSavedAddressId && customer?.addresses) {
@@ -754,10 +755,17 @@ const CheckoutPage = () => {
         if (selectedAddr) {
           provinceName = selectedAddr.province || '';
           wardName = selectedAddr.address_2 || '';
+          // We don't have a strict districtName field in Medusa Address by default, 
+          // but we map selectedDistrict ID to name for GHN anyway.
+          // Let's rely on the districts array which should be populated if editing/using existing.
+          const districtObj = districts.find(d => String(d.id) === String(selectedAddr.city || selectedDistrict));
+          districtName = districtObj ? districtObj.name : '';
         }
       } else {
         const provinceObj = provinces.find(p => p.id === selectedProvince);
         provinceName = provinceObj ? provinceObj.name : '';
+        const districtObj = districts.find(d => String(d.id) === String(selectedDistrict));
+        districtName = districtObj ? districtObj.name : '';
         const wardObj = wards.find(w => w.id === selectedWard);
         wardName = wardObj ? wardObj.name : '';
       }
@@ -767,6 +775,7 @@ const CheckoutPage = () => {
         selectedDistrict, 
         selectedWard, 
         provinceName,
+        districtName,
         wardName
       });
 
@@ -796,8 +805,25 @@ const CheckoutPage = () => {
         }).then(res => res.json());
       };
 
-      Promise.all([fetchFee(2), fetchFee(5)])
-        .then(([expressData, economyData]) => {
+      const fetchGhtkFee = () => {
+        return fetch(`${MEDUSA_BACKEND_URL}/store/ghtk/fee`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-publishable-api-key': PUBLISHABLE_KEY
+          },
+          body: JSON.stringify({
+            province_name: provinceName,
+            district_name: districtName,
+            ward_name: wardName,
+            weight: totalWeight || 200,
+            insurance_value: insuranceValue || 0,
+          })
+        }).then(res => res.json());
+      };
+
+      Promise.all([fetchFee(2), fetchFee(5), fetchGhtkFee()])
+        .then(([expressData, economyData, ghtkData]) => {
           if (expressData.data?.total) {
             setGhnExpressFee(expressData.data.total);
             if (expressData.data.resolved_district_id && expressData.data.resolved_ward_code) {
@@ -813,6 +839,14 @@ const CheckoutPage = () => {
           } else {
             setGhnEconomyFee(0);
           }
+          
+          if (ghtkData?.fee?.fee) {
+            setGhtkFee(ghtkData.fee.fee);
+          } else {
+            console.warn("Could not get GHTK fee, falling back to default", ghtkData);
+            setGhtkFee(30000);
+          }
+
         })
         .catch(error => {
           console.error("Fee API error:", error);
@@ -1419,7 +1453,7 @@ const CheckoutPage = () => {
                     >
                       <div className="option-card-header">
                         <span className="option-name">Giao hàng Tiết kiệm (Economy)</span>
-                        <span className="option-price">{ghnEconomyFee > 0 ? `${ghnEconomyFee.toLocaleString('vi-VN')}đ` : 'Chưa tính'}</span>
+                        <span className="option-price">{ghtkFee > 0 ? `${ghtkFee.toLocaleString('vi-VN')}đ` : 'Chưa tính'}</span>
                       </div>
                       <span className="option-desc">Giao tiêu chuẩn 3-4 ngày</span>
                       {shippingMethod === 'ghtk' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
