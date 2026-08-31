@@ -46,8 +46,17 @@ Trước đây, GHTK chỉ được gọi bằng API tùy biến bên ngoài, kh
 
 ---
 
-## 4. Hướng Dẫn Kiểm Tra & Cấu Hình Trên Admin
+## 4. Debugging Lỗi API GHTK (500 Internal Server Error)
 
+Hiện tại tính năng đẩy đơn hàng sang Giao Hàng Tiết Kiệm (GHTK) đôi khi gặp lỗi **500 Internal Server Error** từ phía API nội bộ của Medusa.
+- Trong Admin Dashboard (Widget: `OrdersWidget.tsx`), khi người dùng bấm nút **"Duyệt (GHTK)"**, hệ thống sẽ gửi 1 request `POST` tới API nội bộ: `/admin/orders/:id/sync-shipping`.
+- API này sẽ lấy thông tin đơn hàng và đẩy sang GHTK thông qua endpoint tạo đơn của họ.
+- **Vấn đề:** GHTK từ chối payload được gửi sang, dẫn đến API của Medusa quăng lỗi và trả về mã lỗi 500. Kéo theo việc xuất kho bị hủy bỏ.
+- Đã thêm logic alert popup trong `OrdersWidget.tsx` để hiển thị lỗi chi tiết khi GHTK từ chối đơn hàng để dễ dàng debug.
+
+---
+
+## 5. Hướng Dẫn Kiểm Tra & Cấu Hình Trên Admin
 1. **Khởi động lại Server Backend:**
    ```bash
    cd medusa-backend/backend/apps/backend

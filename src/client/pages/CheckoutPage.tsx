@@ -756,7 +756,6 @@ const CheckoutPage = () => {
       localStorage.removeItem('applied_promo_code');
       localStorage.removeItem('applied_promo_discount');
       setIsProcessing(false);
-
       if (!buyNowItem) {
         clearCart();
       }
