@@ -44,6 +44,10 @@ export default defineMiddlewares({
       matcher: "/admin/uploads",
       method: "POST",
       middlewares: [validateUploadSize]
+    },
+    {
+      matcher: "/store/payment/*",
+      publishableApiKey: false,
     }
   ]
 })

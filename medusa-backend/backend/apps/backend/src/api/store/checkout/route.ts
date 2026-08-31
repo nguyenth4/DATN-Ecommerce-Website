@@ -50,8 +50,8 @@ async function buildZalopayUrl(
   try {
     const response = await fetch(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams(orderPayload as any).toString(),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(orderPayload),
     });
     const result = (await response.json()) as any;
     console.log("[ZaloPay API] Create order response:", result);
