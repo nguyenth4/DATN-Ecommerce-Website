@@ -100,17 +100,15 @@ const ZaloPayReturnPage = () => {
 
       // ─── Gọi backend để sync order nếu cần ─────────────────────────────
       // Trường hợp server callback chưa chạy kịp (localhost), trigger thủ công
-      if (medusaOrderId) {
-        fetch(`${MEDUSA_BACKEND_URL}/payment/zalopay/callback?` + new URLSearchParams({
-          apptransid,
-          status: '1',
-          amount: amountParam,
-          checksum,
-          medusa_order_id: medusaOrderId,
-        }).toString())
-          .then(() => console.log('[ZaloPayReturnPage] Manual sync triggered'))
-          .catch(() => { /* silently ignore */ });
-      }
+      fetch(`${MEDUSA_BACKEND_URL}/payment/zalopay/callback?` + new URLSearchParams({
+        apptransid,
+        status: '1',
+        amount: amountParam,
+        checksum,
+        ...(medusaOrderId ? { medusa_order_id: medusaOrderId } : {})
+      }).toString())
+        .then(() => console.log('[ZaloPayReturnPage] Manual sync triggered'))
+        .catch(() => { /* silently ignore */ });
 
       // Auto redirect đến trang đơn hàng sau 3s
       setTimeout(() => {
