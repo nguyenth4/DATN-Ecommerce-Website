@@ -9,61 +9,68 @@ async function buildZalopayUrl(
   orderId: string,
   amount: number, // VND
   orderInfo: string
-): Promise<string> {
-  const appId = parseInt(process.env.ZALOPAY_APP_ID || "2553");
-  const key1 = process.env.ZALOPAY_KEY1 || "Pc94W2rvqAee8DhF2rBegigwkgho0AcZ";
+): Promise<string | null> {
+  const appId = parseInt(process.env.ZALOPAY_APP_ID || "2554");
+  const key1 = process.env.ZALOPAY_KEY1 || "sdngKKJmqEMzvh5QQcdD2A9XBSKUNaYn";
   const endpoint = process.env.ZALOPAY_ENDPOINT || "https://sb-openapi.zalopay.vn/v2/create";
-  const returnUrl = process.env.ZALOPAY_RETURN_URL || "http://localhost:9000/payment/zalopay/callback";
+  // redirecturl: ZaloPay redirect user về FE sau khi thanh toán
+  const redirectUrl = `${process.env.STORE_FRONTEND_URL || "http://localhost:5174"}/checkout/zalopay_return`;
+  // callback_url: ZaloPay POST server-to-server để xác nhận
+  const callbackUrl = `${process.env.MEDUSA_BACKEND_URL || "http://localhost:9000"}/payment/zalopay/callback`;
 
-  // AppTransId format: YYMMDD_orderId (e.g. 260828_order_123456)
-  const now = new Date();
+  // AppTransId: YYMMDD_<random> — KHÔNG dùng orderId vì quá dài và có ký tự đặc biệt
+  const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
   const pad = (n: number) => n.toString().padStart(2, "0");
-  const dateStr =
-    now.getFullYear().toString().slice(2) +
-    pad(now.getMonth() + 1) +
-    pad(now.getDate());
-  const cleanOrderRef = orderId.replace(/[^a-zA-Z0-9_]/g, '');
-  const appTransId = `${dateStr}_${cleanOrderRef}`;
-
-  const embedData = JSON.stringify({
-    redirecturl: `${returnUrl}?apptransid=${appTransId}&amount=${amount}`,
-  });
-  const items = JSON.stringify([]);
+  const dateStr = now.getFullYear().toString().slice(2) + pad(now.getMonth() + 1) + pad(now.getDate());
+  const transID = Math.floor(Math.random() * 1_000_000);
+  const appTransId = `${dateStr}_${transID}`;
   const appTime = Date.now();
 
-  const data = `${appId}|${appTransId}|demo|${amount}|${appTime}|${embedData}|${items}`;
-  const mac = crypto.createHmac("sha256", key1).update(data).digest("hex");
+  const embedData = JSON.stringify({
+    redirecturl: redirectUrl,
+    medusa_order_id: orderId,
+  });
+  const items = JSON.stringify([]);
+
+  // MAC data string theo đúng spec ZaloPay: app_id|app_trans_id|app_user|amount|app_time|embed_data|item
+  const dataStr = `${appId}|${appTransId}|DATN_User|${amount}|${appTime}|${embedData}|${items}`;
+  const mac = crypto.createHmac("sha256", key1).update(dataStr).digest("hex");
 
   const orderPayload = {
     app_id: appId,
     app_trans_id: appTransId,
-    app_user: "demo",
+    app_user: "DATN_User",
     app_time: appTime,
     item: items,
     embed_data: embedData,
     amount: amount,
-    description: orderInfo.substring(0, 255),
+    description: orderInfo.substring(0, 256),
     bank_code: "",
+    callback_url: callbackUrl,
     mac: mac,
   };
 
   try {
+    console.log(`[ZaloPay] Creating order: app_trans_id=${appTransId}, orderId=${orderId}, amount=${amount}`);
     const response = await fetch(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams(orderPayload as any).toString(),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(orderPayload),
     });
     const result = (await response.json()) as any;
     console.log("[ZaloPay API] Create order response:", result);
     if (result && result.return_code === 1 && result.order_url) {
+      // Lưu mapping app_trans_id → orderId để callback có thể tra cứu
+      (global as any).__zalopayOrders = (global as any).__zalopayOrders || new Map();
+      (global as any).__zalopayOrders.set(appTransId, { medusaOrderId: orderId });
       return result.order_url;
     }
+    console.error("[ZaloPay API] Failed:", result?.return_message);
   } catch (err) {
     console.error("[ZaloPay API] Error creating order:", err);
   }
 
-  // Fallback direct redirect to callback URL if sandbox API call fails or for offline test
-  return `${returnUrl}?apptransid=${appTransId}&status=1&amount=${amount}`;
+  return null;
 }
 
 
@@ -577,7 +584,7 @@ export const POST = async (
       wallet_deducted: walletDeducted,
       amount_to_pay: amountToPay,
       paymentMethod: amountToPay === 0 ? "wallet" : paymentMethod,
-      paymentUrl: paymentUrl || ((amountToPay > 0 && paymentMethod !== 'cod' && paymentMethod !== 'vnpay' && paymentMethod !== 'zalopay') ? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?dummy" : null)
+      paymentUrl: paymentUrl || null
     })
   } catch (error: any) {
     console.error("[Checkout API Error]:", error)
