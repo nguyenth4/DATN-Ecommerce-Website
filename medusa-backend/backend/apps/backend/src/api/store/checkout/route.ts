@@ -27,7 +27,11 @@ async function buildZalopayUrl(
   const appTime = Date.now();
 
   const embedData = JSON.stringify({
-    redirecturl: redirectUrl,
+    // redirecturl: ZaloPay redirect user về backend callback sau khi thanh toán.
+    // Backend sẽ xử lý markOrderPaid rồi redirect tiếp về FE zalopay_return.
+    // Lý do: callback_url của ZaloPay không hoạt động với localhost,
+    // nên dùng redirecturl (GET) để đảm bảo payment được ghi nhận.
+    redirecturl: `${process.env.MEDUSA_BACKEND_URL || "http://localhost:9000"}/payment/zalopay/callback`,
     medusa_order_id: orderId,
   });
   const items = JSON.stringify([]);
