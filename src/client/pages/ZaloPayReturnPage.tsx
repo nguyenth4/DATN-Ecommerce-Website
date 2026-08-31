@@ -11,6 +11,8 @@ const ZALOPAY_RESPONSE_CODES: Record<string, string> = {
   '-1': 'Lỗi không xác định từ cổng thanh toán.',
 };
 
+const MEDUSA_BACKEND_URL = (import.meta as any).env?.VITE_MEDUSA_BACKEND_URL || 'http://localhost:9000';
+
 const ZaloPayReturnPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -23,11 +25,13 @@ const ZaloPayReturnPage = () => {
     const statusParam = searchParams.get('status');
     const amountParam = searchParams.get('amount') || '0';
     const checksum = searchParams.get('checksum') || apptransid;
+    // medusa_order_id được backend gắn vào khi redirect
+    const medusaOrderId = searchParams.get('medusa_order_id') || '';
 
-    // Standard order id extracted if apptransid is formatted YYMMDD_order_xxx
-    const displayOrderId = apptransid.includes('_')
+    // app_trans_id dạng YYMMDD_<random> — lấy phần sau dấu _ đầu tiên làm display
+    const displayOrderId = medusaOrderId || (apptransid.includes('_')
       ? apptransid.split('_').slice(1).join('_')
-      : apptransid;
+      : apptransid);
 
     const parsedAmount = parseInt(amountParam, 10);
     const formattedAmount = isNaN(parsedAmount) || parsedAmount === 0 
@@ -40,22 +44,22 @@ const ZaloPayReturnPage = () => {
       transId: apptransid,
     });
 
-    const isSuccess = statusParam === '1' || statusParam === '00' || !statusParam;
+    // ZaloPay status=1 là thành công (khác VNPay dùng '00')
+    const isSuccess = statusParam === '1';
 
     if (isSuccess) {
       setStatus('success');
 
-      // Update payment_status in localStorage for matching order
+      // ─── Cập nhật localStorage ───────────────────────────────────────────
       try {
         const orders: any[] = JSON.parse(localStorage.getItem('sprylo_orders') || '[]');
         let updated = false;
 
         const updatedOrders = orders.map((order) => {
-          if (
-            order.orderId === displayOrderId ||
-            order.orderId === apptransid ||
-            order.orderId?.includes(displayOrderId)
-          ) {
+          const matchByMedusa = medusaOrderId && (order.orderId === medusaOrderId);
+          const matchByTrans  = order.orderId === apptransid || order.orderId?.includes(displayOrderId);
+
+          if (matchByMedusa || matchByTrans) {
             updated = true;
             return {
               ...order,
@@ -67,7 +71,7 @@ const ZaloPayReturnPage = () => {
           return order;
         });
 
-        // Fallback to update latest zalopay order
+        // Fallback: cập nhật đơn zalopay mới nhất chưa paid
         if (!updated && orders.length > 0) {
           const latestZalopay = [...updatedOrders]
             .reverse()
@@ -94,7 +98,21 @@ const ZaloPayReturnPage = () => {
         console.error('[ZaloPayReturnPage] Failed to update localStorage:', e);
       }
 
-      // Auto redirect to order management tab after 3s
+      // ─── Gọi backend để sync order nếu cần ─────────────────────────────
+      // Trường hợp server callback chưa chạy kịp (localhost), trigger thủ công
+      if (medusaOrderId) {
+        fetch(`${MEDUSA_BACKEND_URL}/payment/zalopay/callback?` + new URLSearchParams({
+          apptransid,
+          status: '1',
+          amount: amountParam,
+          checksum,
+          medusa_order_id: medusaOrderId,
+        }).toString())
+          .then(() => console.log('[ZaloPayReturnPage] Manual sync triggered'))
+          .catch(() => { /* silently ignore */ });
+      }
+
+      // Auto redirect đến trang đơn hàng sau 3s
       setTimeout(() => {
         navigate('/account?tab=orders');
       }, 3000);
