@@ -64,9 +64,10 @@ export async function createGhnShipping(order: any) {
   const data = await response.json()
   // GHN returns data inside { data: { order_code, label, total_price } }
   const result = data?.data || {}
+  const fee = result?.total_price || (order.metadata?.shipping_fee ? parseInt(order.metadata.shipping_fee) : 0)
   return {
     orderId: result?.order_code || "",
-    trackingNumber: result?.label ? result.label : "",
-    fee: result?.total_price || 0,
+    trackingNumber: result?.label || result?.order_code || "",
+    fee,
   }
 }

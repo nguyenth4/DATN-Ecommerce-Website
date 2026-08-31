@@ -149,10 +149,10 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
             </div>
           )}
 
-          {meta.tracking_number && (
+          {(meta.tracking_number || meta.shipping_order_id) && (
             <div className="mt-3 bg-blue-50 p-3 rounded-lg border border-blue-200">
               <Text className="text-sm font-medium">Đơn vị vận chuyển: <span className="font-semibold capitalize">{meta.shipping_provider || "GHN"}</span></Text>
-              <Text className="text-sm font-medium mt-1">Mã vận đơn: <span className="font-mono font-semibold text-blue-600">{meta.tracking_number}</span></Text>
+              <Text className="text-sm font-medium mt-1">Mã vận đơn: <span className="font-mono font-semibold text-blue-600">{meta.tracking_number || meta.shipping_order_id}</span></Text>
               {meta.shipping_fee && <Text className="text-xs text-gray-500 mt-1">Phí giao hàng đối tác: {Number(meta.shipping_fee).toLocaleString()} ₫</Text>}
             </div>
           )}
@@ -201,17 +201,10 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
                 </Button>
                 <Button
                   variant="primary"
-                  onClick={() => handleStatusChange("shipping", "ghn")}
+                  onClick={() => handleStatusChange("shipping")}
                   disabled={loading}
                 >
-                  {loading ? "Đang xử lý..." : "Giao (GHN)"}
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={() => handleStatusChange("shipping", "ghtk")}
-                  disabled={loading}
-                >
-                  {loading ? "Đang xử lý..." : "Giao (GHTK)"}
+                  {loading ? "Đang xử lý..." : `Giao hàng (${meta.shipping_method?.toUpperCase() || "GHN"})`}
                 </Button>
                 <Button
                   variant="danger"
@@ -227,17 +220,10 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
               <>
                 <Button
                   variant="primary"
-                  onClick={() => handleStatusChange("shipping", "ghn")}
+                  onClick={() => handleStatusChange("shipping")}
                   disabled={loading}
                 >
-                  {loading ? "Đang xử lý..." : "3. Giao hàng (GHN)"}
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={() => handleStatusChange("shipping", "ghtk")}
-                  disabled={loading}
-                >
-                  {loading ? "Đang xử lý..." : "3. Giao hàng (GHTK)"}
+                  {loading ? "Đang xử lý..." : `3. Giao hàng (${meta.shipping_method?.toUpperCase() || "GHN"})`}
                 </Button>
                 <Button
                   variant="danger"

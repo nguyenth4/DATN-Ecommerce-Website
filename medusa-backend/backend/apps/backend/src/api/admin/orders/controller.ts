@@ -228,6 +228,7 @@ export async function updateOrderStatus(
 
   // Merge with existing metadata
   const existingMetadata = (order as any).metadata || {}
+  const finalShippingMethod = shippingMethod || existingMetadata.shipping_method;
   const metadata: Record<string, any> = {
     ...existingMetadata,
     custom_status: newStatus
@@ -279,7 +280,7 @@ export async function updateOrderStatus(
       } else if (newStatus === "preparing") {
         desc = `Đơn hàng đang được đóng gói bởi ${adminName || "System Admin"}`
       } else if (newStatus === "shipping") {
-        const providerName = shippingMethod ? shippingMethod.toUpperCase() : (metadata.shipping_provider ? metadata.shipping_provider.toUpperCase() : "đối tác vận chuyển")
+        const providerName = finalShippingMethod ? finalShippingMethod.toUpperCase() : (metadata.shipping_provider ? metadata.shipping_provider.toUpperCase() : "đối tác vận chuyển")
         desc = `Đơn hàng đã giao cho đơn vị vận chuyển ${providerName} bởi ${adminName || "System Admin"}`
       } else if (newStatus === "delivered") {
         desc = `Đơn hàng được xác nhận đã giao thành công bởi ${adminName || "System Admin"}`
@@ -672,17 +673,18 @@ export async function updateOrderStatus(
       await orderService.updateOrders(orderId, { metadata })
     }
 
-      // Shipping integration (GHN / GHTK) - Only trigger if requested and not yet created
-      if (newStatus === "shipping" && shippingMethod && !existingMetadata.tracking_number) {
+      // Shipping integration (GHN / GHTK) - Only trigger if requested or defined in order metadata and not yet created
+      if (newStatus === "shipping" && finalShippingMethod && !existingMetadata.tracking_number) {
         let shippingResult: any = null
-        if (shippingMethod.toLowerCase() === "ghn") {
+        const methodLower = finalShippingMethod.toLowerCase()
+        if (methodLower === "ghn") {
           shippingResult = await createGhnShipping(order)
-        } else if (shippingMethod.toLowerCase() === "ghtk") {
+        } else if (methodLower === "ghtk") {
           shippingResult = await createGhtkShipping(order)
         }
 
         if (shippingResult) {
-          metadata.shipping_provider = shippingMethod.toLowerCase()
+          metadata.shipping_provider = methodLower
           metadata.shipping_order_id = shippingResult.orderId
           metadata.tracking_number = shippingResult.trackingNumber
           metadata.shipping_fee = shippingResult.fee
