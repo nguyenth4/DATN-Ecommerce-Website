@@ -19,10 +19,14 @@ export const OrdersWidget = () => {
   const fetchOrders = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`/admin/orders?limit=${limit}&offset=${page * limit}&order=-created_at&status=pending`);
+      // Remove status=pending so we can see all recent orders, 
+      // but we will filter out legacy ones in the UI.
+      const response = await fetch(`/admin/orders?limit=50&offset=${page * 50}&order=-created_at`);
       if (response.ok) {
         const data = await response.json();
-        setOrders(data.orders || []);
+        // Lọc bỏ những đơn hàng cũ (không có shipping_method trong metadata)
+        const validOrders = (data.orders || []).filter((o: any) => o.metadata?.shipping_method);
+        setOrders(validOrders);
       }
     } catch (e) {
       console.error("Failed to fetch orders", e)
