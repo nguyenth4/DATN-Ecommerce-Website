@@ -267,10 +267,63 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       // Mock MoMo URL
       paymentUrl = `https://test-payment.momo.vn/v2/gateway/api/create?orderId=${mockOrderId}&redirectUrl=${encodeURIComponent(`${baseUrl}/momo/callback`)}`;
     } else if (paymentMethod === 'zalopay') {
-      // ✅ Tạo URL ZaloPay với chữ ký HMAC-SHA256
-      const orderInfo = `Thanh toan don hang ${mockOrderId}`;
-      paymentUrl = await buildZalopayUrl(mockOrderId, totalAmount, orderInfo);
-      console.log(`[Checkout API] ✅ ZALOPAY URL generated for order ${mockOrderId}, amount: ${totalAmount}`);
+      // ✅ Với ZaloPay: tạo Medusa order TRƯỚC để có orderId thật,
+      //    rồi mới gọi ZaloPay và lưu mapping app_trans_id → medusaOrderId
+      let medusaOrderId: string | null = null;
+      try {
+        const orderService = req.scope.resolve(Modules.ORDER);
+        const createdOrders = await orderService.createOrders([{
+          currency_code: "VND",
+          email: payload.customer?.email || "guest@example.com",
+          customer_id: payload.customer_id || undefined,
+          metadata: {
+            external_id: mockOrderId,
+            payment_method: 'zalopay',
+            shipping_method: payload.shippingMethod,
+            shipping_fee: payload.shippingFee,
+            customer_name: payload.customer?.fullName,
+            customer_phone: payload.customer?.phoneNumber,
+            payment_status: 'pending',
+          },
+          items: items.map((i: any) => ({
+            title: i.name || "Unknown item",
+            unit_price: i.price || 0,
+            quantity: i.qty || 1,
+            variant_title: i.variant || "",
+            thumbnail: i.img || "",
+            variant_id: i.id || "",
+          })),
+        }]);
+        medusaOrderId = createdOrders?.[0]?.id || null;
+        console.log(`[Checkout API] ✅ Medusa order created for ZaloPay: ${medusaOrderId}`);
+      } catch (err) {
+        console.error('[Checkout API] Failed to pre-create Medusa order for ZaloPay:', err);
+      }
+
+      const finalOrderId = medusaOrderId || mockOrderId;
+      const orderInfo = `Thanh toan don hang ${finalOrderId}`;
+      const zalopayResult = await buildZalopayUrl(finalOrderId, totalAmount, orderInfo);
+      if (zalopayResult) {
+        paymentUrl = zalopayResult.order_url;
+        // Lưu mapping: app_trans_id → medusaOrderId để callback tra cứu
+        (global as any).__zalopayOrders = (global as any).__zalopayOrders || new Map();
+        (global as any).__zalopayOrders.set(zalopayResult.app_trans_id, {
+          medusaOrderId: finalOrderId,
+          mockOrderId,
+          totalAmount,
+          items,
+          customer: payload.customer,
+          customer_id: payload.customer_id,
+          shippingMethod: payload.shippingMethod,
+        });
+        // Cập nhật pending cache với medusaOrderId
+        if ((global as any).__pendingOrders) {
+          (global as any).__pendingOrders.set(finalOrderId, (global as any).__pendingOrders.get(mockOrderId));
+        }
+        console.log(`[Checkout API] ✅ ZaloPay URL: ${paymentUrl}, app_trans_id: ${zalopayResult.app_trans_id}`);
+      } else {
+        console.error('[Checkout API] ZaloPay URL generation failed');
+      }
     } else {
       // Fallback
       paymentUrl = null;
