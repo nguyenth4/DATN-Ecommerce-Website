@@ -878,7 +878,8 @@ const AccountPage = () => {
       phone: selectedRealOrder.customer?.phoneNumber || '0000000000',
       address: selectedRealOrder.address || 'Địa chỉ mặc định'
     },
-    paymentMethod: selectedRealOrder.paymentMethod === 'cod' ? 'COD (Thanh toán khi nhận hàng)' : (selectedRealOrder.paymentMethod === 'wallet' ? 'Ví điện tử Sprylo' : 'VNPay'),
+    paymentMethod: selectedRealOrder.paymentMethod === 'cod' ? 'COD (Thanh toán khi nhận hàng)' : selectedRealOrder.paymentMethod === 'wallet' ? 'Ví điện tử Sprylo' : selectedRealOrder.paymentMethod === 'zalopay' ? 'ZaloPay' : selectedRealOrder.paymentMethod === 'momo' ? 'MoMo' : selectedRealOrder.paymentMethod === 'vnpay' ? 'VNPay' : (selectedRealOrder.paymentMethod || 'VNPay'),
+
     items: selectedRealOrder.items.map((item: any) => ({
       name: item.title || item.name || 'Sản phẩm',
       variant: item.variant?.title || item.variant || '',
