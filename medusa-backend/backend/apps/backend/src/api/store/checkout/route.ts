@@ -13,7 +13,7 @@ async function buildZalopayUrl(
   const appId = parseInt(process.env.ZALOPAY_APP_ID || "2553");
   const key1 = process.env.ZALOPAY_KEY1 || "Pc94W2rvqAee8DhF2rBegigwkgho0AcZ";
   const endpoint = process.env.ZALOPAY_ENDPOINT || "https://sb-openapi.zalopay.vn/v2/create";
-  const returnUrl = process.env.ZALOPAY_RETURN_URL || "http://localhost:9000/store/payment/zalopay/callback";
+  const returnUrl = process.env.ZALOPAY_RETURN_URL || "http://localhost:9000/payment/zalopay/callback";
 
   // AppTransId format: YYMMDD_orderId (e.g. 260828_order_123456)
   const now = new Date();
