@@ -39,7 +39,7 @@ async function buildZalopayUrl(
   const dataStr = `${appId}|${appTransId}|DATN_User|${amount}|${appTime}|${embedData}|${items}`;
   const mac = crypto.createHmac("sha256", key1).update(dataStr).digest("hex");
 
-  const orderPayload = {
+  const orderPayload: any = {
     app_id: appId,
     app_trans_id: appTransId,
     app_user: "DATN_User",
@@ -49,12 +49,13 @@ async function buildZalopayUrl(
     amount: amount,
     description: orderInfo.substring(0, 256),
     bank_code: "",
-    // Dùng public URL để ZaloPay webhook không bị timeout/treo ở localhost,
-    // giúp trang thanh toán redirect về FE nhanh chóng.
-    // FE sẽ tự gọi backend bằng GET request.
-    callback_url: callbackUrl.includes("localhost") ? "https://example.com" : callbackUrl,
     mac: mac,
   };
+
+  // Chỉ thêm callback_url nếu không phải là localhost (môi trường prod)
+  if (!callbackUrl.includes("localhost")) {
+    orderPayload.callback_url = callbackUrl;
+  }
 
   try {
     console.log(`[ZaloPay] Creating order: app_trans_id=${appTransId}, orderId=${orderId}, amount=${amount}`);
