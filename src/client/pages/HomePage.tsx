@@ -5,15 +5,90 @@ import { getWishlist } from '../utils/wishlist';
 import { 
   Zap, 
   ArrowRight, 
-  ChevronRight
+  ChevronRight,
+  Ticket
 } from 'lucide-react';
 import { useProducts, useCategories, useRecommendedProducts } from '../services/product.service';
 import { HomePageProductCard } from '../components/HomePageProductCard';
+import toast from 'react-hot-toast';
+import './HomePage.css';
+
 
 const HomePage = () => {
   const [selectedCatId, setSelectedCatId] = useState<string | null>(null);
   const [compareList, setCompareList] = useState(getCompareList());
   const [wishlist, setWishlist] = useState(getWishlist());
+  
+  const [promotions, setPromotions] = useState<any[]>([]);
+  const [copiedCodes, setCopiedCodes] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const fetchPromotions = async () => {
+      try {
+        const res = await fetch('http://localhost:9000/store/promotions', {
+          headers: {
+            'x-publishable-api-key': 'pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d'
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPromotions(data.promotions || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch promotions in homepage:", err);
+      }
+    };
+    fetchPromotions();
+  }, []);
+
+  const activePromos = promotions.length > 0 ? promotions : [
+    {
+      id: 'fallback-1',
+      code: 'GIAM100K',
+      app_method_type: 'fixed',
+      app_method_value: 100000,
+      is_automatic: false
+    },
+    {
+      id: 'fallback-2',
+      code: 'GIAM50K',
+      app_method_type: 'fixed',
+      app_method_value: 50000,
+      is_automatic: true
+    }
+  ];
+
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    toast.success(`Đã sao chép mã ${code}!`);
+    setCopiedCodes(prev => ({ ...prev, [code]: true }));
+    setTimeout(() => {
+      setCopiedCodes(prev => ({ ...prev, [code]: false }));
+    }, 3000);
+  };
+
+  const getPromotionRuleLabel = (promo: any) => {
+    if (!promo.target_rules || promo.target_rules.length === 0) {
+      return promo.is_automatic ? 'Áp dụng khi thanh toán' : 'Nhập mã để nhận ưu đãi';
+    }
+    
+    const rulesText = promo.target_rules.map((rule: any) => {
+      if (rule.collection_title) {
+        return `dòng ${rule.collection_title}`;
+      }
+      if (rule.product_title) {
+        return `sản phẩm ${rule.product_title}`;
+      }
+      return '';
+    }).filter(Boolean).join(', ');
+
+    if (rulesText) {
+      return `Chỉ áp dụng cho ${rulesText}`;
+    }
+    return promo.is_automatic ? 'Áp dụng khi thanh toán' : 'Nhập mã để nhận ưu đãi';
+  };
+
+
 
   // Lấy sessionId từ localStorage (giả lập đơn giản cho user vãng lai)
   const sessionId = typeof window !== 'undefined' ? (localStorage.getItem('session_id') || Math.random().toString(36).substring(7)) : undefined;
@@ -131,6 +206,54 @@ const HomePage = () => {
               </article>
             </div>
 
+          </div>
+        </div>
+      </section>
+  
+      {/* VOUCHER BOARD */}
+      <section className="voucher-board-section">
+        <div className="container">
+          <div className="voucher-board-title">
+            <Ticket size={22} style={{ color: 'var(--primary)' }} />
+            <span>Mã Giảm Giá Dành Cho Bạn</span>
+          </div>
+          <div className="voucher-grid">
+            {activePromos.map((promo: any) => {
+              const valueFormatted = promo.app_method_type === 'percentage' 
+                ? `${promo.app_method_value}%` 
+                : `${Number(promo.app_method_value).toLocaleString('vi-VN')}đ`;
+
+              return (
+                <div key={promo.id} className="voucher-card">
+                  <div className="voucher-ticket-left">
+                    <span className={`voucher-type-badge ${promo.is_automatic ? 'automatic' : 'manual'}`}>
+                      {promo.is_automatic ? 'Tự động' : 'Mã giảm giá'}
+                    </span>
+                    <div className="voucher-discount">Giảm {valueFormatted}</div>
+                    <span className="voucher-limit-label">
+                      {getPromotionRuleLabel(promo)}
+                    </span>
+                  </div>
+                  
+                  <div className="voucher-dashed-divider"></div>
+                  
+                  <div className="voucher-ticket-right">
+                    <span className="voucher-code">{promo.code}</span>
+                    {promo.is_automatic ? (
+                      <span className="voucher-btn auto">Tự động</span>
+                    ) : (
+                      <button 
+                        className={`voucher-btn ${copiedCodes[promo.code] ? 'copied' : ''}`}
+                        onClick={() => handleCopyCode(promo.code)}
+                        disabled={copiedCodes[promo.code]}
+                      >
+                        {copiedCodes[promo.code] ? 'Đã lưu ✓' : 'Sao chép'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>

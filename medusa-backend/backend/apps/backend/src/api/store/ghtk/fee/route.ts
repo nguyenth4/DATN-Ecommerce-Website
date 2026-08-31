@@ -1,17 +1,187 @@
-// src/api/store/ghtk/fee/route.ts
-import { MedusaRequest, MedusaResponse } from "medusa-core-utils";
+import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 
-/**
- * Mock endpoint for GHTK shipping fee calculation.
- * Returns a static fee of 30,000 VND. Replace with real API call when ready.
- */
-export async function POST(req: MedusaRequest, res: MedusaResponse) {
-  const staticFee = 30000; // 30k VND
-  return res.json({ data: { total: staticFee } });
+const locationCache: Record<string, string> = {};
+
+function cleanName(name: string) {
+  if (!name) return "";
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/^(thanh\s+pho|tinh|quan|huyen|phuong|xa|thi\s+tran|thi\s+xa)\s+/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-export const config = {
-  method: "POST",
-  route: "/store/ghtk/fee",
-  auth: false,
-};
+function normalizeProvinceForGhtk(province: string) {
+  if (!province) return "";
+  const cleaned = province.trim();
+  if (cleaned.match(/^(Thành phố|Thành Phố|TP\.|TP)\s*Hồ\s*Chí\s*Minh$/i)) {
+    return "TP. Hồ Chí Minh";
+  }
+  if (cleaned.match(/^(Thành phố|Thành Phố|TP\.|TP)\s*Hà\s*Nội$/i)) {
+    return "Hà Nội";
+  }
+  if (cleaned.match(/^(Thành phố|Thành Phố|TP\.|TP)\s*Đà\s*Nẵng$/i)) {
+    return "Đà Nẵng";
+  }
+  if (cleaned.match(/^(Thành phố|Thành Phố|TP\.|TP)\s*Hải\s*Phòng$/i)) {
+    return "Hải Phòng";
+  }
+  if (cleaned.match(/^(Thành phố|Thành Phố|TP\.|TP)\s*Cần\s*Thơ$/i)) {
+    return "Cần Thơ";
+  }
+  return cleaned;
+}
+
+// Resolve correct District Name for GHTK from province and ward names
+async function resolveDistrictName(provinceName: string, wardName: string, ghnToken: string): Promise<string | null> {
+  const cacheKey = `${cleanName(provinceName)}:${cleanName(wardName)}`;
+  if (locationCache[cacheKey]) {
+    return locationCache[cacheKey];
+  }
+
+  try {
+    // 1. Fetch Provinces
+    const provRes = await fetch("https://online-gateway.ghn.vn/shiip/public-api/master-data/province", {
+      headers: { Token: ghnToken }
+    });
+    const provData = (await provRes.json()) as any;
+    const matchedProv = provData.data?.find((p: any) => 
+      cleanName(p.ProvinceName) === cleanName(provinceName) ||
+      p.NameExtension?.some((ext: string) => cleanName(ext) === cleanName(provinceName))
+    );
+
+    if (!matchedProv) return null;
+
+    // 2. Fetch Districts
+    const distRes = await fetch("https://online-gateway.ghn.vn/shiip/public-api/master-data/district", {
+      method: "POST",
+      headers: { 
+        Token: ghnToken,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ province_id: matchedProv.ProvinceID })
+    });
+    const distData = (await distRes.json()) as any;
+    const districts = distData.data || [];
+
+    // 3. Search wards across districts in parallel
+    const wardPromises = districts.map(async (d: any) => {
+      try {
+        const res = await fetch(`https://online-gateway.ghn.vn/shiip/public-api/master-data/ward?district_id=${d.DistrictID}`, {
+          headers: { Token: ghnToken }
+        });
+        const data = await res.json() as any;
+        return { districtName: d.DistrictName, wards: data.data || [] };
+      } catch {
+        return { districtName: d.DistrictName, wards: [] };
+      }
+    });
+
+    const districtWardsList = await Promise.all(wardPromises);
+
+    // Search for the ward name
+    // Try exact cleaned name match
+    for (const dw of districtWardsList) {
+      const found = dw.wards.find((w: any) => 
+        cleanName(w.WardName) === cleanName(wardName) ||
+        w.NameExtension?.some((ext: string) => cleanName(ext) === cleanName(wardName))
+      );
+      if (found) {
+        locationCache[cacheKey] = dw.districtName;
+        return dw.districtName;
+      }
+    }
+
+    // Fallback 1: If ward name matches the district name
+    const matchedDist = districts.find((d: any) => 
+      cleanName(d.DistrictName) === cleanName(wardName) ||
+      d.NameExtension?.some((ext: string) => cleanName(ext) === cleanName(wardName))
+    );
+    if (matchedDist) {
+      locationCache[cacheKey] = matchedDist.DistrictName;
+      return matchedDist.DistrictName;
+    }
+
+    // Fallback 2: Substring match
+    for (const dw of districtWardsList) {
+      const found = dw.wards.find((w: any) => 
+        cleanName(w.WardName).includes(cleanName(wardName)) ||
+        cleanName(wardName).includes(cleanName(w.WardName))
+      );
+      if (found) {
+        locationCache[cacheKey] = dw.districtName;
+        return dw.districtName;
+      }
+    }
+  } catch (err) {
+    console.error("[GHTK Fee] Error resolving district name:", err);
+  }
+  return null;
+}
+
+export async function POST(
+  req: MedusaRequest,
+  res: MedusaResponse
+) {
+  const token = process.env.GHTK_API_TOKEN;
+
+  if (!token) {
+    return res.status(400).json({ error: "GHTK_API_TOKEN is not configured" });
+  }
+
+  try {
+    const body = req.body as any;
+    
+    let provinceName = body.province_name || "Hồ Chí Minh";
+    let districtName = body.district_name || "Quận 1";
+    const wardName = body.ward_name;
+
+    const ghnToken = process.env.GHN_API_TOKEN || process.env.GHN_TOKEN;
+    if (ghnToken && provinceName && wardName) {
+      const resolvedDistrict = await resolveDistrictName(provinceName, wardName, ghnToken);
+      if (resolvedDistrict) {
+        districtName = resolvedDistrict;
+        console.log(`[GHTK Fee] Resolved district name: ${districtName} for province ${provinceName}, ward ${wardName}`);
+      }
+    }
+
+    const ghtkProvince = normalizeProvinceForGhtk(provinceName);
+
+    // GHTK expects parameters in query string for fee calculation, but we receive them in POST body
+    const params = new URLSearchParams({
+      pick_province: process.env.GHTK_PICK_PROVINCE || "TP. Hồ Chí Minh",
+      pick_district: process.env.GHTK_PICK_DISTRICT || "Quận 1",
+      province: ghtkProvince || "Hồ Chí Minh",
+      district: districtName || "Quận 1",
+      weight: (body.weight || 200).toString(),
+      deliver_option: "none"
+    });
+
+    if (wardName) {
+      params.append("ward", wardName);
+    }
+
+    if (body.insurance_value) {
+      params.append("value", body.insurance_value.toString());
+    }
+
+    const apiUrl = `https://services.giaohangtietkiem.vn/services/shipment/fee?${params.toString()}`;
+    console.log(`[GHTK Fee] Request URL: ${apiUrl}`);
+
+    const ghtkRes = await fetch(apiUrl, {
+      method: "GET",
+      headers: {
+        "Token": token,
+      },
+    });
+
+    const data = await ghtkRes.json();
+    return res.status(ghtkRes.status).json(data);
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Failed to calculate GHTK fee";
+    return res.status(500).json({ error: message });
+  }
+}

@@ -23,6 +23,7 @@ import { getCart, clearCart } from '../utils/cart';
 import type { CartItem } from '../utils/cart';
 import { authService } from '../services/auth.service';
 import { walletService } from '../services/wallet.service';
+import { showToast } from '../utils/compare';
 
 const validateEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 const validatePhone = (v: string) => /^(0|\+84)[0-9]{8,10}$/.test(v.replace(/\s/g, ''));
@@ -95,6 +96,46 @@ const CheckoutPage = () => {
     }
   }, [cartItems, validationErrors.length]);
 
+  const [promoCode, setPromoCode] = useState(() => localStorage.getItem('applied_promo_code') || '');
+  const [promoDiscount, setPromoDiscount] = useState(() => Number(localStorage.getItem('applied_promo_discount') || 0));
+
+  // Automatically fetch active automatic promotions if no promo code is applied
+  useEffect(() => {
+    const fetchAutoPromo = async () => {
+      if (promoCode || cartItems.length === 0) return;
+      try {
+        const response = await fetch(`${MEDUSA_BACKEND_URL}/store/promotions/validate`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-publishable-api-key': PUBLISHABLE_KEY
+          },
+          body: JSON.stringify({
+            code: "",
+            items: cartItems.map(item => ({
+              id: item.id,
+              productId: item.productId,
+              price: item.price,
+              qty: item.qty
+            }))
+          })
+        });
+
+        const data = await response.json();
+        if (response.ok && data.success && data.isAutomatic) {
+          setPromoCode(data.code);
+          setPromoDiscount(data.discount);
+          localStorage.setItem('applied_promo_code', data.code);
+          localStorage.setItem('applied_promo_discount', data.discount.toString());
+        }
+      } catch (err) {
+        console.error("Failed to check automatic promo on checkout page:", err);
+      }
+    };
+
+    fetchAutoPromo();
+  }, [cartItems, promoCode]);
+
   // Auth & Guest States
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isGuestCheckout, setIsGuestCheckout] = useState(!!location.state?.buyNowItem);
@@ -102,6 +143,7 @@ const CheckoutPage = () => {
   const [customer, setCustomer] = useState<MedusaCustomer | null>(null);
   const [useWallet, setUseWallet] = useState(false);
   const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [authTab, setAuthTab] = useState<'login' | 'register' | 'guest'>('login');
 
   // Inline Login Form State
@@ -562,10 +604,12 @@ const CheckoutPage = () => {
   ]);
 
   const handlePlaceOrder = async () => {
+    setIsProcessing(true);
     // Validate email & phone if guest checkout
     if (isGuestCheckout && !isLoggedIn) {
       if (!fullName.trim() || !validateEmail(email) || !validatePhone(phoneNumber)) {
         setAddressValidationError('Vui lòng điền đầy đủ và chính xác thông tin cá nhân (Họ tên, Email và Số điện thoại hợp lệ).');
+        setIsProcessing(false);
         return;
       }
     }
@@ -574,6 +618,7 @@ const CheckoutPage = () => {
     if (addressMode === 'new') {
       if (!selectedProvince || !selectedWard || !detailAddress.trim()) {
         setAddressValidationError('Vui lòng chọn hoặc nhập đầy đủ thông tin Tỉnh/Thành, Phường/Xã và Địa chỉ chi tiết.');
+        setIsProcessing(false);
         return;
       }
     }
@@ -616,13 +661,15 @@ const CheckoutPage = () => {
       }
     }
 
+    const calculatedTotal = Math.max(0, subtotal + shippingFee - promoDiscount);
+
     const orderData = {
         customer: {
             fullName: finalOrderFullName,
             phoneNumber: finalOrderPhone,
             email: isLoggedIn ? (customer?.email || email) : email,
         },
-        paymentMethod: (useWallet && walletBalance >= (subtotal + shippingFee)) ? 'wallet' : paymentMethod,
+        paymentMethod: (useWallet && walletBalance >= calculatedTotal) ? 'wallet' : paymentMethod,
         shippingMethod,
         shippingFee,
         address: finalOrderAddress,
@@ -644,21 +691,24 @@ const CheckoutPage = () => {
         items: cartItems,
         use_wallet: useWallet,
         customer_id: customer?.id || undefined,
-        totalAmount: subtotal + shippingFee,
+        totalAmount: calculatedTotal,
+        promo_code: promoCode || undefined
     };
 
     console.log("Placing order...", orderData);
     
     // Save order data for the success page
-    const finalPaymentMethod = (useWallet && walletBalance >= (subtotal + shippingFee)) ? 'wallet' : paymentMethod;
+    const finalPaymentMethod = (useWallet && walletBalance >= calculatedTotal) ? 'wallet' : paymentMethod;
+    const walletDeductedVal = useWallet && walletBalance > 0 ? (walletBalance >= calculatedTotal ? calculatedTotal : walletBalance) : 0;
+    
     localStorage.setItem('latest_order', JSON.stringify({
       ...orderData,
       id: `#SF${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
       createdAt: new Date().toISOString(),
       subtotal,
       shippingFee,
-      discount: useWallet && walletBalance > 0 ? (walletBalance >= (subtotal + shippingFee) ? subtotal + shippingFee : walletBalance) : 0, // Simplified discount logic for wallet
-      total: (subtotal + shippingFee) - (useWallet && walletBalance > 0 ? (walletBalance >= (subtotal + shippingFee) ? subtotal + shippingFee : walletBalance) : 0),
+      discount: walletDeductedVal + promoDiscount,
+      total: calculatedTotal - walletDeductedVal,
       paymentMethod: finalPaymentMethod
     }));
     
@@ -703,6 +753,9 @@ const CheckoutPage = () => {
         localStorage.setItem('sprylo_last_order', JSON.stringify(orderRecord));
       }
 
+      localStorage.removeItem('applied_promo_code');
+      localStorage.removeItem('applied_promo_discount');
+      setIsProcessing(false);
       if (!buyNowItem) {
         clearCart();
       }
@@ -877,7 +930,7 @@ const CheckoutPage = () => {
     selectedProvince
   ]);
 
-  const total = subtotal + shippingFee;
+  const total = Math.max(0, subtotal + shippingFee - promoDiscount);
   const walletDeduction = useWallet ? Math.min(walletBalance, total) : 0;
   const remainingTotal = total - walletDeduction;
 
@@ -1554,10 +1607,12 @@ const CheckoutPage = () => {
                 </div>
               )}
 
-              <div className="summary-row">
-                <span>Giảm giá</span>
-                <span>-0đ</span>
-              </div>
+              {promoDiscount > 0 && (
+                <div className="summary-row" style={{ color: '#a5f3fc', fontWeight: 600 }}>
+                  <span>Khuyến mãi {promoCode ? `(${promoCode})` : ''}</span>
+                  <span>-{promoDiscount.toLocaleString('vi-VN')}đ</span>
+                </div>
+              )}
 
               <div className="summary-total">
                 <span>Tổng cộng</span>
@@ -1605,15 +1660,18 @@ const CheckoutPage = () => {
               <button 
                 className="btn-checkout" 
                 onClick={handlePlaceOrder}
-                disabled={validationErrors.length > 0}
+                disabled={validationErrors.length > 0 || isProcessing}
                 style={{
                   background: validationErrors.length > 0 ? '#ef4444' : '',
                   borderColor: validationErrors.length > 0 ? '#ef4444' : '',
-                  cursor: validationErrors.length > 0 ? 'not-allowed' : 'pointer'
+                  cursor: (validationErrors.length > 0 || isProcessing) ? 'not-allowed' : 'pointer'
                 }}
               >
-                {validationErrors.length > 0 ? 'LỖI TỒN KHO - KHÔNG THỂ THANH TOÁN' : 'HOÀN THÀNH ĐẶT HÀNG'}
-                <ChevronRight size={20} />
+                {validationErrors.length > 0 
+                  ? 'LỖI TỒN KHO - KHÔNG THỂ THANH TOÁN' 
+                  : (isProcessing ? 'ĐANG XỬ LÝ ĐƠN HÀNG...' : 'HOÀN THÀNH ĐẶT HÀNG')
+                }
+                {isProcessing ? <Loader2 className="animate-spin" size={20} /> : <ChevronRight size={20} />}
               </button>
 
               <div className="trust-badges">

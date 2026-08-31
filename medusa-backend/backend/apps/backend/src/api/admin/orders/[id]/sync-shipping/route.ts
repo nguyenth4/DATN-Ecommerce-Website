@@ -257,6 +257,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       const ghtkToken = process.env.GHTK_API_TOKEN || "";
       
       const totalValue = order?.total || 300000;
+
       // Validate GHTK required fields
       if (order && order.shipping_address) {
         if (!order.shipping_address.province) {

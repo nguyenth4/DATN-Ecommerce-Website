@@ -236,6 +236,45 @@ const Header = () => {
   const [wishlistCount, setWishlistCount] = useState(getWishlist().length);
   const [customerInfo, setCustomerInfo] = useState<any>(null);
 
+  const [promotions, setPromotions] = useState<any[]>([]);
+  const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
+  const [fadeState, setFadeState] = useState('in'); // 'in' | 'out'
+
+  useEffect(() => {
+    const fetchPromotions = async () => {
+      try {
+        const res = await fetch('http://localhost:9000/store/promotions', {
+          headers: {
+            'x-publishable-api-key': 'pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d'
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPromotions(data.promotions || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch promotions in header:", err);
+      }
+    };
+    fetchPromotions();
+  }, []);
+
+  useEffect(() => {
+    const activePromosCount = promotions.length > 0 ? promotions.length : 2; // fallback mock count
+    if (activePromosCount <= 1) return;
+
+    const interval = setInterval(() => {
+      setFadeState('out');
+      setTimeout(() => {
+        setCurrentPromoIndex((prevIndex) => (prevIndex + 1) % activePromosCount);
+        setFadeState('in');
+      }, 500);
+    }, 4500);
+
+    return () => clearInterval(interval);
+  }, [promotions]);
+
+
   const { data: cart } = useCart();
   const updateLineItem = useUpdateLineItem();
   const removeLineItem = useRemoveLineItem();
@@ -306,9 +345,63 @@ const Header = () => {
     });
   };
 
+  const activePromos = promotions.length > 0 ? promotions : [
+    {
+      id: 'fallback-1',
+      code: 'GIAM100K',
+      app_method_type: 'fixed',
+      app_method_value: 100000,
+      is_automatic: false
+    },
+    {
+      id: 'fallback-2',
+      code: 'GIAM50K',
+      app_method_type: 'fixed',
+      app_method_value: 50000,
+      is_automatic: true
+    }
+  ];
+
+  const currentPromo = activePromos[currentPromoIndex];
+
+  const formatPromoValue = (promo: any) => {
+    if (promo.app_method_type === 'percentage') {
+      return `${promo.app_method_value}%`;
+    }
+    return `${Number(promo.app_method_value).toLocaleString('vi-VN')}đ`;
+  };
+
+
   return (
     <>
       <style>{headerStyles}</style>
+
+      {/* Announcement Bar */}
+      {currentPromo && (
+        <div style={{
+          background: 'linear-gradient(90deg, #1e3a8a 0%, #2563eb 50%, #1d4ed8 100%)',
+          color: '#fff',
+          padding: '8px 16px',
+          textAlign: 'center',
+          fontSize: '12.5px',
+          fontWeight: 600,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '8px',
+          position: 'relative',
+          zIndex: 51,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
+          transition: 'opacity 0.5s ease-in-out',
+          opacity: fadeState === 'in' ? 1 : 0
+        }}>
+          {currentPromo.is_automatic ? (
+            <span>🎉 Chương trình: Tự động giảm ngay <strong style={{ color: '#fde047' }}>{formatPromoValue(currentPromo)}</strong> cho tất cả đơn hàng!</span>
+          ) : (
+            <span>🔥 Siêu khuyến mãi: Nhập mã <strong style={{ textDecoration: 'underline', color: '#fde047', cursor: 'pointer', letterSpacing: '0.5px' }} onClick={() => { navigator.clipboard.writeText(currentPromo.code); toast.success(`Đã sao chép mã ${currentPromo.code}!`); }}>{currentPromo.code}</strong> để giảm ngay <strong style={{ color: '#fde047' }}>{formatPromoValue(currentPromo)}</strong> cho đơn hàng!</span>
+          )}
+        </div>
+      )}
 
       {/* Header Wrapper to keep both rows sticky together */}
       <div className="header-wrapper" style={{ position: 'sticky', top: 0, zIndex: 50, background: 'var(--paper)', borderBottom: '1px solid var(--rule)' }}>

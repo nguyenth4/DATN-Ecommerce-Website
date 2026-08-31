@@ -67,6 +67,7 @@ const AccountPage = () => {
   const [cancelModalOrderId, setCancelModalOrderId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState<string>('');
   const [customCancelReason, setCustomCancelReason] = useState<string>('');
+  const [copiedOrderId, setCopiedOrderId] = useState<string | null>(null);
 
   // Dynamic badge helpers for orders
   const getOrderFulfillmentBadgeClass = (order: any) => {
@@ -159,22 +160,7 @@ const AccountPage = () => {
         const { orders } = await response.json();
         if (orders && Array.isArray(orders)) {
           const localOrders = getRealOrders();
-          const updated = localOrders.map(localOrder => {
-            const remoteOrder = orders.find((o: any) => o.id === localOrder.orderId);
-            if (remoteOrder) {
-              return {
-                ...localOrder,
-                status: remoteOrder.status,
-                fulfillment_status: remoteOrder.fulfillment_status,
-                payment_status: remoteOrder.payment_status,
-                canceled: remoteOrder.status === 'canceled',
-                cancelReason: remoteOrder.status === 'canceled' ? (localOrder.cancelReason || 'Hệ thống/Cửa hàng hủy') : localOrder.cancelReason,
-                items: remoteOrder.items || localOrder.items
-              };
-            }
-            return localOrder;
-          });
-          
+
           const remoteMapped = orders.map((o: any) => {
             const items = (o.items || []).map((item: any) => ({
               name: item.title || item.product_title || 'Sản phẩm',
@@ -788,10 +774,12 @@ const AccountPage = () => {
   const getCancelBlockedReason = (order: any) => {
     if (order.canceled || order.status === 'canceled') return null;
     const step = getDynamicStatusStep(order);
-    if (step >= 4) return 'Đơn hàng đã hoàn tất, không thể hủy.';
-    if (step === 3) return 'Đơn hàng đang được vận chuyển, không thể hủy.';
+    if (step === 3) return 'Đơn hàng đang giao, không thể hủy';
+    if (step >= 4) return 'Đơn hàng đã hoàn thành';
     return null;
   };
+
+
 
   const getDynamicTimeline = (order: any) => {
     const timeline = [];
@@ -1228,16 +1216,15 @@ const AccountPage = () => {
                                   {formatPrice(order.items.reduce((s: number, i: any) => s + ((i as any).price || 0) * i.qty, 0) + (order.shippingFee || 35000))}
                                 </td>
                                 <td>
-                                  <span style={{
-                                    fontSize: '0.8rem',
-                                    fontWeight: 600,
-                                    padding: '3px 8px',
-                                    borderRadius: '12px',
-                                    background: (order.payment_status === 'captured' || order.payment_status === 'paid') ? '#dcfce7' : '#fef9c3',
-                                    color: (order.payment_status === 'captured' || order.payment_status === 'paid') ? '#15803d' : '#a16207',
-                                  }}>
-                                    {(order.payment_status === 'captured' || order.payment_status === 'paid') ? '✓ Đã thanh toán' : 'Chưa thanh toán'}
-                                  </span>
+                                  {(order.payment_status === 'captured' || order.payment_status === 'paid') ? (
+                                    <span className="status-badge badge-completed">
+                                      <i className="bi bi-check-circle-fill"></i> Đã thanh toán
+                                    </span>
+                                  ) : (
+                                    <span className="status-badge badge-pending">
+                                      <i className="bi bi-exclamation-circle-fill"></i> Chưa thanh toán
+                                    </span>
+                                  )}
                                 </td>
                                 <td>
                                   <span className={getOrderFulfillmentBadgeClass(order)}>
@@ -1284,7 +1271,15 @@ const AccountPage = () => {
                                 <td>{order.date.split(' – ')[0]}</td>
                                 <td style={{ fontWeight: 700, color: 'var(--indigo)' }}>{formatPrice(order.total)}</td>
                                 <td>
-                                  <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>{order.paymentStatus}</span>
+                                  {order.paymentStatus === 'Đã thanh toán' ? (
+                                    <span className="status-badge badge-completed">
+                                      <i className="bi bi-check-circle-fill"></i> Đã thanh toán
+                                    </span>
+                                  ) : (
+                                    <span className="status-badge badge-pending">
+                                      <i className="bi bi-exclamation-circle-fill"></i> Chưa thanh toán
+                                    </span>
+                                  )}
                                 </td>
                                 <td>
                                   <span className={getShippingBadgeClass(order.shippingStatus)}>
@@ -1321,6 +1316,45 @@ const AccountPage = () => {
                             <p className="text-xs text-muted" style={{ marginTop: '0.2rem' }}>
                               Đặt lúc {selectedOrder.date}
                             </p>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500 }}>Mã đơn hàng:</span>
+                              <div style={{ 
+                                display: 'inline-flex', 
+                                alignItems: 'center', 
+                                gap: '0.5rem', 
+                                background: 'var(--bg)', 
+                                padding: '3px 8px', 
+                                borderRadius: '6px', 
+                                border: '1px solid var(--rule)',
+                                fontFamily: 'monospace',
+                                fontSize: '0.8rem',
+                                color: 'var(--ink)'
+                              }}>
+                                <span>{selectedOrder.id}</span>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(selectedOrder.id);
+                                    setCopiedOrderId(selectedOrder.id);
+                                    setTimeout(() => setCopiedOrderId(null), 2000);
+                                  }}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    padding: '0 2px',
+                                    cursor: 'pointer',
+                                    color: copiedOrderId === selectedOrder.id ? '#10b981' : 'var(--text-muted)',
+                                    fontSize: '0.85rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'color 0.2s ease'
+                                  }}
+                                  title="Sao chép mã đơn hàng"
+                                >
+                                  <i className={copiedOrderId === selectedOrder.id ? "bi bi-clipboard-check-fill" : "bi bi-clipboard"}></i>
+                                </button>
+                              </div>
+                            </div>
                           </div>
                           <span className={getShippingBadgeClass(selectedOrder.shippingStatus)} style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>
                             <i className={getShippingBadgeIcon(selectedOrder.shippingStatus)}></i> {selectedOrder.shippingStatus}

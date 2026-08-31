@@ -251,7 +251,7 @@ const ProductDetailPage = () => {
     || productData.basePrice 
     || 0;
 
-  const oldPrice = activeVariant.oldPrice || (price * 1.15);
+  const oldPrice = activeVariant.oldPrice;
 
   // Specifications
   const specifications = productData.metadata?.specifications || {};

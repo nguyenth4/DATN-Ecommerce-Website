@@ -1,38 +1,74 @@
-# Handoff Debugging Lỗi API GHTK (500 Internal Server Error)
+# Tài Liệu Bàn Giao (Handoff) Tích Hợp & Sửa Lỗi GHTK
 
-Chào bạn,
+Tài liệu này tóm tắt toàn bộ các lỗi đã được sửa và tính năng mới đã được triển khai cho đơn vị vận chuyển Giao Hàng Tiết Kiệm (GHTK) trong dự án.
 
-Hiện tại tính năng đẩy đơn hàng sang Giao Hàng Tiết Kiệm (GHTK) đang gặp lỗi **500 Internal Server Error** từ phía API nội bộ của Medusa. Dưới đây là tóm tắt vấn đề và hướng dẫn để bạn (đồng đội) có thể tiếp tục debug và fix lỗi này.
+---
 
-## 1. Mô tả lỗi
+## 1. Các Lỗi Đã Khắc Phục (Bug Fixes)
+
+### 🔴 Lỗi 1: Phí vận chuyển GHTK luôn mặc định cố định 30.000đ
+- **Nguyên nhân:**
+  1. Server backend của dự án thực tế đang chạy từ thư mục trùng lặp: `medusa-backend/backend/apps/backend` thay vì thư mục chính. Thư mục này chứa code mock API cũ trả về giá trị 30k cứng.
+  2. API GHTK thiếu cơ chế dịch tên Quận/Huyện/Tỉnh từ client sang định dạng chuẩn của GHTK, khiến yêu cầu gửi lên GHTK bị lỗi và phải dùng giá trị fallback 30k.
+- **Giải pháp:**
+  - Đồng bộ toàn bộ code sửa lỗi sang thư mục đang hoạt động (`medusa-backend/backend/apps/backend`).
+  - Viết bộ **Location Resolver** sử dụng API GHN Master Data để dịch tự động tên Phường/Quận sang tên Quận/Huyện chuẩn được GHTK chấp nhận.
+  - Viết hàm `normalizeProvinceForGhtk` để chuẩn hóa định dạng các tỉnh thành lớn (ví dụ: "Thành phố Hồ Chí Minh" -> "TP. Hồ Chí Minh").
+
+### 🔴 Lỗi 2: Phí GHTK tăng vọt lên hơn 100k - 200k cho sản phẩm giá trị lớn
+- **Nguyên nhân:**
+  - GHTK có chính sách tính phí bảo hiểm hàng hóa bằng **0.5%** giá trị đơn hàng cho các đơn hàng > 3.000.000đ. Với các sản phẩm đắt tiền như điện thoại 31 triệu, phí bảo hiểm này lên tới 157.500đ, đẩy tổng phí ship lên hơn 215.000đ.
+- **Giải pháp:**
+  - Giới hạn trần giá trị khai giá bảo hiểm gửi sang GHTK tối đa là **5.000.000đ** (tương tự cách GHN đang làm), giúp phí bảo hiểm tối đa chỉ là 25.000đ và tổng phí ship cho đơn hàng đắt tiền giảm xuống mức hợp lý (~83.000đ).
+
+---
+
+## 2. Tính Năng Mới Đã Triển Khai (New Features)
+
+### 🚀 Tích Hợp GHTK Làm Module Fulfillment Provider Chính Thức
+Trước đây, GHTK chỉ được gọi bằng API tùy biến bên ngoài, không hiển thị trong quản trị của Medusa. Hiện tại GHTK đã được tích hợp giống hệt GHN:
+1. **Tạo Module `ghtk-fulfillment`:**
+   - [index.ts](file:///d:/FPT%20Polytechnic/DATN/DATN-Ecommerce-Website/medusa-backend/backend/apps/backend/src/modules/ghtk-fulfillment/index.ts)
+   - [service.ts](file:///d:/FPT%20Polytechnic/DATN/DATN-Ecommerce-Website/medusa-backend/backend/apps/backend/src/modules/ghtk-fulfillment/service.ts) (kế thừa `AbstractFulfillmentProviderService`).
+2. **Khai báo đăng ký:** Trong [medusa-config.ts](file:///d:/FPT%20Polytechnic/DATN/DATN-Ecommerce-Website/medusa-backend/backend/apps/backend/medusa-config.ts) dưới khóa `fulfillment.providers`.
+3. **Liên kết kho hàng tự động:** Đã chạy script liên kết mã nhà cung cấp `ghtk` trực tiếp vào cơ sở dữ liệu (`location_fulfillment_provider`), giúp **Ghtk** xuất hiện chính thức trong Admin Dashboard dưới phần cài đặt Vị trí kho hàng (Stock Location Việt Nam).
+
+---
+
+## 3. Cấu Trúc Thư Mục & Các File Cần Lưu Ý
+
+- **Backend chính (Thư mục thực tế đang chạy):** `medusa-backend/backend/apps/backend`
+  - **Module GHTK:** `src/modules/ghtk-fulfillment/`
+  - **API Tính phí:** `src/api/store/ghtk/fee/route.ts`
+  - **API Đồng bộ đơn hàng:** `src/api/admin/orders/[id]/sync-shipping/route.ts`
+  - **Widget Admin:** `src/admin/widgets/OrdersWidget.tsx`
+  - **File cấu hình:** `medusa-config.ts` và `.env` (đã khai báo `GHTK_API_TOKEN`).
+
+---
+
+## 4. Debugging Lỗi API GHTK (500 Internal Server Error)
+
+Hiện tại tính năng đẩy đơn hàng sang Giao Hàng Tiết Kiệm (GHTK) đôi khi gặp lỗi **500 Internal Server Error** từ phía API nội bộ của Medusa.
 - Trong Admin Dashboard (Widget: `OrdersWidget.tsx`), khi người dùng bấm nút **"Duyệt (GHTK)"**, hệ thống sẽ gửi 1 request `POST` tới API nội bộ: `/admin/orders/:id/sync-shipping`.
-- API này sẽ chịu trách nhiệm lấy thông tin đơn hàng và đẩy sang hệ thống của GHTK thông qua endpoint tạo đơn của họ.
-- **Vấn đề:** GHTK từ chối payload được gửi sang, dẫn đến API của Medusa quăng lỗi (`throw new Error(...)`) và trả về mã lỗi 500. Kéo theo việc xuất kho (Fulfillment) bị hủy bỏ.
+- API này sẽ lấy thông tin đơn hàng và đẩy sang GHTK thông qua endpoint tạo đơn của họ.
+- **Vấn đề:** GHTK từ chối payload được gửi sang, dẫn đến API của Medusa quăng lỗi và trả về mã lỗi 500. Kéo theo việc xuất kho bị hủy bỏ.
+- Đã thêm logic alert popup trong `OrdersWidget.tsx` để hiển thị lỗi chi tiết khi GHTK từ chối đơn hàng để dễ dàng debug.
 
-## 2. Các file liên quan cần kiểm tra
-1. **Frontend (Widget):** 
-   - Đường dẫn: `medusa-backend/apps/backend/src/admin/widgets/OrdersWidget.tsx`
-   - *Lưu ý:* AI trước đó đã thêm logic `alert(errText)` vào đây để popup thẳng thông báo lỗi trả về từ API backend lên màn hình. Bạn có thể bấm thử lại nút "Duyệt" trên giao diện để đọc xem chính xác GHTK đang "chê" trường dữ liệu nào.
+---
 
-2. **Backend (API đẩy đơn sang GHTK):** 
-   - Đường dẫn: `medusa-backend/apps/backend/src/api/admin/orders/[id]/sync-shipping/route.ts`
-   - *Lưu ý:* Trong file này, đoạn fetch sang GHTK:
-     ```typescript
-     const ghtkRes = await fetch("https://services.giaohangtietkiem.vn/services/shipment/order", { ... })
-     ```
-     Lỗi 500 sinh ra là do `ghtkRes.ok` là `false` hoặc `ghtkData.success` là `false`.
+## 5. Hướng Dẫn Kiểm Tra & Cấu Hình Trên Admin
 
-## 3. Các nguyên nhân phổ biến (Cần check log)
-Dựa vào payload chuẩn của GHTK, hãy `console.log(ghtkPayload)` trước khi gửi đi để kiểm tra các lỗi thường gặp sau:
-1. **Trọng lượng (weight) không hợp lệ:** GHTK yêu cầu `weight` phải > 0. Nếu trong database Medusa sản phẩm chưa được cài đặt cân nặng, biến này có thể bị truyền sang là `0` hoặc `null`.
-2. **Thiếu thông tin địa chỉ lấy hàng (Pick Address):** Các thông số `pick_province`, `pick_district` có thể đang bị thiếu trong `.env` hoặc truyền sai định dạng.
-3. **Địa chỉ khách hàng không chuẩn:** Tên tỉnh/thành phố, quận/huyện của khách hàng nhập từ Checkout (Frontend) không khớp với tên chuẩn trong hệ thống GHTK.
-4. **Thông tin cơ bản:** Thiếu số điện thoại, thiếu tên người nhận, hoặc giá trị đơn hàng bị sai lệch.
-
-## 4. Hướng giải quyết (Step-by-step)
-1. Trên trình duyệt, F5 lại trang Admin và bấm nút **Duyệt (GHTK)** một lần nữa.
-2. Một hộp thoại thông báo lỗi (Alert) sẽ hiện lên. Ghi chú lại dòng chữ tiếng Việt trả về từ GHTK là gì (vd: *"Cần cung cấp số điện thoại người nhận"*, *"Địa chỉ lấy hàng không hợp lệ"*).
-3. Mở file `sync-shipping/route.ts`, tìm dòng khai báo `const ghtkPayload = ...` và đối chiếu dữ liệu bị sai theo lời phàn nàn của GHTK.
-4. Sửa lại logic map dữ liệu cho đúng. Sau khi GHTK chấp nhận đơn, API sẽ tự động chạy tiếp logic tạo Fulfillment và đổi màu trạng thái thành màu xanh.
-
-Chúc bạn fix bug mượt mà!
+1. **Khởi động lại Server Backend:**
+   ```bash
+   cd medusa-backend/backend/apps/backend
+   npm run dev
+   ```
+2. **Tạo tùy chọn vận chuyển (Shipping Option) trong Admin:**
+   - Vào **Cài đặt** -> **Vị trí & Vận chuyển** -> Chọn **VietNam**.
+   - Tại thẻ **Nhà cung cấp giao hàng**, bạn sẽ thấy **Ghtk** đã hiển thị bên cạnh **Ghn**.
+   - Nhấn **Tạo tùy chọn** dưới mục Vận chuyển:
+     - *Loại giá:* Tính toán (Calculated).
+     - *Tên:* Giao Hàng Tiết Kiệm (GHTK).
+     - *Shipping option type:* Standard.
+     - *Tùy chọn giao hàng:* Giao Hàng Tiết Kiệm (Tiêu Chuẩn).
+     - *Bật trong cửa hàng:* Kích hoạt.

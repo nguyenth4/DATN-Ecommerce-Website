@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { addToCart } from '../../utils/cart';
 import { getWishlist, toggleWishlistProduct } from '../../utils/wishlist';
+import toast from 'react-hot-toast';
 
 interface ProductInfoProps {
   product: {
@@ -44,6 +45,26 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
 }) => {
   const navigate = useNavigate();
   const [wishlist, setWishlist] = useState<string[]>(getWishlist());
+  const [promotions, setPromotions] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchPromotions = async () => {
+      try {
+        const res = await fetch(`http://localhost:9000/store/promotions`, {
+          headers: {
+            'x-publishable-api-key': 'pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d'
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPromotions(data.promotions || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch promotions:", err);
+      }
+    };
+    fetchPromotions();
+  }, []);
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -55,9 +76,31 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
     };
   }, []);
 
-  const discountPercent = Math.round(
-    ((activeVariant.oldPrice - activeVariant.price) / activeVariant.oldPrice) * 100
-  );
+  const getPromotionRuleLabel = (promo: any) => {
+    if (!promo.target_rules || promo.target_rules.length === 0) {
+      return promo.is_automatic ? 'Áp dụng tự động khi mua hàng' : 'Nhập mã giảm giá khi thanh toán';
+    }
+    
+    const rulesText = promo.target_rules.map((rule: any) => {
+      if (rule.collection_title) {
+        return `dòng sản phẩm ${rule.collection_title}`;
+      }
+      if (rule.product_title) {
+        return `sản phẩm ${rule.product_title}`;
+      }
+      return '';
+    }).filter(Boolean).join(', ');
+
+    if (rulesText) {
+      return `Chỉ áp dụng cho ${rulesText}`;
+    }
+    return promo.is_automatic ? 'Áp dụng tự động khi mua hàng' : 'Nhập mã giảm giá khi thanh toán';
+  };
+
+  const hasDiscount = activeVariant.oldPrice && activeVariant.oldPrice > activeVariant.price;
+  const discountPercent = hasDiscount
+    ? Math.round(((activeVariant.oldPrice - activeVariant.price) / activeVariant.oldPrice) * 100)
+    : 0;
 
   // Lấy giá cho từng tuỳ chọn màu sắc (dựa vào dung lượng đang được chọn)
   const getColorPrice = (colorName: string) => {
@@ -118,13 +161,99 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
       {/* DYNAMIC PRICE */}
       <div className="product-detail-price" style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--accent)', marginBottom: '1.5rem' }}>
         {activeVariant.price.toLocaleString('vi-VN')}đ{" "}
-        <span style={{ fontSize: '1.1rem', textDecoration: 'line-through', color: 'var(--gray)', fontWeight: 500, marginLeft: '0.5rem' }}>
-          {activeVariant.oldPrice.toLocaleString('vi-VN')}đ
-        </span>
-        <span className="text-xs" style={{ background: 'var(--accent)', color: 'white', padding: '0.25rem 0.5rem', borderRadius: '4px', fontWeight: 700, verticalAlign: 'middle', marginLeft: '0.8rem', fontSize: '0.75rem' }}>
-          -{discountPercent}%
-        </span>
+        {hasDiscount && activeVariant.oldPrice && (
+          <>
+            <span style={{ fontSize: '1.1rem', textDecoration: 'line-through', color: 'var(--gray)', fontWeight: 500, marginLeft: '0.5rem' }}>
+              {activeVariant.oldPrice.toLocaleString('vi-VN')}đ
+            </span>
+            <span className="text-xs" style={{ background: 'var(--accent)', color: 'white', padding: '0.25rem 0.5rem', borderRadius: '4px', fontWeight: 700, verticalAlign: 'middle', marginLeft: '0.8rem', fontSize: '0.75rem' }}>
+              -{discountPercent}%
+            </span>
+          </>
+        )}
       </div>
+
+      {/* SHOP VOUCHERS BOX */}
+      <div style={{ 
+        background: '#f8fafc', 
+        border: '1px solid #e2e8f0', 
+        borderRadius: '10px', 
+        padding: '12px 14px', 
+        marginBottom: '1.5rem',
+        boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.02)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>
+          <i className="bi bi-ticket-perforated" style={{ color: '#2563eb', fontSize: '16px' }}></i>
+          <span>Mã giảm giá của shop:</span>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {promotions.length > 0 ? (
+            promotions.map((promo) => (
+              <div 
+                key={promo.id}
+                title={getPromotionRuleLabel(promo)}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  background: promo.is_automatic ? '#f0fdf4' : '#eff6ff', 
+                  border: promo.is_automatic ? '1px dashed #22c55e' : '1px dashed #3b82f6', 
+                  borderRadius: '6px', 
+                  padding: '4px 8px',
+                  gap: '8px',
+                  cursor: 'help'
+                }}
+              >
+                <span style={{ fontSize: '12px', fontWeight: 700, color: promo.is_automatic ? '#16a34a' : '#2563eb' }}>
+                  {promo.code} ({promo.app_method_type === 'percentage' ? `${promo.app_method_value}%` : `${Number(promo.app_method_value)/1000}k`})
+                </span>
+                {promo.is_automatic ? (
+                  <span style={{ fontSize: '10px', color: '#15803d', fontWeight: 600 }}>Tự động</span>
+                ) : (
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(promo.code);
+                      toast.success(`Đã sao chép mã ${promo.code}!`);
+                    }}
+                    style={{
+                      background: '#2563eb',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '4px',
+                      padding: '2px 6px',
+                      fontSize: '10px',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Copy
+                  </button>
+                )}
+              </div>
+            ))
+          ) : (
+            // Fallback mock vouchers if API returns empty
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', background: '#eff6ff', border: '1px dashed #3b82f6', borderRadius: '6px', padding: '4px 8px', gap: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#2563eb' }}>GIAM100K</span>
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText("GIAM100K");
+                    toast.success("Đã sao chép mã GIAM100K!");
+                  }}
+                  style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: '4px', padding: '2px 6px', fontSize: '10px', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  Copy
+                </button>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', background: '#f0fdf4', border: '1px dashed #22c55e', borderRadius: '6px', padding: '4px 8px', gap: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#16a34a' }}>GIAM50K</span>
+                <span style={{ fontSize: '10px', color: '#15803d', fontWeight: 500 }}>Tự động</span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
 
       {/* DYNAMIC STORAGE SELECTION (CellphoneS Style) */}
       {storages.length > 0 && (

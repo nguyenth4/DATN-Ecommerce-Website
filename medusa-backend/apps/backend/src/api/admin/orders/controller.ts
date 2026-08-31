@@ -262,10 +262,12 @@ export async function updateOrderStatus(
       const generateMedusaId = (prefix: string) => {
         const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         let result = ""
-        for (let i = 0; i < 18; i++) {
+        for (let i = 0; i < 11; i++) {
           result += chars.charAt(Math.floor(Math.random() * chars.length))
         }
-        return `${prefix}_01${result}`
+        const displayId = (order as any).display_id || 0
+        const suffix = `ORD${String(displayId).padStart(4, '0')}`.toUpperCase().slice(-7)
+        return `${prefix}_01${result}${suffix}`
       }
 
       const changeId = generateMedusaId("orch")
