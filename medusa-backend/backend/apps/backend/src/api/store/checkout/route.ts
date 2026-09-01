@@ -52,10 +52,10 @@ async function buildZalopayUrl(
     mac: mac,
   };
 
-  // Nếu localhost, dùng 1 public URL dummy để tránh bị treo ZaloPay,
-  // nếu môi trường production thì dùng callbackUrl thật.
+  // Nếu localhost, dùng dummy URL (httpbin.org/post) thay vì example.com (vì example.com báo lỗi 405 với POST)
+  // Việc này giúp ZaloPay Sandbox không bị treo do timeout hoặc lỗi HTTP.
   if (callbackUrl.includes("localhost")) {
-    orderPayload.callback_url = "https://example.com";
+    orderPayload.callback_url = "https://httpbin.org/post";
   } else {
     orderPayload.callback_url = callbackUrl;
   }
