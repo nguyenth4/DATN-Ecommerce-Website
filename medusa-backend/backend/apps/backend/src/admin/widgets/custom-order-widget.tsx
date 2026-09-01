@@ -191,86 +191,43 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
             )}
 
             {customStatus === "confirmed" && (
-              <>
-                <Button
-                  variant="secondary"
-                  onClick={() => handleStatusChange("preparing")}
-                  disabled={loading}
-                >
-                  {loading ? "Đang xử lý..." : "2. Chuẩn bị hàng"}
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={() => handleStatusChange("shipping")}
-                  disabled={loading}
-                >
-                  {loading ? "Đang xử lý..." : `Giao hàng (${meta.shipping_method?.toUpperCase() || "GHN"})`}
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={() => handleStatusChange("canceled")}
-                  disabled={loading}
-                >
-                  Hủy đơn
-                </Button>
-              </>
+              <Button
+                variant="secondary"
+                onClick={() => handleStatusChange("preparing")}
+                disabled={loading}
+              >
+                {loading ? "Đang xử lý..." : "2. Chuẩn bị hàng"}
+              </Button>
             )}
 
             {customStatus === "preparing" && (
-              <>
-                <Button
-                  variant="primary"
-                  onClick={() => handleStatusChange("shipping")}
-                  disabled={loading}
-                >
-                  {loading ? "Đang xử lý..." : `3. Giao hàng (${meta.shipping_method?.toUpperCase() || "GHN"})`}
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={() => handleStatusChange("canceled")}
-                  disabled={loading}
-                >
-                  Hủy đơn
-                </Button>
-              </>
+              <Button
+                variant="primary"
+                onClick={() => handleStatusChange("shipping")}
+                disabled={loading}
+              >
+                {loading ? "Đang xử lý..." : `3. Giao hàng (${meta.shipping_method?.toUpperCase() || "GHN"})`}
+              </Button>
             )}
 
             {customStatus === "shipping" && (
-              <>
-                <Button
-                  variant="primary"
-                  onClick={() => handleStatusChange("delivered")}
-                  disabled={loading}
-                >
-                  {loading ? "Đang xử lý..." : "4. Xác nhận đã giao hàng"}
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={() => handleStatusChange("canceled")}
-                  disabled={loading}
-                >
-                  Giao thất bại / Hủy
-                </Button>
-              </>
+              <Button
+                variant="primary"
+                onClick={() => handleStatusChange("delivered")}
+                disabled={loading}
+              >
+                {loading ? "Đang xử lý..." : "4. Xác nhận đã giao hàng"}
+              </Button>
             )}
 
             {customStatus === "delivered" && (
-              <>
-                <Button
-                  variant="primary"
-                  onClick={() => handleStatusChange("completed")}
-                  disabled={loading}
-                >
-                  {loading ? "Đang xử lý..." : "5. Hoàn thành đơn hàng"}
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={() => handleStatusChange("canceled")}
-                  disabled={loading}
-                >
-                  Yêu cầu trả hàng / Hủy
-                </Button>
-              </>
+              <Button
+                variant="primary"
+                onClick={() => handleStatusChange("completed")}
+                disabled={loading}
+              >
+                {loading ? "Đang xử lý..." : "5. Hoàn thành đơn hàng"}
+              </Button>
             )}
 
             {(customStatus === "completed" || customStatus === "canceled") && (

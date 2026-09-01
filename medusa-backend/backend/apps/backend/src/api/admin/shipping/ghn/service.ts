@@ -57,8 +57,17 @@ export async function createGhnShipping(order: any) {
   })
 
   if (!response.ok) {
-    const err = await response.text()
-    throw new Error(`GHN shipping creation failed: ${err}`)
+    const errorBody = await response.json().catch(() => null)
+
+    if (errorBody?.code_message === "CREATE_ORDER_FAIL_BY_EXCEED_LIMIT") {
+      throw new Error(
+        "GHN đang giới hạn tài khoản này tối đa 3 đơn tạo mới. Hãy hủy hoặc hoàn tất đơn thử nghiệm trên GHN, hoặc dùng tài khoản GHN khác trước khi giao đơn này.",
+      )
+    }
+
+    throw new Error(
+      `GHN shipping creation failed: ${errorBody?.message || response.statusText}`,
+    )
   }
 
   const data = await response.json()

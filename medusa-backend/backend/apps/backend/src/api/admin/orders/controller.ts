@@ -255,6 +255,25 @@ export async function updateOrderStatus(
     metadata.canceled_by = adminName || "System Admin"
   }
 
+  // Create the carrier shipment before persisting shipping state so a carrier rejection is retryable.
+  if (newStatus === "shipping" && finalShippingMethod && !existingMetadata.tracking_number) {
+    const methodLower = finalShippingMethod.toLowerCase()
+    let shippingResult: any = null
+
+    if (methodLower === "ghn") {
+      shippingResult = await createGhnShipping(order)
+    } else if (methodLower === "ghtk") {
+      shippingResult = await createGhtkShipping(order)
+    }
+
+    if (shippingResult) {
+      metadata.shipping_provider = methodLower
+      metadata.shipping_order_id = shippingResult.orderId
+      metadata.tracking_number = shippingResult.trackingNumber
+      metadata.shipping_fee = shippingResult.fee
+    }
+  }
+
   // Log the status change in the Admin timeline (Hoạt động) by inserting an order_change record
   if (currentStatus !== newStatus) {
     try {
@@ -673,25 +692,6 @@ export async function updateOrderStatus(
       await orderService.updateOrders(orderId, { metadata })
     }
 
-      // Shipping integration (GHN / GHTK) - Only trigger if requested or defined in order metadata and not yet created
-      if (newStatus === "shipping" && finalShippingMethod && !existingMetadata.tracking_number) {
-        let shippingResult: any = null
-        const methodLower = finalShippingMethod.toLowerCase()
-        if (methodLower === "ghn") {
-          shippingResult = await createGhnShipping(order)
-        } else if (methodLower === "ghtk") {
-          shippingResult = await createGhtkShipping(order)
-        }
-
-        if (shippingResult) {
-          metadata.shipping_provider = methodLower
-          metadata.shipping_order_id = shippingResult.orderId
-          metadata.tracking_number = shippingResult.trackingNumber
-          metadata.shipping_fee = shippingResult.fee
-          
-          await orderService.updateOrders(orderId, { metadata })
-        }
-      }
   }
 
   // 2. Process Cancellation (Restock inventory if already deducted)
