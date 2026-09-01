@@ -436,10 +436,11 @@ const Header = () => {
             <div className="icon-row">
               {customerInfo ? (
                 <Link to="/account" className="icon-btn" aria-label="Tài khoản" title={`Chào, ${customerInfo.first_name || 'bạn'}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {customerInfo.avatar_url ? (
+                  {(customerInfo.avatar_url || customerInfo.metadata?.avatar_url) ? (
                     <img
-                      src={customerInfo.avatar_url}
+                      src={customerInfo.avatar_url || customerInfo.metadata?.avatar_url}
                       alt="Avatar"
+                      referrerPolicy="no-referrer"
                       style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--rule)' }}
                     />
                   ) : (

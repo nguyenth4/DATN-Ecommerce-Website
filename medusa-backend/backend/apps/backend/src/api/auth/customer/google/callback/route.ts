@@ -49,7 +49,8 @@ export const GET = async (
     const email = userData.email;
     const first_name = userData.given_name || "";
     const last_name = userData.family_name || "";
-    
+    const picture = userData.picture || "";
+
     if (!email) {
       return res.redirect(getRedirectUrl({ error: "missing_email" }));
     }
@@ -66,9 +67,29 @@ export const GET = async (
         first_name,
         last_name,
         has_account: true,
+        metadata: {
+          avatar_url: picture,
+        },
       });
     } else {
       customer = customers[0];
+    }
+
+    // Always ensure avatar_url in database metadata is updated with Google profile photo if available
+    if (picture && customer) {
+      try {
+        const db = req.scope.resolve("__pg_connection__");
+        await db.raw(`
+          UPDATE customer 
+          SET metadata = COALESCE(metadata, '{}'::jsonb) || ?::jsonb
+          WHERE id = ?
+        `, [JSON.stringify({ avatar_url: picture }), customer.id]);
+
+        customer.metadata = { ...(customer.metadata || {}), avatar_url: picture };
+        customer.avatar_url = picture;
+      } catch (err) {
+        console.error("[Google OAuth Callback] Error updating customer metadata with avatar_url:", err);
+      }
     }
 
     // Generate JWT token matching Medusa V2's standard structure
@@ -78,15 +99,20 @@ export const GET = async (
       {
         actor_id: customer.id,
         actor_type: "customer",
-        // Dummy auth_identity_id since we are bypassing the provider
-        auth_identity_id: `google_${userData.id}` 
+        auth_identity_id: `google_${userData.id}`,
+        user_metadata: {
+          email,
+          first_name,
+          last_name,
+          picture,
+        }
       },
       jwtSecret,
       { expiresIn: "1d" } // Token expires in 1 day
     );
 
-    // Redirect to frontend with token
-    res.redirect(getRedirectUrl({ token }));
+    // Redirect to frontend with token and provider type
+    res.redirect(getRedirectUrl({ token, _type: "google" }));
 
   } catch (error) {
     console.error("Google OAuth error:", error);
