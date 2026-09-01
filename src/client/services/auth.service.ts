@@ -30,6 +30,7 @@ export const authService = {
   logout() {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(INFO_KEY);
+    localStorage.removeItem('sprylo_orders');
     window.dispatchEvent(new Event('customer-auth-change'));
     // Redirect to login page
     window.location.href = '/login';
