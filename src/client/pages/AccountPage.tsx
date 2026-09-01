@@ -1099,6 +1099,53 @@ const AccountPage = () => {
     };
   };
 
+  const getShippingProviderInfo = (order: any, trackingNum?: string | null) => {
+    const tracking = (
+      trackingNum ||
+      (order as any)?.fulfillments?.[0]?.tracking_numbers?.[0]?.tracking_number ||
+      (order as any)?.fulfillments?.[0]?.tracking_numbers?.[0] ||
+      (order as any)?.trackingNumber ||
+      order?.metadata?.tracking_number ||
+      order?.metadata?.tracking_code ||
+      ''
+    ).toString().trim();
+
+    const rawProvider = (
+      order?.metadata?.shipping_provider ||
+      order?.metadata?.shipping_method ||
+      order?.shipping_provider ||
+      order?.shippingMethod ||
+      order?.fulfillments?.[0]?.provider_id ||
+      ''
+    ).toString().toLowerCase();
+
+    const trackingUpper = tracking.toUpperCase();
+
+    if (
+      trackingUpper.startsWith('GHTK') ||
+      rawProvider.includes('ghtk') ||
+      rawProvider.includes('tiết kiệm')
+    ) {
+      return {
+        id: 'ghtk',
+        name: 'GHTK',
+        fullName: 'Giao Hàng Tiết Kiệm',
+        label: 'MÃ VẬN ĐƠN (GHTK)',
+        buttonText: 'Theo dõi trên GHTK',
+        trackingUrl: tracking ? `https://i.ghtk.vn/${tracking}` : 'https://i.ghtk.vn'
+      };
+    }
+
+    return {
+      id: 'ghn',
+      name: 'GHN',
+      fullName: 'Giao Hàng Nhanh',
+      label: 'MÃ VẬN ĐƠN (GHN)',
+      buttonText: 'Theo dõi trên GHN',
+      trackingUrl: tracking ? `https://donhang.ghn.vn/?order_code=${tracking}` : 'https://donhang.ghn.vn'
+    };
+  };
+
   const getDynamicTimeline = (order: any) => {
     const timeline = [];
     const dateStr = new Date(order.created_at).toLocaleString("vi-VN");
@@ -2320,7 +2367,6 @@ const AccountPage = () => {
                               </div>
                             </div>
                           </div>
-
                           {selectedOrder.trackingNumber &&
                             (() => {
                               const providerInfo = getShippingProviderInfo(
