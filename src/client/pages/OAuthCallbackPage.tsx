@@ -96,6 +96,7 @@ const OAuthCallbackPage = () => {
         let email = '';
         let firstName = '';
         let lastName = '';
+        let avatarUrl = '';
         let customer: any = null;
 
         try {
@@ -112,7 +113,8 @@ const OAuthCallbackPage = () => {
             email = metadata.email || '';
             firstName = metadata.given_name || metadata.first_name || metadata.name || '';
             lastName = metadata.family_name || metadata.last_name || '';
-            console.log('[OAuthCallbackPage] Lấy thông tin từ Custom API thành công:', { email, firstName, lastName });
+            avatarUrl = metadata.picture || metadata.avatar_url || metadata.avatar || metadata.photo || '';
+            console.log('[OAuthCallbackPage] Lấy thông tin từ Custom API thành công:', { email, firstName, lastName, avatarUrl });
             
             // Nếu backend tìm thấy customer trùng email và đã liên kết + cấp token mới:
             if (authIdentityData.customer && authIdentityData.token) {
@@ -129,8 +131,8 @@ const OAuthCallbackPage = () => {
           console.error('[OAuthCallbackPage] Lỗi khi gọi Custom API:', e);
         }
 
-        // Dự phòng: Giải mã JWT token nếu Custom API không lấy được email
-        if (!email) {
+        // Dự phòng: Giải mã JWT token nếu Custom API không lấy được email hoặc avatar
+        if (!email || !avatarUrl) {
           try {
             const payloadBase64 = activeToken!.split('.')[1];
             const payloadJson = decodeURIComponent(
@@ -142,10 +144,11 @@ const OAuthCallbackPage = () => {
             const payload = JSON.parse(payloadJson);
             console.log('[OAuthCallbackPage] Decoded JWT payload:', payload);
 
-            email = payload.email || '';
+            email = email || payload.email || '';
             const metadata = payload.user_metadata || payload.app_metadata || payload;
             firstName = firstName || metadata.given_name || metadata.first_name || metadata.name || '';
             lastName = lastName || metadata.family_name || metadata.last_name || '';
+            avatarUrl = avatarUrl || metadata.picture || metadata.avatar_url || metadata.avatar || metadata.photo || payload.picture || '';
           } catch (e) {
             console.error('[OAuthCallbackPage] Lỗi giải mã token dự phòng:', e);
           }
@@ -184,6 +187,9 @@ const OAuthCallbackPage = () => {
               email: email.trim(),
               first_name: firstName.trim() || 'Google',
               last_name: lastName.trim() || 'User',
+              metadata: {
+                avatar_url: avatarUrl
+              }
             }),
           });
 
@@ -220,6 +226,8 @@ const OAuthCallbackPage = () => {
 
         // 3. Lưu thông tin customer vào localStorage
         if (customer) {
+          const finalAvatar = avatarUrl || customer.metadata?.avatar_url || customer.avatar_url || '';
+
           localStorage.setItem(
             'customer_info',
             JSON.stringify({
@@ -228,6 +236,7 @@ const OAuthCallbackPage = () => {
               first_name: customer.first_name,
               last_name:  customer.last_name,
               phone:      customer.phone,
+              avatar_url: finalAvatar,
             })
           );
           // Gộp giỏ hàng guest → tài khoản

@@ -71,7 +71,7 @@ export async function GET(
 
       if (customerRes.rows.length > 0) {
         customer = customerRes.rows[0];
-
+        
         // Update customer avatar in database metadata if Google avatar is available
         if (googleAvatar) {
           try {
@@ -87,7 +87,7 @@ export async function GET(
             console.error("[Custom AuthIdentity API] Error updating customer Google avatar:", e);
           }
         }
-        
+
         // 3. Link Google auth_identity to the existing customer
         const appMetadata = {
           customer_id: customer.id
