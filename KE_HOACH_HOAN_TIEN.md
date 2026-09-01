@@ -1,85 +1,86 @@
-# Kế hoạch Triển khai Chức năng Hoàn tiền (Refund)
+# Hoàn Tiền (Refund) Feature Implementation Plan
 
-Tài liệu này phác thảo kế hoạch và quy trình thực hiện chức năng **Hoàn tiền (Refund)** cho các đơn hàng đã thanh toán qua cổng thanh toán VNPay và ZaloPay. Chức năng này dành cho Quản trị viên (Admin) hoặc tự động kích hoạt khi có yêu cầu huỷ đơn hợp lệ.
+## Mục tiêu
+Thêm chức năng hoàn tiền (refund) cho đơn hàng trong hệ thống Medusa, cho phép nhân viên admin thực hiện hoàn tiền cho các đơn đã thanh toán qua ZaloPay (và các nhà cung cấp khác trong tương lai) và cập nhật trạng thái đơn hàng.
+
+## Yêu cầu người dùng xem lại
+> [!IMPORTANT]
+> - Xác nhận rằng endpoint API chỉ dành cho **admin** và sẽ không mở cho người dùng thường.
+> - Xác nhận các nhà cung cấp thanh toán cần hỗ trợ ngay bây giờ (hiện tại chỉ ZaloPay hay muốn mở rộng?).
+> - Xác nhận cách tính tiền hoàn: toàn bộ số tiền đơn hàng hay cho phép hoàn một phần (có truyền `amount` trong body không?).
+> - Xác nhận các quy tắc kinh doanh: chỉ cho phép hoàn tiền khi trạng thái đơn là `paid`? Có lưu log audit chi tiết không?
+
+## Câu hỏi cần làm rõ
+> [!WARNING]
+> 1. **Nhà cung cấp**: Chỉ ZaloPay hay cần hỗ trợ MoMo, VNPay,...?
+> 2. **Số tiền hoàn**: Toàn bộ hay có hỗ trợ partial refund?
+> 3. **Luật kinh doanh**: Hoàn tiền chỉ cho các đơn `paid` hay có trường hợp khác?
+> 4. **Biến môi trường**: Các key ZaloPay refund (`ZALOPAY_REFUND_URL`, `ZALOPAY_APP_ID`, `ZALOPAY_APP_SECRET`) đã có trong `.env.template` chưa? Cần placeholder?
+> 5. **Giao diện admin**: Nút “Hoàn tiền” sẽ xuất hiện ở đâu? (trong `OrdersWidget.tsx` hay chi tiết đơn hàng?)
+
+## Các thay đổi dự kiến
+### 1. Backend – Route API & Service
+- **Tạo file mới** `medusa-backend/backend/apps/backend/src/api/admin/orders/[id]/refund/route.ts`
+  - POST `/admin/orders/:id/refund`
+  - Kiểm tra quyền admin, lấy order, chắc chắn trạng thái `paid`.
+  - Gọi `refundService.refundOrder(order)`.
+  - Cập nhật `order.status = 'refunded'`, lưu `refund_id`, `refund_at`.
+  - Trả về `{ success: true, refundId }`.
+- **Tạo service** `medusa-backend/backend/apps/backend/src/services/refund.service.ts`
+  - `refundOrder(order: Order): Promise<{ refundId: string }>`
+  - Dựa vào `order.payment_method` để gọi hàm provider tương ứng (hiện tại chỉ ZaloPay).
+- **Helper ZaloPay** `medusa-backend/backend/apps/backend/src/utils/zalopayRefund.ts`
+  - Xây dựng payload, tính MAC, gọi API ZaloPay refund (`https://sandbox.zalopay.com.vn/v2/refund`).
+  - Xử lý response, trả về `refund_id` nếu thành công.
+- **Thêm unit test** `medusa-backend/backend/apps/backend/src/api/admin/orders/[id]/refund/route.test.ts`.
+- **Cập nhật `.env.template`**
+  - Thêm `ZALOPAY_REFUND_URL`, `ZALOPAY_APP_ID`, `ZALOPAY_APP_SECRET` (để developer fill).
+- **Bảo mật**: Sử dụng middleware `isAdmin` hiện có để bảo vệ route.
+
+### 2. Cơ sở dữ liệu – mở rộng model Order
+- **File** `medusa-backend/backend/apps/backend/src/models/order.ts`
+  - Thêm trường tùy chọn: `refund_id?: string`, `refund_at?: Date`, `refund_reason?: string`.
+- **Migration** (nếu dùng ORM) – tạo migration script để thêm các cột trên vào bảng `order`.
+
+### 3. Giao diện admin – Nút Hoàn tiền
+- **File** `medusa-backend/apps/backend/src/admin/widgets/OrdersWidget.tsx`
+  - Khi `order.status === 'paid'` hiển thị nút `Hoàn tiền`.
+  - Khi click → hiện modal xác nhận, gửi POST tới `/admin/orders/{id}/refund`.
+  - Disable nút khi đang chờ response, hiển thị toast thành công hoặc lỗi.
+- **Thêm test UI** `OrdersWidget.test.tsx` để kiểm tra hiển thị và hành vi.
+- **Styling**: Tuân thủ thiết kế hiện có (glassmorphism, gradient…) để giữ giao diện “premium”.
+
+### 4. Logging & Auditing
+- Ghi log `refund` chi tiết (orderId, refundId, amount, response code) trong file logger hiện có.
+- Trả về lỗi chi tiết (400/500) nếu ZaloPay trả về lỗi.
+
+### 5. Tài liệu
+- **Cập nhật** `KE_HOACH_HOAN_TIEN.md` (đang mở) với mô tả API, cách cấu hình env, hướng dẫn admin sử dụng.
+- **Cập nhật** `README.md` (hoặc tài liệu dev) thêm mục “Refund workflow”.
+
+## Kế hoạch kiểm thử
+### Kiểm thử tự động
+- Chạy toàn bộ test (`npm test`).
+- Đảm bảo các kịch bản: 
+  1. Người không phải admin → 403.
+  2. Đơn không ở trạng thái `paid` → 400.
+  3. Gọi ZaloPay mock thành công → trạng thái đổi thành `refunded`, trường `refund_id` được lưu.
+### Kiểm thử thủ công
+1. **Chuẩn bị môi trường:**
+   - Điền các biến môi trường ZaloPay refund vào `.env`.
+   - Restart backend (`npm run dev`).
+2. **Tạo đơn thanh toán ZaloPay** thành công.
+3. **Mở Admin UI**, tìm đơn trong `OrdersWidget`, nhấn “Hoàn tiền”.
+4. **Xác nhận** modal, quan sát toast thành công, và kiểm tra trạng thái đơn đổi thành `refunded`.
+5. **Kiểm tra DB** (qua admin panel hoặc query) rằng `refund_id` và `refund_at` được lưu.
+6. **Kiểm tra log** để thấy entry refund.
+
+## Kế hoạch triển khai
+1. **Nhánh** `feature/refund` từ `develop`.
+2. Thực hiện các thay đổi trên, commit từng bước (sẽ tạo commit message chi tiết).
+3. Pull request, review code, chạy CI.
+4. Merge vào `develop`, triển khai lên staging, thực hiện kiểm thử thủ công.
+5. Khi mọi thứ ổn, deploy lên production.
 
 ---
-
-## 1. Quy trình Nghiệp vụ (Business Flow)
-
-1. **Kích hoạt hoàn tiền**: 
-   - Admin vào chi tiết đơn hàng đã thanh toán thành công (Trạng thái thanh toán: `paid`).
-   - Admin bấm nút **"Hoàn tiền"** (có thể chọn hoàn toàn bộ hoặc một phần).
-   - *Tuỳ chọn*: Khách hàng ấn "Huỷ đơn" trên giao diện của khách (nếu đơn hàng chưa được giao cho đơn vị vận chuyển).
-
-2. **Xử lý Backend**:
-   - Backend kiểm tra cổng thanh toán của đơn hàng (ZaloPay hay VNPay).
-   - Backend gọi API hoàn tiền tương ứng của đối tác thanh toán.
-   - Nhận kết quả trả về từ đối tác (Thành công / Thất bại).
-
-3. **Cập nhật Database**:
-   - Nếu đối tác trả về "Thành công", cập nhật trạng thái thanh toán của đơn hàng thành `refunded`.
-   - Cập nhật lịch sử giao dịch (Transaction History) lưu lại mã giao dịch hoàn tiền.
-
-4. **Thông báo**:
-   - Gửi email thông báo cho khách hàng về việc tiền đang được hoàn lại.
-
----
-
-## 2. Các thay đổi về mặt Kỹ thuật (Technical Plan)
-
-### A. Tích hợp API Đối tác (VNPay & ZaloPay)
-
-#### 1. Hoàn tiền VNPay
-- **Endpoint**: `https://sandbox.vnpayment.vn/merchant_webapi/api/transaction`
-- **Phương thức**: POST
-- **Dữ liệu cần gửi**:
-  - `vnp_RequestId`: Mã yêu cầu hoàn tiền (Tạo random).
-  - `vnp_Version`: `2.1.0`
-  - `vnp_Command`: `refund`
-  - `vnp_TransactionType`: `02` (Hoàn toàn phần) hoặc `03` (Hoàn một phần).
-  - `vnp_TxnRef`: Mã đơn hàng của chúng ta (app_trans_id cũ).
-  - `vnp_Amount`: Số tiền cần hoàn (x100).
-  - `vnp_TransactionNo`: Mã giao dịch VNPay đã ghi nhận trước đó.
-  - `vnp_TransactionDate`: Thời gian tạo giao dịch gốc.
-  - `vnp_CreateBy`: Tên người tạo yêu cầu (Admin).
-  - `vnp_SecureHash`: Chữ ký bảo mật (SHA512).
-
-#### 2. Hoàn tiền ZaloPay
-- **Endpoint**: `https://sb-openapi.zalopay.vn/v2/refund`
-- **Phương thức**: POST
-- **Dữ liệu cần gửi**:
-  - `app_id`: Mã ứng dụng.
-  - `m_refund_id`: Mã hoàn tiền (Định dạng: `YYMMDD_app_id_randomString`).
-  - `zp_trans_id`: Mã giao dịch ZaloPay trả về lúc thanh toán thành công.
-  - `amount`: Số tiền hoàn.
-  - `timestamp`: Thời gian hiện tại.
-  - `description`: Lý do hoàn tiền.
-  - `mac`: Chữ ký bảo mật (HMAC SHA256).
-
-### B. Thay đổi Backend (MedusaJS)
-
-- **Database**:
-  - Cần đảm bảo lúc thanh toán thành công, chúng ta đã lưu lại `vnp_TransactionNo` (VNPay) và `zp_trans_id` (ZaloPay) vào `metadata` của Order, vì đây là dữ liệu bắt buộc để gọi API hoàn tiền.
-  
-- **API Routes**:
-  - Tạo Endpoint mới cho Admin: `POST /api/admin/orders/:id/refund`
-  - Controller này sẽ đọc thông tin đơn hàng, xác định phương thức thanh toán, và gọi Service tương ứng (`vnpay.service.ts` hoặc `zalopay.service.ts`).
-
-### C. Thay đổi Frontend (React Admin & Client)
-
-- **Admin Dashboard**:
-  - Thêm một nút **"Refund" (Hoàn tiền)** ở màn hình Chi tiết đơn hàng (Chỉ hiển thị khi đơn hàng đã thanh toán).
-  - Hiển thị Popup xác nhận hoàn tiền (nhập lý do hoàn tiền).
-  - Xử lý Loading state trong lúc đợi API đối tác trả về.
-
-- **Client App (Người dùng)**:
-  - Cập nhật giao diện Lịch sử đơn hàng: Hiển thị trạng thái "Đã hoàn tiền" nếu `payment_status` là `refunded`.
-  - Nút "Huỷ đơn" (nếu khách tự huỷ) cần có thông báo giải thích: "Tiền sẽ được hoàn về tài khoản của bạn trong vòng 3-5 ngày làm việc".
-
----
-
-## 3. Các Rủi ro và Lưu ý (Risk & Edge Cases)
-
-1. **Hoàn tiền thất bại từ phía Ngân hàng**: API đối tác có thể trả về lỗi (do thẻ khách bị khoá, hoặc lỗi hệ thống ngân hàng). Backend cần lưu trạng thái lỗi và cho phép Admin "Thử lại" (Retry).
-2. **Idempotency (Tránh hoàn tiền 2 lần)**: Phải đảm bảo nếu Admin bấm nút 2 lần, hệ thống không gọi API hoàn tiền 2 lần. Phải check trạng thái trước khi thực hiện.
-3. **Môi trường Sandbox**: Các API hoàn tiền ở môi trường Sandbox của VNPay/ZaloPay đôi khi hoạt động không ổn định hoặc có thời gian delay.
+**Bước tiếp theo**: Vui lòng trả lời các câu hỏi ở mục *Câu hỏi cần làm rõ* để tôi có thể tiến hành triển khai.

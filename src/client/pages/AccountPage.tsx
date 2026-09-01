@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import Select from 'react-select';
 import '../styles/account.css';
 import '../styles/order-tracking.css';
 import { 
@@ -63,7 +64,6 @@ const AccountPage = () => {
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [realOrders, setRealOrders] = useState(getRealOrders);
   const [cancelingOrderId, setCancelingOrderId] = useState<string | null>(null);
-  const [confirmingOrderId, setConfirmingOrderId] = useState<string | null>(null);
   const [cancelModalOrderId, setCancelModalOrderId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState<string>('');
   const [customCancelReason, setCustomCancelReason] = useState<string>('');
@@ -72,7 +72,6 @@ const AccountPage = () => {
   // Dynamic badge helpers for orders
   const getOrderFulfillmentBadgeClass = (order: any) => {
     if (order.canceled || order.status === 'canceled') return 'status-badge badge-cancelled';
-    if (order.status === 'completed') return 'status-badge badge-delivered';
     
     const customStatus = order.metadata?.custom_status;
     if (customStatus) {
@@ -82,7 +81,10 @@ const AccountPage = () => {
       if (customStatus === "shipping") return 'status-badge badge-shipped';
       if (customStatus === "delivered" || customStatus === "completed") return 'status-badge badge-delivered';
       if (customStatus === "canceled") return 'status-badge badge-cancelled';
+      if (customStatus === "refunded") return 'status-badge badge-cancelled';
     }
+    
+    if (order.status === 'completed') return 'status-badge badge-delivered';
     
     switch (order.fulfillment_status) {
       case 'shipped':
@@ -98,7 +100,6 @@ const AccountPage = () => {
 
   const getOrderFulfillmentBadgeIcon = (order: any) => {
     if (order.canceled || order.status === 'canceled') return 'bi bi-x-circle-fill';
-    if (order.status === 'completed') return 'bi bi-check-circle-fill';
     
     const customStatus = order.metadata?.custom_status;
     if (customStatus) {
@@ -108,7 +109,10 @@ const AccountPage = () => {
       if (customStatus === "shipping") return 'bi bi-truck';
       if (customStatus === "delivered" || customStatus === "completed") return 'bi bi-check-circle-fill';
       if (customStatus === "canceled") return 'bi bi-x-circle-fill';
+      if (customStatus === "refunded") return 'bi bi-arrow-return-left';
     }
+    
+    if (order.status === 'completed') return 'bi bi-check-circle-fill';
     
     switch (order.fulfillment_status) {
       case 'shipped':
@@ -124,7 +128,6 @@ const AccountPage = () => {
 
   const getOrderFulfillmentBadgeText = (order: any) => {
     if (order.canceled || order.status === 'canceled') return 'Đã hủy';
-    if (order.status === 'completed') return 'Đã nhận';
     
     const customStatus = order.metadata?.custom_status;
     if (customStatus) {
@@ -134,7 +137,10 @@ const AccountPage = () => {
       if (customStatus === "shipping") return 'Đang giao';
       if (customStatus === "delivered" || customStatus === "completed") return 'Đã nhận';
       if (customStatus === "canceled") return 'Đã hủy';
+      if (customStatus === "refunded") return 'Đã hoàn tiền';
     }
+    
+    if (order.status === 'completed') return 'Đã nhận';
     
     switch (order.fulfillment_status) {
       case 'shipped':
@@ -749,7 +755,6 @@ const AccountPage = () => {
 
   const getDynamicStatusStep = (order: any) => {
     if (order.canceled || order.status === 'canceled') return -1;
-    if (order.status === 'completed') return 4;
     
     // Check custom metadata status first
     const customStatus = order.metadata?.custom_status;
@@ -759,7 +764,10 @@ const AccountPage = () => {
       if (customStatus === "preparing") return 2;
       if (customStatus === "shipping") return 3;
       if (customStatus === "delivered" || customStatus === "completed") return 4;
+      if (customStatus === "refunded") return 5;
     }
+    
+    if (order.status === 'completed') return 4;
     
     return 0;
   };
@@ -770,6 +778,69 @@ const AccountPage = () => {
     const step = getDynamicStatusStep(order);
     return step >= 0 && step < 3;
   };
+
+  // Return is allowed when order is delivered and no return is currently requested
+  const canReturnOrder = (order: any) => {
+    if (order.canceled || order.status === 'canceled') return false;
+    const step = getDynamicStatusStep(order);
+    return step === 4 && !order.metadata?.return_requested;
+  };
+
+  const [returnModalOrderId, setReturnModalOrderId] = useState<string | null>(null);
+  const [returnReason, setReturnReason] = useState<string>('Hàng lỗi / Không hoạt động');
+  const [customReturnReason, setCustomReturnReason] = useState<string>('');
+  
+  // Refund info state
+  const [refundMethod, setRefundMethod] = useState<string>('bank_transfer');
+  const [refundBankName, setRefundBankName] = useState<string>('');
+  const [refundAccountNumber, setRefundAccountNumber] = useState<string>('');
+  const [refundAccountName, setRefundAccountName] = useState<string>('');
+  const [returningOrderId, setReturningOrderId] = useState<string | null>(null);
+  
+  const [banks, setBanks] = useState<any[]>([]);
+  const [isLookingUp, setIsLookingUp] = useState(false);
+
+  useEffect(() => {
+    fetch('https://api.vietqr.io/v2/banks')
+      .then(res => res.json())
+      .then(data => {
+        if (data.code === "00") setBanks(data.data);
+      })
+      .catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    if (refundMethod === 'bank_transfer' && refundBankName && refundAccountNumber && refundAccountNumber.length >= 5) {
+      const timer = setTimeout(async () => {
+        setIsLookingUp(true);
+        try {
+          const res = await fetch('https://api.vietqr.io/v2/lookup', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-client-id': 'e3568c07-fc2a-4de1-8a90-8edc4e09fa84',
+              'x-api-key': '059bb29d-ee65-4f7f-ac90-1c3fc4bc98a0',
+            },
+            body: JSON.stringify({
+              bin: refundBankName,
+              accountNumber: refundAccountNumber
+            })
+          });
+          const data = await res.json();
+          if (data.code === "00") {
+            setRefundAccountName(data.data.accountName);
+          } else {
+            setRefundAccountName("NGUYEN VAN DEMO");
+          }
+        } catch(e) {
+          setRefundAccountName("NGUYEN VAN DEMO");
+        } finally {
+          setIsLookingUp(false);
+        }
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [refundBankName, refundAccountNumber, refundMethod]);
 
   const getCancelBlockedReason = (order: any) => {
     if (order.canceled || order.status === 'canceled') return null;
@@ -951,31 +1022,7 @@ const AccountPage = () => {
     trackingNumber: (selectedMockOrder as any).trackingNumber || null
   } : null);
 
-  const handleConfirmReceipt = async (orderId: string) => {
-    if (!window.confirm('Bạn có chắc chắn đã nhận được hàng và hài lòng với sản phẩm?')) return;
-    setConfirmingOrderId(orderId);
-    try {
-      const response = await authService.authFetch(`${MEDUSA_BACKEND_URL}/store/orders/${orderId}/confirm-receipt`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (response.ok) {
-        const updated = realOrders.map(o =>
-          o.orderId === orderId ? { ...o, status: 'completed', payment_status: 'captured' } : o
-        );
-        localStorage.setItem('sprylo_orders', JSON.stringify(updated));
-        setRealOrders(updated);
-        alert('Đã xác nhận nhận hàng thành công. Bạn có thể đánh giá sản phẩm ngay bây giờ!');
-      } else {
-        alert('Xác nhận nhận hàng thất bại. Vui lòng thử lại.');
-      }
-    } catch (err) {
-      console.error('Confirm receipt error:', err);
-      alert('Lỗi kết nối máy chủ.');
-    } finally {
-      setConfirmingOrderId(null);
-    }
-  };
+
 
   // Cancel a real order and restore inventory
   const handleCancelOrder = async (orderId: string, reason: string) => {
@@ -1005,6 +1052,38 @@ const AccountPage = () => {
       alert('Lỗi kết nối máy chủ khi hủy đơn hàng.');
     } finally {
       setCancelingOrderId(null);
+    }
+  };
+
+  const handleReturnOrder = async (orderId: string, reason: string, refund_info: string = '') => {
+    setReturningOrderId(orderId);
+    try {
+      const response = await authService.authFetch(`${MEDUSA_BACKEND_URL}/store/orders/${orderId}/request-return`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason, refund_info }),
+      });
+      if (response.ok) {
+        const updated = realOrders.map(o =>
+          o.orderId === orderId ? { ...o, metadata: { ...o.metadata, return_requested: true, return_reason: reason, refund_info } } : o
+        );
+        localStorage.setItem('sprylo_orders', JSON.stringify(updated));
+        setRealOrders(updated);
+        setReturnModalOrderId(null);
+        setRefundMethod('bank_transfer');
+        setRefundBankName('');
+        setRefundAccountNumber('');
+        setRefundAccountName('');
+        alert('Yêu cầu trả hàng đã được gửi thành công.');
+      } else {
+        const err = await response.json();
+        alert('Gửi yêu cầu thất bại: ' + (err.error || 'Vui lòng thử lại.'));
+      }
+    } catch (err) {
+      console.error('Return order error:', err);
+      alert('Lỗi kết nối máy chủ.');
+    } finally {
+      setReturningOrderId(null);
     }
   };
 
@@ -1297,6 +1376,27 @@ const AccountPage = () => {
                                       >
                                         <i className="bi bi-x-circle"></i> Hủy đơn
                                       </button>
+                                    ) : canReturnOrder(order) ? (
+                                      <button
+                                        className="btn-order-action btn-order-cancel"
+                                        style={{ borderColor: '#f59e0b', color: '#b45309' }}
+                                        onClick={() => {
+                                          setReturnModalOrderId(order.orderId);
+                                          setReturnReason('Hàng lỗi / Không hoạt động');
+                                          setCustomReturnReason('');
+                                        }}
+                                        disabled={returningOrderId === order.orderId}
+                                      >
+                                        <i className="bi bi-arrow-return-left"></i> Yêu cầu trả hàng
+                                      </button>
+                                    ) : (order.metadata?.return_requested && order.metadata?.custom_status !== 'refunded') ? (
+                                      <span
+                                        className="cancel-blocked-note"
+                                        title="Đang chờ duyệt yêu cầu trả hàng"
+                                        style={{ fontSize: '0.75rem', color: '#b45309', fontStyle: 'italic' }}
+                                      >
+                                        <i className="bi bi-hourglass-split"></i> Đang duyệt trả hàng
+                                      </span>
                                     ) : getCancelBlockedReason(order) ? (
                                       <span
                                         className="cancel-blocked-note"
@@ -1588,7 +1688,30 @@ const AccountPage = () => {
                               </button>
                             </div>
                           )}
-                          {selectedRealOrder && !canCancelOrder(selectedRealOrder) && getCancelBlockedReason(selectedRealOrder) && (
+                          {selectedRealOrder && canReturnOrder(selectedRealOrder) && (
+                            <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--rule)', display: 'flex', justifyContent: 'flex-end' }}>
+                              <button
+                                className="btn-order-action btn-order-cancel"
+                                style={{ padding: '0.6rem 1.5rem', borderRadius: '8px', fontSize: '0.85rem', borderColor: '#f59e0b', color: '#b45309' }}
+                                onClick={() => {
+                                  setReturnModalOrderId(selectedOrderId!);
+                                  setReturnReason('Hàng lỗi / Không hoạt động');
+                                  setCustomReturnReason('');
+                                }}
+                                disabled={returningOrderId === selectedOrderId}
+                              >
+                                <i className="bi bi-arrow-return-left" style={{ fontSize: '1rem' }}></i> Yêu cầu trả hàng
+                              </button>
+                            </div>
+                          )}
+                          {selectedRealOrder && selectedRealOrder.metadata?.return_requested && (
+                            <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--rule)', display: 'flex', justifyContent: 'flex-end' }}>
+                              <span style={{ fontSize: '0.85rem', color: '#b45309', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <i className="bi bi-hourglass-split"></i> Đang chờ duyệt yêu cầu trả hàng
+                              </span>
+                            </div>
+                          )}
+                          {selectedRealOrder && !canCancelOrder(selectedRealOrder) && !canReturnOrder(selectedRealOrder) && !selectedRealOrder.metadata?.return_requested && getCancelBlockedReason(selectedRealOrder) && (
                             <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--rule)', display: 'flex', justifyContent: 'flex-end' }}>
                               <span style={{ fontSize: '0.85rem', color: 'var(--text-muted, #888)', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                                 <i className="bi bi-info-circle"></i> {getCancelBlockedReason(selectedRealOrder)}
@@ -2205,6 +2328,241 @@ const AccountPage = () => {
                   disabled={cancelingOrderId === cancelModalOrderId}
                 >
                   {cancelingOrderId === cancelModalOrderId ? 'Đang hủy...' : 'Xác nhận hủy đơn'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Return Modal */}
+        {returnModalOrderId && (
+          <div className="address-modal-overlay">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="address-modal-container"
+              style={{ maxWidth: '500px' }}
+            >
+              <div className="address-modal-header" style={{ borderBottom: '1px solid var(--rule)' }}>
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#d97706' }}>
+                  <i className="bi bi-arrow-return-left"></i> Lý do trả hàng
+                </h3>
+                <button className="close-btn" onClick={() => setReturnModalOrderId(null)}>
+                  <i className="bi bi-x-lg"></i>
+                </button>
+              </div>
+              <div className="address-modal-body" style={{ padding: '1.5rem' }}>
+                <p style={{ fontSize: '0.875rem', color: 'var(--fg-soft)', marginBottom: '1.2rem', lineHeight: 1.5 }}>
+                  Vui lòng chọn lý do trả hàng cho đơn <strong>#{formatOrderId(returnModalOrderId)}</strong>. Yêu cầu của bạn sẽ được gửi tới Admin để phê duyệt.
+                </p>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                  {[
+                    "Hàng lỗi / Không hoạt động",
+                    "Giao sai sản phẩm / Thiếu phụ kiện",
+                    "Sản phẩm khác với mô tả",
+                    "Hàng hỏng hóc do vận chuyển",
+                    "Lý do khác"
+                  ].map((reason) => (
+                    <label 
+                      key={reason} 
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'flex-start', 
+                        gap: '10px', 
+                        fontSize: '0.9rem', 
+                        cursor: 'pointer', 
+                        fontWeight: 500, 
+                        color: 'var(--ink)',
+                        padding: '0.8rem 1rem',
+                        border: returnReason === reason ? '1.5px solid var(--amber-600)' : '1.5px solid var(--rule)',
+                        borderRadius: '10px',
+                        background: returnReason === reason ? '#fffbeb' : 'white',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <input 
+                        type="radio" 
+                        name="returnReason" 
+                        value={reason}
+                        checked={returnReason === reason}
+                        onChange={() => setReturnReason(reason)}
+                        style={{ accentColor: '#d97706', marginTop: '3px' }}
+                      />
+                      <span>{reason}</span>
+                    </label>
+                  ))}
+                </div>
+
+                {returnReason === "Lý do khác" && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    style={{ marginTop: '1rem' }}
+                  >
+                    <label className="form-label" style={{ marginBottom: '0.4rem', fontSize: '0.78rem' }}>Chi tiết lý do khác *</label>
+                    <textarea 
+                      className="form-control" 
+                      rows={3} 
+                      placeholder="Vui lòng nhập lý do cụ thể..." 
+                      value={customReturnReason}
+                      onChange={(e) => setCustomReturnReason(e.target.value)}
+                      style={{ borderRadius: '8px', resize: 'none' }}
+                    />
+                  </motion.div>
+                )}
+
+                {(() => {
+                  const modalOrder = realOrders.find(o => o.orderId === returnModalOrderId);
+                  const pMethod = modalOrder?.metadata?.payment_method;
+                  const isZalopayOrVnpay = pMethod === 'zalopay' || pMethod === 'vnpay';
+                  if (!isZalopayOrVnpay) {
+                    return (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed var(--rule)' }}
+                      >
+                        <h4 style={{ fontSize: '0.9rem', marginBottom: '1rem', color: '#d97706', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <i className="bi bi-wallet2"></i> Phương thức nhận tiền hoàn
+                        </h4>
+                        
+                        <div style={{ display: 'flex', gap: '10px', marginBottom: '1rem' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                            <input 
+                              type="radio" 
+                              name="refundMethod" 
+                              value="bank_transfer" 
+                              checked={refundMethod === 'bank_transfer'} 
+                              onChange={() => setRefundMethod('bank_transfer')} 
+                              style={{ accentColor: '#d97706' }}
+                            />
+                            Chuyển khoản Ngân hàng
+                          </label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                            <input 
+                              type="radio" 
+                              name="refundMethod" 
+                              value="momo" 
+                              checked={refundMethod === 'momo'} 
+                              onChange={() => setRefundMethod('momo')}
+                              style={{ accentColor: '#d97706' }}
+                            />
+                            Ví MoMo
+                          </label>
+                        </div>
+
+                        {refundMethod === 'bank_transfer' && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <div>
+                              <label className="form-label" style={{ fontSize: '0.78rem' }}>Ngân Hàng *</label>
+                              <Select
+                                options={banks.map(bank => ({ value: bank.bin, label: `${bank.shortName} - ${bank.name}` }))}
+                                value={refundBankName ? { value: refundBankName, label: banks.find(b => b.bin === refundBankName) ? `${banks.find(b => b.bin === refundBankName).shortName} - ${banks.find(b => b.bin === refundBankName).name}` : refundBankName } : null}
+                                onChange={(selectedOption: any) => setRefundBankName(selectedOption ? selectedOption.value : '')}
+                                placeholder="Chọn hoặc tìm ngân hàng..."
+                                isClearable
+                                isSearchable
+                                styles={{
+                                  control: (base) => ({
+                                    ...base,
+                                    borderRadius: '6px',
+                                    borderColor: '#e5e7eb',
+                                    boxShadow: 'none',
+                                    '&:hover': {
+                                      borderColor: '#d97706'
+                                    }
+                                  })
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <label className="form-label" style={{ fontSize: '0.78rem' }}>Số Tài Khoản *</label>
+                              <input 
+                                type="text" 
+                                className="form-control" 
+                                placeholder="Nhập số tài khoản" 
+                                value={refundAccountNumber} 
+                                onChange={e => setRefundAccountNumber(e.target.value)} 
+                                style={{ borderRadius: '6px' }} 
+                              />
+                            </div>
+                            <div>
+                              <label className="form-label" style={{ fontSize: '0.78rem', display: 'flex', justifyContent: 'space-between' }}>
+                                <span>Tên Chủ Tài Khoản *</span>
+                                {isLookingUp && <span style={{ color: '#d97706', fontSize: '0.7rem' }}><i className="bi bi-arrow-repeat spin"></i> Đang tra cứu...</span>}
+                              </label>
+                              <input 
+                                type="text" 
+                                className="form-control" 
+                                placeholder={isLookingUp ? "Đang lấy tên..." : "NGUYEN VAN A"} 
+                                value={refundAccountName} 
+                                onChange={e => setRefundAccountName(e.target.value.toUpperCase())} 
+                                style={{ borderRadius: '6px', background: isLookingUp ? '#f3f4f6' : 'white' }} 
+                                readOnly={isLookingUp}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {refundMethod === 'momo' && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            <div>
+                              <label className="form-label" style={{ fontSize: '0.78rem' }}>Số Điện Thoại MoMo *</label>
+                              <input type="text" className="form-control" placeholder="Nhập SĐT đăng ký MoMo" value={refundAccountNumber} onChange={e => setRefundAccountNumber(e.target.value)} style={{ borderRadius: '6px' }} />
+                            </div>
+                            <div>
+                              <label className="form-label" style={{ fontSize: '0.78rem' }}>Tên Chủ Ví *</label>
+                              <input type="text" className="form-control" placeholder="NGUYEN VAN A" value={refundAccountName} onChange={e => setRefundAccountName(e.target.value.toUpperCase())} style={{ borderRadius: '6px' }} />
+                            </div>
+                          </div>
+                        )}
+
+                      </motion.div>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+              <div className="address-modal-footer">
+                <button className="btn btn--ghost" onClick={() => setReturnModalOrderId(null)}>Quay lại</button>
+                <button 
+                  className="btn" 
+                  style={{ background: '#d97706', color: 'white', border: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  onClick={() => {
+                    const finalReason = returnReason === 'Lý do khác' ? customReturnReason : returnReason;
+                    if (!finalReason || !finalReason.trim()) {
+                      alert("Vui lòng chọn hoặc nhập lý do trả hàng.");
+                      return;
+                    }
+                    const modalOrder = realOrders.find(o => o.orderId === returnModalOrderId);
+                    const pMethod = modalOrder?.metadata?.payment_method;
+                    const isZalopayOrVnpay = pMethod === 'zalopay' || pMethod === 'vnpay';
+                    
+                    let compiledRefundInfo = '';
+                    if (!isZalopayOrVnpay) {
+                      if (refundMethod === 'bank_transfer') {
+                        if (!refundBankName.trim() || !refundAccountNumber.trim() || !refundAccountName.trim()) {
+                          alert("Vui lòng điền đầy đủ thông tin ngân hàng.");
+                          return;
+                        }
+                        compiledRefundInfo = `Ngân hàng: ${refundBankName.trim()} - STK: ${refundAccountNumber.trim()} - Chủ thẻ: ${refundAccountName.trim()}`;
+                      } else if (refundMethod === 'momo') {
+                        if (!refundAccountNumber.trim() || !refundAccountName.trim()) {
+                          alert("Vui lòng điền đầy đủ thông tin MoMo.");
+                          return;
+                        }
+                        compiledRefundInfo = `MoMo: ${refundAccountNumber.trim()} - Tên: ${refundAccountName.trim()}`;
+                      }
+                    }
+
+                    handleReturnOrder(returnModalOrderId, finalReason, compiledRefundInfo);
+                  }}
+                  disabled={returningOrderId === returnModalOrderId}
+                >
+                  {returningOrderId === returnModalOrderId ? 'Đang gửi...' : 'Gửi yêu cầu trả hàng'}
                 </button>
               </div>
             </motion.div>
