@@ -491,7 +491,7 @@ const ContactPage: React.FC = () => {
                     boxShadow: isOpen ? '0 4px 12px rgba(0,0,0,0.05)' : 'none'
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyBetween: 'space-between', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <h3 style={{ fontSize: 'var(--text-md)', fontWeight: 600, color: 'var(--fg-bold)', margin: 0, paddingRight: '8px' }}>
                       {item.q}
                     </h3>
