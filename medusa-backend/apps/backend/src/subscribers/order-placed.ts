@@ -91,7 +91,7 @@ const buildOrderHtml = (order: any) => {
               <tr>
                 <td style="background:#f1f5f9;padding:24px 40px;text-align:center;border-top:1px solid #e2e8f0;">
                   <p style="margin:0;font-size:0.85rem;color:#64748b;">
-                    © 2026 Sprylo. Mọi thắc mắc liên hệ <a href="mailto:support@sprylo.vn" style="color:#4F46E5;">support@sprylo.vn</a>
+                    © 2026 Sprylo. Mọi thắc mắc liên hệ <a href="mailto:sprylo123@gmail.com" style="color:#4F46E5;">sprylo123@gmail.com</a>
                   </p>
                 </td>
               </tr>

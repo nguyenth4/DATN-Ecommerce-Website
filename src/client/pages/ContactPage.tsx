@@ -162,7 +162,7 @@ const ContactPage: React.FC = () => {
                 <div>
                   <div className="label">GỬI EMAIL</div>
                   <div className="value">
-                    <a href="mailto:support@sprylo.vn">support@sprylo.vn</a>
+                    <a href="mailto:sprylo123@gmail.com">sprylo123@gmail.com</a>
                   </div>
                 </div>
               </div>
@@ -172,7 +172,7 @@ const ContactPage: React.FC = () => {
                 <div>
                   <div className="label">HOTLINE TƯ VẤN (MIỄN PHÍ)</div>
                   <div className="value">
-                    <a href="tel:19006868">1900 6868</a>
+                    <a href="tel:09824421498">09824421498</a>
                   </div>
                 </div>
               </div>
