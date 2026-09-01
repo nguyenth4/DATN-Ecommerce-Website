@@ -52,8 +52,11 @@ async function buildZalopayUrl(
     mac: mac,
   };
 
-  // Chỉ thêm callback_url nếu không phải là localhost (môi trường prod)
-  if (!callbackUrl.includes("localhost")) {
+  // Nếu localhost, dùng 1 public URL dummy để tránh bị treo ZaloPay,
+  // nếu môi trường production thì dùng callbackUrl thật.
+  if (callbackUrl.includes("localhost")) {
+    orderPayload.callback_url = "https://example.com";
+  } else {
     orderPayload.callback_url = callbackUrl;
   }
 
