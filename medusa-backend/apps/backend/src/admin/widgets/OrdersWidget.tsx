@@ -105,10 +105,41 @@ export const OrdersWidget = () => {
     setLoading(false)
   }
 
+  const [filter, setFilter] = useState<"all" | "need_refund" | "return_request">("all")
+
+  const displayedOrders = filter === "need_refund"
+    ? orders.filter(o => o.status === "canceled" && o.payment_status === "captured")
+    : filter === "return_request"
+    ? orders.filter(o => o.metadata?.return_requested === true && o.payment_status === "captured")
+    : orders;
+
   return (
     <Container className="p-6">
       <div className="flex items-center justify-between mb-4">
         <Heading level="h2">Quản lý Đơn hàng (GHN / GHTK)</Heading>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <Button 
+            size="small" 
+            variant={filter === "all" ? "primary" : "secondary"} 
+            onClick={() => setFilter("all")}
+          >
+            Tất cả đơn
+          </Button>
+          <Button 
+            size="small" 
+            variant={filter === "need_refund" ? "primary" : "secondary"} 
+            onClick={() => setFilter("need_refund")}
+          >
+            Cần hoàn tiền
+          </Button>
+          <Button 
+            size="small" 
+            variant={filter === "return_request" ? "primary" : "secondary"} 
+            onClick={() => setFilter("return_request")}
+          >
+            Yêu cầu trả hàng
+          </Button>
+        </div>
       </div>
       {loading && <div style={{ padding: "20px", textAlign: "center" }}>Đang tải...</div>}
       <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "10px" }}>
@@ -121,7 +152,7 @@ export const OrdersWidget = () => {
           </tr>
         </thead>
         <tbody>
-          {orders.map((order) => (
+          {displayedOrders.map((order) => (
             <tr key={order.id} style={{ borderBottom: "1px solid #eaeaea" }}>
               <td style={{ padding: "8px" }}>{order.id}</td>
               <td style={{ padding: "8px" }}>
@@ -131,6 +162,16 @@ export const OrdersWidget = () => {
               </td>
               <td style={{ padding: "8px" }}>
                 {Number(order.total || 0).toLocaleString()} ₫
+                {order.metadata?.return_requested && (
+                  <div style={{ color: '#d97706', fontSize: '0.8rem', marginTop: '4px' }}>
+                    Yêu cầu trả hàng: <strong>{order.metadata?.return_reason}</strong>
+                    {order.metadata?.refund_info && (
+                      <div style={{ marginTop: '2px', color: '#059669' }}>
+                        Thông tin nhận tiền: <strong>{order.metadata.refund_info}</strong>
+                      </div>
+                    )}
+                  </div>
+                )}
               </td>
               <td style={{ padding: "8px", display: "flex", gap: "8px" }}>
                 {order.status !== "fulfilled" && (
@@ -143,10 +184,35 @@ export const OrdersWidget = () => {
                     </Button>
                   </>
                 )}
+                {(order.payment_status === "captured" || order.metadata?.return_requested) && (
+                  <Button size="small" variant="danger" onClick={async () => {
+                    if (!confirm("Bạn có chắc chắn muốn hoàn tiền cho đơn hàng này?")) return;
+                    try {
+                      // Note: We need to know the payment method, but for now we try zalopay or vnpay based on metadata
+                      const method = order.metadata?.payment_method || 'zalopay';
+                      const res = await fetch(`/admin/orders/${order.id}/refund`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ payment_method: method })
+                      });
+                      if (res.ok) {
+                        alert("Hoàn tiền thành công!");
+                        fetchOrders();
+                      } else {
+                        const err = await res.json();
+                        alert("Lỗi hoàn tiền: " + (err.message || "Unknown error"));
+                      }
+                    } catch(e: any) {
+                      alert("Lỗi kết nối: " + e.message);
+                    }
+                  }}>
+                    Hoàn tiền
+                  </Button>
+                )}
               </td>
             </tr>
           ))}
-          {orders.length === 0 && !loading && (
+          {displayedOrders.length === 0 && !loading && (
             <tr>
               <td colSpan={4} style={{ textAlign: "center", padding: "20px", color: "gray" }}>
                 Không có đơn hàng nào
