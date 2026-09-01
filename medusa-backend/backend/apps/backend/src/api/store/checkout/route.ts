@@ -52,10 +52,10 @@ async function buildZalopayUrl(
     mac: mac,
   };
 
-  // Nếu localhost, dùng dummy URL (httpbin.org) thay vì example.com (vì example.com báo lỗi 405 với POST)
-  // Việc này giúp ZaloPay Sandbox nhận được HTTP 200 và chuỗi JSON có return_code=1 để không bị treo.
+  // Nếu localhost, dùng dummy URL chuyên dụng (webhook.site) thay vì httpbin
+  // Nó sẽ trả về đúng {"return_code": 1, "return_message": "success"} với Content-Type chuẩn
   if (callbackUrl.includes("localhost")) {
-    orderPayload.callback_url = "https://httpbin.org/response-headers?return_code=1&return_message=success";
+    orderPayload.callback_url = "https://webhook.site/6fb55db0-945c-4e14-9b67-fdbe707b6abb";
   } else {
     orderPayload.callback_url = callbackUrl;
   }
