@@ -106,9 +106,12 @@ export const OrdersWidget = () => {
   }
 
   return (
-    <Container className="p-6">
-      <div className="flex items-center justify-between mb-4">
-        <Heading level="h2">Quản lý Đơn hàng (GHN / GHTK)</Heading>
+    <Container className="p-6 mb-6">
+      <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+        <div>
+          <Heading level="h2">Quản lý Đơn hàng (GHN / GHTK)</Heading>
+          <p className="text-xs text-gray-500 mt-1">Duyệt giao hàng và đồng bộ vận chuyển tự động</p>
+        </div>
       </div>
       {loading && <div style={{ padding: "20px", textAlign: "center" }}>Đang tải...</div>}
       <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "10px" }}>
@@ -160,7 +163,7 @@ export const OrdersWidget = () => {
 }
 
 export const config = defineWidgetConfig({
-  zone: "order.list.after",
+  zone: "order.list.before",
 })
 
 export default OrdersWidget

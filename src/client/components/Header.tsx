@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { Menu, X, ShoppingCart, User, Heart, Search, ChevronRight, Plus, Minus, Trash2, ShoppingBag } from 'lucide-react';
+import { Menu, X, ShoppingCart, User, Heart, Search, ChevronRight, Plus, Minus, Trash2, ShoppingBag, ShieldCheck } from 'lucide-react';
 
 import { getCompareList } from '../utils/compare';
 import { getWishlist } from '../utils/wishlist';
@@ -435,21 +435,48 @@ const Header = () => {
 
             <div className="icon-row">
               {customerInfo ? (
-                <Link to="/account" className="icon-btn" aria-label="Tài khoản" title={`Chào, ${customerInfo.first_name || 'bạn'}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {(customerInfo.avatar_url || customerInfo.metadata?.avatar_url) ? (
-                    <img
-                      src={customerInfo.avatar_url || customerInfo.metadata?.avatar_url}
-                      alt="Avatar"
-                      referrerPolicy="no-referrer"
-                      style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--rule)' }}
-                    />
-                  ) : (
-                    <User size={20} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {customerInfo.email === 'sprylo123@gmail.com' && (
+                    <a
+                      href="http://localhost:9000/app"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '4px 10px',
+                        background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+                        color: '#ffffff',
+                        borderRadius: '6px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        textDecoration: 'none',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                        transition: 'all 0.2s ease',
+                      }}
+                      title="Truy cập Trang Quản Trị Medusa Admin"
+                    >
+                      <ShieldCheck size={14} style={{ color: '#38bdf8' }} />
+                      <span>Admin</span>
+                    </a>
                   )}
-                  <span className="text-xs font-semibold" style={{ fontSize: '0.8rem', fontWeight: 600, maxWidth: '70px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {customerInfo.first_name}
-                  </span>
-                </Link>
+                  <Link to="/account" className="icon-btn" aria-label="Tài khoản" title={`Chào, ${customerInfo.first_name || 'bạn'}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {(customerInfo.avatar_url || customerInfo.metadata?.avatar_url) ? (
+                      <img
+                        src={customerInfo.avatar_url || customerInfo.metadata?.avatar_url}
+                        alt="Avatar"
+                        referrerPolicy="no-referrer"
+                        style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--rule)' }}
+                      />
+                    ) : (
+                      <User size={20} />
+                    )}
+                    <span className="text-xs font-semibold" style={{ fontSize: '0.8rem', fontWeight: 600, maxWidth: '70px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {customerInfo.first_name}
+                    </span>
+                  </Link>
+                </div>
               ) : (
                 <Link to="/login" className="icon-btn" aria-label="Đăng nhập" title="Đăng nhập">
                   <User size={20} />
