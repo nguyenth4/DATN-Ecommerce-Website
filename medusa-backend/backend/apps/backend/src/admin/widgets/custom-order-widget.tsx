@@ -1,19 +1,28 @@
-import { useState } from "react"
-import { defineWidgetConfig } from "@medusajs/admin-sdk"
-import { Container, Heading, Text, Button, StatusBadge, Copy } from "@medusajs/ui"
-import { DetailWidgetProps, AdminOrder } from "@medusajs/types"
-import { useQueryClient } from "@tanstack/react-query"
+import { useState } from "react";
+import { defineWidgetConfig } from "@medusajs/admin-sdk";
+import {
+  Container,
+  Heading,
+  Text,
+  Button,
+  StatusBadge,
+  Copy,
+} from "@medusajs/ui";
+import { DetailWidgetProps, AdminOrder } from "@medusajs/types";
+import { useQueryClient } from "@tanstack/react-query";
 
 const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const queryClient = useQueryClient()
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const order = data
-  if (!order) return null
+  const order = data;
+  if (!order) return null;
 
-  const customStatus = (order.metadata?.custom_status || order.status || "pending") as string
-  
+  const customStatus = (order.metadata?.custom_status ||
+    order.status ||
+    "pending") as string;
+
   const labelMap: Record<string, string> = {
     pending: "Chờ xác nhận",
     confirmed: "Đã xác nhận",
@@ -22,53 +31,66 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
     delivered: "Đã giao",
     completed: "Hoàn thành",
     canceled: "Đã hủy",
-  }
+  };
 
-  const colorMap: Record<string, "orange" | "blue" | "green" | "red" | "grey"> = {
-    pending: "orange",
-    confirmed: "blue",
-    preparing: "orange",
-    shipping: "blue",
-    delivered: "green",
-    completed: "green",
-    canceled: "red",
-  }
+  const colorMap: Record<string, "orange" | "blue" | "green" | "red" | "grey"> =
+    {
+      pending: "orange",
+      confirmed: "blue",
+      preparing: "orange",
+      shipping: "blue",
+      delivered: "green",
+      completed: "green",
+      canceled: "red",
+    };
 
-  const handleStatusChange = async (newStatus: string, shippingMethod?: string) => {
+  const handleStatusChange = async (
+    newStatus: string,
+    shippingMethod?: string,
+  ) => {
     if (newStatus === "canceled") {
-      const confirmed = window.confirm("Bạn có chắc chắn muốn hủy đơn hàng này không?")
-      if (!confirmed) return
+      const confirmed = window.confirm(
+        "Bạn có chắc chắn muốn hủy đơn hàng này không?",
+      );
+      if (!confirmed) return;
     }
 
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
     try {
       const res = await fetch(`/admin/orders/${order.id}/status`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ status: newStatus, shipping_method: shippingMethod })
-      })
+        body: JSON.stringify({
+          status: newStatus,
+          shipping_method: shippingMethod,
+        }),
+      });
 
       if (!res.ok) {
-        const errJson = await res.json().catch(() => null)
-        throw new Error(errJson?.message || await res.text() || "Lỗi cập nhật trạng thái")
+        const errJson = await res.json().catch(() => null);
+        throw new Error(
+          errJson?.message || (await res.text()) || "Lỗi cập nhật trạng thái",
+        );
       }
 
       // Refresh the page reactively using TanStack Query
-      queryClient.invalidateQueries({ queryKey: ["orders"] })
-      queryClient.invalidateQueries({ queryKey: ["order", order.id] })
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["order", order.id] });
     } catch (e: any) {
-      console.error(e)
-      setError(e?.message || "Lỗi cập nhật trạng thái")
+      console.error(e);
+      setError(e?.message || "Lỗi cập nhật trạng thái");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const meta = (order.metadata || {}) as any
-  const dateStr = meta.confirmed_at ? new Date(meta.confirmed_at as string).toLocaleString("vi-VN") : ""
+  const meta = (order.metadata || {}) as any;
+  const dateStr = meta.confirmed_at
+    ? new Date(meta.confirmed_at as string).toLocaleString("vi-VN")
+    : "";
 
   const steps = [
     { key: "pending", label: "Chờ xác nhận" },
@@ -77,20 +99,26 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
     { key: "shipping", label: "Đang vận chuyển" },
     { key: "delivered", label: "Đã giao" },
     { key: "completed", label: "Hoàn thành" },
-  ]
+  ];
 
-  const currentStepIndex = steps.findIndex(s => s.key === customStatus)
+  const currentStepIndex = steps.findIndex((s) => s.key === customStatus);
 
   return (
     <Container className="p-6 mb-4">
       <div className="flex items-center justify-between border-b pb-4 mb-4">
         <div>
-          <Heading level="h2" className="text-xl font-bold flex items-center gap-2">
+          <Heading
+            level="h2"
+            className="text-xl font-bold flex items-center gap-2"
+          >
             Quy trình đơn hàng
           </Heading>
           <div className="flex items-center gap-2 mt-1">
             <Text className="text-xs text-gray-500 font-mono">
-              Mã đơn hàng: <span className="text-gray-900 font-semibold select-all">{order.id}</span>
+              Mã đơn hàng:{" "}
+              <span className="text-gray-900 font-semibold select-all">
+                {order.id}
+              </span>
             </Text>
             <Copy content={order.id} className="text-xs font-mono" />
           </div>
@@ -103,29 +131,36 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
       {/* Timeline steps visualization */}
       {customStatus !== "canceled" ? (
         <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
-          <Text className="text-xs font-semibold text-gray-500 uppercase mb-3">Tiến trình xử lý đơn hàng</Text>
+          <Text className="text-xs font-semibold text-gray-500 uppercase mb-3">
+            Tiến trình xử lý đơn hàng
+          </Text>
           <div className="flex items-center justify-between">
             {steps.map((step, idx) => {
-              const isCompleted = idx <= currentStepIndex
-              const isCurrent = step.key === customStatus
+              const isCompleted = idx <= currentStepIndex;
+              const isCurrent = step.key === customStatus;
               return (
-                <div key={step.key} className="flex-1 flex flex-col items-center relative">
+                <div
+                  key={step.key}
+                  className="flex-1 flex flex-col items-center relative"
+                >
                   <div
                     className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold mb-1 transition-all ${
                       isCurrent
                         ? "bg-blue-600 text-white ring-4 ring-blue-100"
                         : isCompleted
-                        ? "bg-green-500 text-white"
-                        : "bg-gray-200 text-gray-500"
+                          ? "bg-green-500 text-white"
+                          : "bg-gray-200 text-gray-500"
                     }`}
                   >
                     {idx + 1}
                   </div>
-                  <Text className={`text-xs text-center font-medium ${isCurrent ? "text-blue-600 font-bold" : isCompleted ? "text-gray-800" : "text-gray-400"}`}>
+                  <Text
+                    className={`text-xs text-center font-medium ${isCurrent ? "text-blue-600 font-bold" : isCompleted ? "text-gray-800" : "text-gray-400"}`}
+                  >
                     {step.label}
                   </Text>
                 </div>
-              )
+              );
             })}
           </div>
         </div>
@@ -139,27 +174,55 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Heading level="h3" className="text-sm font-semibold mb-2">Nhật ký & Thông tin</Heading>
+          <Heading level="h3" className="text-sm font-semibold mb-2">
+            Nhật ký & Thông tin
+          </Heading>
           {!meta.confirmed_by && !meta.confirmed_at ? (
-            <Text className="text-sm text-gray-500 italic">Chưa được xác nhận bởi admin</Text>
+            <Text className="text-sm text-gray-500 italic">
+              Chưa được xác nhận bởi admin
+            </Text>
           ) : (
             <div className="bg-gray-50 p-3 rounded-lg border">
-              <Text className="text-sm font-medium">Người xác nhận: <span className="font-semibold text-gray-800">{meta.confirmed_by || "Admin"}</span></Text>
-              <Text className="text-xs text-gray-500 mt-1">Thời gian: {dateStr}</Text>
+              <Text className="text-sm font-medium">
+                Người xác nhận:{" "}
+                <span className="font-semibold text-gray-800">
+                  {meta.confirmed_by || "Admin"}
+                </span>
+              </Text>
+              <Text className="text-xs text-gray-500 mt-1">
+                Thời gian: {dateStr}
+              </Text>
             </div>
           )}
 
           {(meta.tracking_number || meta.shipping_order_id) && (
             <div className="mt-3 bg-blue-50 p-3 rounded-lg border border-blue-200">
-              <Text className="text-sm font-medium">Đơn vị vận chuyển: <span className="font-semibold capitalize">{meta.shipping_provider || "GHN"}</span></Text>
-              <Text className="text-sm font-medium mt-1">Mã vận đơn: <span className="font-mono font-semibold text-blue-600">{meta.tracking_number || meta.shipping_order_id}</span></Text>
-              {meta.shipping_fee && <Text className="text-xs text-gray-500 mt-1">Phí giao hàng đối tác: {Number(meta.shipping_fee).toLocaleString()} ₫</Text>}
+              <Text className="text-sm font-medium">
+                Đơn vị vận chuyển:{" "}
+                <span className="font-semibold capitalize">
+                  {meta.shipping_provider || "GHN"}
+                </span>
+              </Text>
+              <Text className="text-sm font-medium mt-1">
+                Mã vận đơn:{" "}
+                <span className="font-mono font-semibold text-blue-600">
+                  {meta.tracking_number || meta.shipping_order_id}
+                </span>
+              </Text>
+              {meta.shipping_fee && (
+                <Text className="text-xs text-gray-500 mt-1">
+                  Phí giao hàng đối tác:{" "}
+                  {Number(meta.shipping_fee).toLocaleString()} ₫
+                </Text>
+              )}
             </div>
           )}
 
           {meta.delivered_at && (
             <div className="mt-3 bg-green-50 p-3 rounded-lg border border-green-200">
-              <Text className="text-sm font-medium text-green-800">Giao hàng thành công</Text>
+              <Text className="text-sm font-medium text-green-800">
+                Giao hàng thành công
+              </Text>
               <Text className="text-xs text-gray-600 mt-1">
                 Thời gian: {new Date(meta.delivered_at).toLocaleString("vi-VN")}
               </Text>
@@ -168,8 +231,13 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
         </div>
 
         <div className="flex flex-col justify-end gap-2 items-start md:items-end">
-          <Heading level="h3" className="text-sm font-semibold mb-2 md:self-end">Chuyển trạng thái tiếp theo</Heading>
-          
+          <Heading
+            level="h3"
+            className="text-sm font-semibold mb-2 md:self-end"
+          >
+            Chuyển trạng thái tiếp theo
+          </Heading>
+
           <div className="flex flex-wrap gap-2 justify-end w-full">
             {customStatus === "pending" && (
               <>
@@ -206,7 +274,9 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
                 onClick={() => handleStatusChange("shipping")}
                 disabled={loading}
               >
-                {loading ? "Đang xử lý..." : `3. Giao hàng (${meta.shipping_method?.toUpperCase() || "GHN"})`}
+                {loading
+                  ? "Đang xử lý..."
+                  : `3. Giao hàng (${meta.shipping_method?.toUpperCase() || "GHN"})`}
               </Button>
             )}
 
@@ -232,22 +302,26 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
 
             {(customStatus === "completed" || customStatus === "canceled") && (
               <Text className="text-sm text-gray-500 italic">
-                Đơn hàng ở trạng thái kết thúc ({labelMap[customStatus] || customStatus}). Không thể chuyển tiếp.
+                Đơn hàng ở trạng thái kết thúc (
+                {labelMap[customStatus] || customStatus}). Không thể chuyển
+                tiếp.
               </Text>
             )}
           </div>
 
           {error && (
-            <Text className="text-red-500 text-xs mt-2 font-semibold bg-red-50 p-2 rounded border border-red-200 w-full text-right">{error}</Text>
+            <Text className="text-red-500 text-xs mt-2 font-semibold bg-red-50 p-2 rounded border border-red-200 w-full text-right">
+              {error}
+            </Text>
           )}
         </div>
       </div>
     </Container>
-  )
-}
+  );
+};
 
 export const config = defineWidgetConfig({
   zone: "order.details.before",
-})
+});
 
-export default CustomOrderWidget
+export default CustomOrderWidget;
