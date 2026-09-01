@@ -4121,12 +4121,16 @@ const AccountPage = () => {
                             <input 
                               type="radio" 
                               name="refundMethod" 
-                              value="momo" 
-                              checked={refundMethod === 'momo'} 
-                              onChange={() => setRefundMethod('momo')}
+                              value="wallet" 
+                              checked={refundMethod === 'wallet'} 
+                              onChange={() => {
+                                setRefundMethod('wallet');
+                                setRefundAccountNumber('');
+                                setRefundAccountName('');
+                              }}
                               style={{ accentColor: '#d97706' }}
                             />
-                            Ví MoMo
+                            Ví điện tử Sprylo
                           </label>
                         </div>
 
@@ -4183,17 +4187,10 @@ const AccountPage = () => {
                           </div>
                         )}
 
-                        {refundMethod === 'momo' && (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <div>
-                              <label className="form-label" style={{ fontSize: '0.78rem' }}>Số Điện Thoại MoMo *</label>
-                              <input type="text" className="form-control" placeholder="Nhập SĐT đăng ký MoMo" value={refundAccountNumber} onChange={e => setRefundAccountNumber(e.target.value)} style={{ borderRadius: '6px' }} />
-                            </div>
-                            <div>
-                              <label className="form-label" style={{ fontSize: '0.78rem' }}>Tên Chủ Ví *</label>
-                              <input type="text" className="form-control" placeholder="NGUYEN VAN A" value={refundAccountName} onChange={e => setRefundAccountName(e.target.value.toUpperCase())} style={{ borderRadius: '6px' }} />
-                            </div>
-                          </div>
+                        {refundMethod === 'wallet' && (
+                          <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted, #64748b)' }}>
+                            Tiền hoàn sẽ được cộng vào Ví điện tử Sprylo của bạn sau khi yêu cầu được duyệt.
+                          </p>
                         )}
 
                       </motion.div>
@@ -4225,12 +4222,8 @@ const AccountPage = () => {
                           return;
                         }
                         compiledRefundInfo = `Ngân hàng: ${refundBankName.trim()} - STK: ${refundAccountNumber.trim()} - Chủ thẻ: ${refundAccountName.trim()}`;
-                      } else if (refundMethod === 'momo') {
-                        if (!refundAccountNumber.trim() || !refundAccountName.trim()) {
-                          alert("Vui lòng điền đầy đủ thông tin MoMo.");
-                          return;
-                        }
-                        compiledRefundInfo = `MoMo: ${refundAccountNumber.trim()} - Tên: ${refundAccountName.trim()}`;
+                      } else if (refundMethod === 'wallet') {
+                        compiledRefundInfo = 'Ví điện tử Sprylo';
                       }
                     }
 
