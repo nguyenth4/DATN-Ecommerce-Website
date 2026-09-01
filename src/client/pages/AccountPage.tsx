@@ -781,6 +781,53 @@ const AccountPage = () => {
 
 
 
+  const getShippingProviderInfo = (order: any, trackingNum?: string | null) => {
+    const tracking = (
+      trackingNum ||
+      (order as any)?.fulfillments?.[0]?.tracking_numbers?.[0]?.tracking_number ||
+      (order as any)?.fulfillments?.[0]?.tracking_numbers?.[0] ||
+      (order as any)?.trackingNumber ||
+      order?.metadata?.tracking_number ||
+      order?.metadata?.tracking_code ||
+      ''
+    ).toString().trim();
+
+    const rawProvider = (
+      order?.metadata?.shipping_provider ||
+      order?.metadata?.shipping_method ||
+      order?.shipping_provider ||
+      order?.shippingMethod ||
+      order?.fulfillments?.[0]?.provider_id ||
+      ''
+    ).toString().toLowerCase();
+
+    const trackingUpper = tracking.toUpperCase();
+
+    if (
+      trackingUpper.startsWith('GHTK') ||
+      rawProvider.includes('ghtk') ||
+      rawProvider.includes('tiết kiệm')
+    ) {
+      return {
+        id: 'ghtk',
+        name: 'GHTK',
+        fullName: 'Giao Hàng Tiết Kiệm',
+        label: 'MÃ VẬN ĐƠN (GHTK)',
+        buttonText: 'Theo dõi trên GHTK',
+        trackingUrl: tracking ? `https://i.ghtk.vn/${tracking}` : 'https://i.ghtk.vn'
+      };
+    }
+
+    return {
+      id: 'ghn',
+      name: 'GHN',
+      fullName: 'Giao Hàng Nhanh',
+      label: 'MÃ VẬN ĐƠN (GHN)',
+      buttonText: 'Theo dõi trên GHN',
+      trackingUrl: tracking ? `https://donhang.ghn.vn/?order_code=${tracking}` : 'https://donhang.ghn.vn'
+    };
+  };
+
   const getDynamicTimeline = (order: any) => {
     const timeline = [];
     const dateStr = new Date(order.created_at).toLocaleString('vi-VN');
@@ -819,8 +866,10 @@ const AccountPage = () => {
     }
 
     if (step >= 3) {
-      const provider = (order.metadata?.shipping_provider || 'GHN').toUpperCase();
-      const tracking = order.metadata?.tracking_number ? ` (Mã vận đơn: ${order.metadata.tracking_number})` : '';
+      const providerInfo = getShippingProviderInfo(order, order.metadata?.tracking_number || order.metadata?.tracking_code);
+      const provider = providerInfo.fullName || providerInfo.name;
+      const trackingCode = order.metadata?.tracking_number || order.metadata?.tracking_code || (order as any).trackingNumber;
+      const tracking = trackingCode ? ` (Mã vận đơn: ${trackingCode})` : '';
       const shippedTime = order.metadata?.shipped_at
         ? new Date(order.metadata.shipped_at).toLocaleString('vi-VN')
         : dateStr;
@@ -893,6 +942,7 @@ const AccountPage = () => {
       || (selectedRealOrder as any).fulfillments?.[0]?.tracking_numbers?.[0]
       || (selectedRealOrder as any).trackingNumber 
       || selectedRealOrder.metadata?.tracking_number
+      || selectedRealOrder.metadata?.tracking_code
       || null
   } : (selectedMockOrder ? {
     ...selectedMockOrder,
@@ -1435,27 +1485,30 @@ const AccountPage = () => {
                             </div>
                           </div>
                           
-                          {selectedOrder.trackingNumber && (
-                            <div className="info-card">
-                              <div className="info-card-title">Mã vận đơn (GHN)</div>
-                              <div className="info-card-text">
-                                <span style={{ fontWeight: 600, display: 'block', marginBottom: '0.5rem', color: 'var(--ink)' }}>
-                                  {selectedOrder.trackingNumber}
-                                </span>
-                                <div className="flex-center text-xs" style={{ justifyContent: 'flex-start' }}>
-                                  <a 
-                                    href={`https://donhang.ghn.vn/?order_code=${selectedOrder.trackingNumber}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="btn-order-action btn-order-detail"
-                                    style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0.3rem 0.7rem' }}
-                                  >
-                                    <i className="bi bi-box-seam"></i> Theo dõi trên GHN
-                                  </a>
+                          {selectedOrder.trackingNumber && (() => {
+                            const providerInfo = getShippingProviderInfo(selectedRealOrder || selectedOrder, selectedOrder.trackingNumber);
+                            return (
+                              <div className="info-card">
+                                <div className="info-card-title">{providerInfo.label}</div>
+                                <div className="info-card-text">
+                                  <span style={{ fontWeight: 600, display: 'block', marginBottom: '0.5rem', color: 'var(--ink)' }}>
+                                    {selectedOrder.trackingNumber}
+                                  </span>
+                                  <div className="flex-center text-xs" style={{ justifyContent: 'flex-start' }}>
+                                    <a 
+                                      href={providerInfo.trackingUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="btn-order-action btn-order-detail"
+                                      style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0.3rem 0.7rem' }}
+                                    >
+                                      <i className="bi bi-box-seam"></i> {providerInfo.buttonText}
+                                    </a>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          )}
+                            );
+                          })()}
                         </div>
 
                         {/* ORDER ITEMS */}

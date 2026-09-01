@@ -191,7 +191,7 @@ const OrderSuccessPage = () => {
                   <span>Tạm tính</span><span>{formatPrice(subtotal)}</span>
                 </div>
                 <div className="flex-between text-xs text-muted" style={{ padding: '0.25rem 0' }}>
-                  <span>Phí vận chuyển ({order?.shippingMethod?.toUpperCase() || 'GHN'})</span><span>{formatPrice(shippingFee)}</span>
+                  <span>Phí vận chuyển ({order?.shippingMethod ? order.shippingMethod.toUpperCase() : 'Tiêu chuẩn'})</span><span>{formatPrice(shippingFee)}</span>
                 </div>
                 <div className="flex-between text-xs text-success" style={{ padding: '0.25rem 0' }}>
                   <span>Giảm giá</span><span>{formatPrice(discount)}</span>
