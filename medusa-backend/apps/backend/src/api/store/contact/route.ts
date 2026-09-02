@@ -74,16 +74,17 @@ export async function POST(
 
     console.log(`[Contact API] Received new support request [${ticketCode}]:`, newTicket);
 
-    // Send email using Resend if API key is provided
-    const apiKey = process.env.RESEND_API_KEY;
-    if (apiKey && apiKey !== "re_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" && !apiKey.includes("xxxx")) {
+    // Send email using SendGrid if API key is provided
+    const apiKey = process.env.SENDGRID_API_KEY;
+    if (apiKey && apiKey.startsWith("SG.")) {
       try {
-        const resend = new Resend(apiKey);
-        const fromEmail = process.env.RESEND_FROM_EMAIL || "Sprylo <onboarding@resend.dev>";
+        const sgMail = require("@sendgrid/mail");
+        sgMail.setApiKey(apiKey);
+        const fromEmail = process.env.SENDGRID_FROM_EMAIL || "nguyenhoang280004@gmail.com";
         const adminEmail = "sprylo123@gmail.com";
 
         // 1. Send notification to Admin (sprylo123@gmail.com)
-        await resend.emails.send({
+        await sgMail.send({
           from: fromEmail,
           to: adminEmail,
           subject: `📩 [Sprylo Contact #${ticketCode}] ${topic} - ${fullName}`,
@@ -106,7 +107,7 @@ export async function POST(
         });
 
         // 2. Send confirmation to Customer
-        await resend.emails.send({
+        await sgMail.send({
           from: fromEmail,
           to: email,
           subject: `✅ [Sprylo] Xác nhận đã nhận yêu cầu hỗ trợ #${ticketCode}`,
@@ -121,12 +122,12 @@ export async function POST(
             </div>
           `
         });
-        console.log(`[Contact API] Emails sent successfully for ticket [${ticketCode}]`);
-      } catch (emailErr) {
-        console.error("[Contact API] Error sending email via Resend:", emailErr);
+        console.log(`[Contact API] Emails sent successfully via SendGrid for ticket [${ticketCode}]`);
+      } catch (emailErr: any) {
+        console.error("[Contact API] Error sending email via SendGrid:", emailErr.response?.body || emailErr);
       }
     } else {
-      console.warn(`[Contact API] RESEND_API_KEY chưa được cấu hình hợp lệ trong .env (hiện tại là placeholder). Vui lòng cập nhật API Key để nhận email thực tế.`);
+      console.warn(`[Contact API] SENDGRID_API_KEY chưa được cấu hình hợp lệ trong .env. Vui lòng cập nhật API Key để nhận email thực tế.`);
     }
 
     return res.status(200).json({
