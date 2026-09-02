@@ -46,6 +46,14 @@ const formatOrderId = (id: string) => {
   return id.replace(/^order_/, '');
 };
 
+const formatTiktokOrderId = (displayId?: string | number | null, orderId?: string) => {
+  if (displayId != null) {
+    // Generate an 18-digit ID like Tiktok Shop: prefix 57760810 + pad 10 digits
+    return `57760810${displayId.toString().padStart(10, '0')}`;
+  }
+  return formatOrderId(orderId || '');
+};
+
 const AccountPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -1320,7 +1328,7 @@ const AccountPage = () => {
                             {/* Real orders from localStorage */}
                             {realOrders.map((order) => (
                               <tr key={order.orderId} style={{ opacity: order.canceled ? 0.6 : 1 }}>
-                                <td style={{ fontWeight: 700, color: 'var(--ink)', fontSize: '0.8rem' }}>#{order.display_id || formatOrderId(order.orderId)}</td>
+                                <td style={{ fontWeight: 700, color: 'var(--ink)', fontSize: '0.8rem' }}>#{formatTiktokOrderId(order.display_id, order.orderId)}</td>
                                 <td>{new Date(order.created_at).toLocaleDateString('vi-VN')}</td>
                                 <td style={{ fontWeight: 700, color: 'var(--indigo)' }}>
                                   {formatPrice(order.items.reduce((s: number, i: any) => s + ((i as any).price || 0) * i.qty, 0) + (order.shippingFee || 35000))}
@@ -1446,7 +1454,7 @@ const AccountPage = () => {
                         <div className="order-details-header">
                           <div>
                             <h2 style={{ fontFamily: 'var(--ff-display)', fontSize: '1.5rem', fontWeight: 800 }}>
-                              Chi tiết đơn hàng #{selectedOrder.display_id || formatOrderId(selectedOrder.id)}
+                              Chi tiết đơn hàng #{formatTiktokOrderId(selectedOrder.display_id, selectedOrder.id || selectedOrder.orderId)}
                             </h2>
                             <p className="text-xs text-muted" style={{ marginTop: '0.2rem' }}>
                               Đặt lúc {selectedOrder.date}
@@ -1465,11 +1473,12 @@ const AccountPage = () => {
                                 fontSize: '0.8rem',
                                 color: 'var(--ink)'
                               }}>
-                                <span>{selectedOrder.id}</span>
+                                <span>{formatTiktokOrderId(selectedOrder.display_id, selectedOrder.id)}</span>
                                 <button
                                   onClick={() => {
-                                    navigator.clipboard.writeText(selectedOrder.id);
-                                    setCopiedOrderId(selectedOrder.id);
+                                    const formattedId = formatTiktokOrderId(selectedOrder.display_id, selectedOrder.id).replace('#', '');
+                                    navigator.clipboard.writeText(formattedId);
+                                    setCopiedOrderId(formattedId);
                                     setTimeout(() => setCopiedOrderId(null), 2000);
                                   }}
                                   style={{

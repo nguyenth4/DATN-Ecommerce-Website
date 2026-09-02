@@ -11,6 +11,12 @@ const statusColorMap: Record<string, "grey" | "orange" | "green" | "red" | "blue
 }
 
 export const OrdersWidget = () => {
+  const formatTiktokOrderId = (displayId?: string | number | null, orderId?: string) => {
+    if (displayId != null) {
+      return `#57760810${displayId.toString().padStart(10, '0')}`;
+    }
+    return orderId || '';
+  };
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [page] = useState(0)
@@ -154,7 +160,12 @@ export const OrdersWidget = () => {
         <tbody>
           {displayedOrders.map((order) => (
             <tr key={order.id} style={{ borderBottom: "1px solid #eaeaea" }}>
-              <td style={{ padding: "8px" }}>{order.id}</td>
+              <td style={{ padding: "8px" }}>
+                <strong>{formatTiktokOrderId(order.display_id, order.id)}</strong>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>
+                  ID Hệ thống: {order.id}
+                </div>
+              </td>
               <td style={{ padding: "8px" }}>
                 <StatusBadge color={statusColorMap[order.status] || "grey"}>
                   {order.status}

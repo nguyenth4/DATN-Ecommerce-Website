@@ -33,7 +33,21 @@ const OrderSuccessPage = () => {
   }, []);
 
   // fallback to mock details if no order is found in localStorage
-  const displayOrderId = order?.orderId ? `#${order.orderId}` : '#SF2025-8843';
+  const formatTiktokOrderId = (id?: string | number) => {
+    if (!id) return '#SF2025-8843';
+    // If it's a small display_id, format it. Otherwise if it's already a big timestamp ID, just use it.
+    const numId = Number(id);
+    if (!isNaN(numId) && numId < 1000000) {
+      return `#57760810${numId.toString().padStart(10, '0')}`;
+    }
+    // If it's a Medusa order_id, strip the prefix and return it
+    if (typeof id === 'string' && id.startsWith('order_')) {
+      return `#${id.replace('order_', '')}`;
+    }
+    return `#${id}`;
+  };
+
+  const displayOrderId = formatTiktokOrderId(order?.display_id || order?.orderId);
   const displayName = order?.customer?.fullName || 'Trần Ngọc';
   const displayPhone = order?.customer?.phoneNumber || '0912 345 678';
   const displayAddress = order?.address || '123 Đường ABC, Phường XYZ, Quận 1, TP. Hồ Chí Minh';
