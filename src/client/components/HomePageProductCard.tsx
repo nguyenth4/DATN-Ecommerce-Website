@@ -41,15 +41,40 @@ export const HomePageProductCard = ({ p, compareList, wishlist }: HomePageProduc
     return false;
   }) || p.variants?.[0];
 
-  const pPrice = activeVariant?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount 
-    || activeVariant?.prices?.[0]?.amount 
-    || activeVariant?.price 
-    || p.price 
-    || 0;
-  
+  const pricesInfo = (() => {
+    if (activeVariant?.calculated_price) {
+      const calcAmt = Number(activeVariant.calculated_price.calculated_amount ?? 0);
+      const origAmt = Number(activeVariant.calculated_price.original_amount ?? calcAmt);
+      return {
+        price: calcAmt,
+        oldPrice: origAmt > calcAmt ? origAmt : 0
+      };
+    }
+    if (!activeVariant?.prices || activeVariant.prices.length === 0) {
+      return { price: activeVariant?.price || p.price || 0, oldPrice: activeVariant?.oldPrice || 0 };
+    }
+    const saleP = activeVariant.prices.find((pr: any) => pr.currency_code === 'vnd' && pr.price_list_id)
+      || activeVariant.prices.find((pr: any) => pr.price_list_id);
+    const baseP = activeVariant.prices.find((pr: any) => pr.currency_code === 'vnd' && !pr.price_list_id)
+      || activeVariant.prices.find((pr: any) => !pr.price_list_id)
+      || activeVariant.prices[0];
+
+    if (saleP) {
+      return {
+        price: Number(saleP.amount),
+        oldPrice: Number(baseP?.amount || 0)
+      };
+    }
+    return {
+      price: Number(baseP?.amount || 0),
+      oldPrice: Number(activeVariant?.oldPrice || 0)
+    };
+  })();
+
+  const pPrice = pricesInfo.price;
   const displayPrice = typeof pPrice === 'number' && pPrice > 0 ? pPrice.toLocaleString('vi-VN') + 'đ' : 'Liên hệ';
-  const oldPrice = activeVariant?.oldPrice;
-  const displayOldPrice = oldPrice ? oldPrice.toLocaleString('vi-VN') + 'đ' : null;
+  const oldPrice = pricesInfo.oldPrice;
+  const displayOldPrice = oldPrice && oldPrice > pPrice ? oldPrice.toLocaleString('vi-VN') + 'đ' : null;
   // Logic tồn kho:
   // - manage_inventory = false → không quản lý tồn kho → luôn còn hàng
   // - inventory_quantity = null/undefined → fallback tổng tất cả variants để lấy số hiển thị
@@ -87,7 +112,7 @@ export const HomePageProductCard = ({ p, compareList, wishlist }: HomePageProduc
   return (
     <article className="product-card">
       <div className="img-wrap">
-        {oldPrice && <span className="badge badge--sale">Giảm giá</span>}
+        {oldPrice > pPrice && <span className="badge badge--sale">Giảm giá</span>}
         <button 
           className="wishlist" 
           aria-label="Wishlist" 

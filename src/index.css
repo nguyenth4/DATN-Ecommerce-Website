@@ -599,13 +599,17 @@ input, select, textarea { font: inherit; color: inherit; }
 .product-card .img-wrap {
   position: relative;
   aspect-ratio: 1 / 1;
-  background: var(--bg);
+  background: var(--bg, #f8fafc);
   border-radius: var(--r-sm);
   overflow: hidden;
   margin-bottom: var(--s4);
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .product-card .img-wrap img {
-  width: 100%; height: 100%; object-fit: cover;
+  width: 100%; height: 100%; object-fit: contain;
   transition: transform 500ms var(--ease);
 }
 .product-card:hover .img-wrap img { transform: scale(1.06); }

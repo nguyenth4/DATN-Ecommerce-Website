@@ -348,15 +348,27 @@ const ProductsPage = () => {
                       const paginatedProducts = sortedProducts.slice((page - 1) * limit, page * limit);
 
                       return paginatedProducts.map((p: any) => {
-                        const pPrice = p.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount
-                          || p.variants?.[0]?.prices?.[0]?.amount
-                          || p.variants?.[0]?.price
-                          || p.price
-                          || 0;
+                        const variant = p.variants?.[0];
+                        let pPrice = 0;
+                        let oldPrice = 0;
+
+                        if (variant?.calculated_price) {
+                          pPrice = Number(variant.calculated_price.calculated_amount ?? 0);
+                          const origAmt = Number(variant.calculated_price.original_amount ?? pPrice);
+                          if (origAmt > pPrice) oldPrice = origAmt;
+                        } else {
+                          const saleP = variant?.prices?.find((pr: any) => pr.currency_code === 'vnd' && pr.price_list_id)
+                            || variant?.prices?.find((pr: any) => pr.price_list_id);
+                          const baseP = variant?.prices?.find((pr: any) => pr.currency_code === 'vnd' && !pr.price_list_id)
+                            || variant?.prices?.find((pr: any) => !pr.price_list_id)
+                            || variant?.prices?.[0];
+
+                          pPrice = saleP ? Number(saleP.amount) : (baseP ? Number(baseP.amount) : (p.price || 0));
+                          oldPrice = saleP && baseP ? Number(baseP.amount) : (variant?.oldPrice || 0);
+                        }
 
                         const displayPrice = typeof pPrice === 'number' && pPrice > 0 ? pPrice.toLocaleString('vi-VN') + 'đ' : 'Liên hệ';
-                        const oldPrice = p.variants?.[0]?.oldPrice;
-                        const displayOldPrice = oldPrice ? oldPrice.toLocaleString('vi-VN') + 'đ' : null;
+                        const displayOldPrice = oldPrice && oldPrice > pPrice ? oldPrice.toLocaleString('vi-VN') + 'đ' : null;
 
                         // Tính tổng stock từ các variants
                         // - manage_inventory=false → không quản lý tồn kho → luôn còn hàng
@@ -384,7 +396,7 @@ const ProductsPage = () => {
                         return (
                           <article className="product-card" key={p.id}>
                             <div className="img-wrap">
-                              {oldPrice && <span className="badge badge--sale">Giảm giá</span>}
+                              {oldPrice > pPrice && <span className="badge badge--sale">Giảm giá</span>}
                               <button
                                 className="wishlist"
                                 aria-label="Add to wishlist"

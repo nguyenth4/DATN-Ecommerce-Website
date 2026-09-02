@@ -122,9 +122,17 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
       v.options?.some((opt: any) => opt.option_id === colorOptionId && opt.value === colorName)
     );
 
-    return variant?.prices?.find((p: any) => p.currency_code === 'vnd')?.amount
-        || variant?.prices?.[0]?.amount
-        || 0;
+    if (variant?.calculated_price) {
+      return Number(variant.calculated_price.calculated_amount ?? 0);
+    }
+    if (!variant || !variant.prices) return 0;
+    const saleP = variant.prices.find((p: any) => p.currency_code === 'vnd' && p.price_list_id)
+      || variant.prices.find((p: any) => p.price_list_id);
+    const baseP = variant.prices.find((p: any) => p.currency_code === 'vnd' && !p.price_list_id)
+      || variant.prices.find((p: any) => !p.price_list_id)
+      || variant.prices[0];
+
+    return Number((saleP || baseP)?.amount || 0);
   };
 
   return (

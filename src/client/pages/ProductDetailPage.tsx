@@ -259,7 +259,7 @@ const ProductDetailPage = () => {
       const origAmt = Number(v.calculated_price.original_amount ?? calcAmt);
       return {
         price: calcAmt,
-        oldPrice: origAmt > calcAmt ? origAmt : 0
+        oldPrice: origAmt > calcAmt ? origAmt : (v?.oldPrice || 0)
       };
     }
     if (!v?.prices || v.prices.length === 0) {
@@ -271,16 +271,21 @@ const ProductDetailPage = () => {
       || v.prices.find((p: any) => !p.price_list_id)
       || v.prices[0];
 
-    const currentP = saleP ? Number(saleP.amount) : (baseP ? Number(baseP.amount) : (v?.price || productData.basePrice || 0));
-    const originalP = (saleP && baseP) ? Number(baseP.amount) : 0;
-
+    if (saleP) {
+      return {
+        price: Number(saleP.amount),
+        oldPrice: Number(baseP?.amount || 0)
+      };
+    }
     return {
-      price: currentP,
-      oldPrice: originalP > currentP ? originalP : (v?.oldPrice || 0)
+      price: Number(baseP?.amount || 0),
+      oldPrice: Number(v?.oldPrice || 0)
     };
   };
 
-  const { price, oldPrice } = getVariantPricesInfo(activeVariant);
+  const pricesInfo = getVariantPricesInfo(activeVariant);
+  const price = pricesInfo.price;
+  const oldPrice = pricesInfo.oldPrice;
 
   // Specifications
   const specifications = productData.metadata?.specifications || {};
