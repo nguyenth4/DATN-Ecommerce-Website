@@ -67,7 +67,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   }, [product.id]);
 
   return (
-    <Link to={`/products/${product.id}`} className="product-card">
+    <Link to={`/product/${product.id}`} className="product-card">
       <div className="product-card-img">
         <img 
           src={image} 
@@ -96,32 +96,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         >
           <Heart size={16} fill={isWishlisted ? 'var(--rose)' : 'none'} stroke={isWishlisted ? 'var(--rose)' : 'currentColor'} />
         </button>
-        <div className="product-card-actions">
-          <div className="stars">
-            {ratingCount > 0 ? (
-              <>
-                <div style={{ display: 'flex', gap: '2px', color: '#fbbf24' }}>
-                  {[...Array(5)].map((_, idx) => (
-                    <Star key={idx} size={14} fill={idx < Math.round(rating) ? "#fbbf24" : "none"} />
-                  ))}
-                </div>
-                <span className="count">({ratingCount})</span>
-              </>
-            ) : (
-              <span className="count" style={{ marginLeft: 0 }}>Chưa có đánh giá</span>
-            )}
-          </div>
-          <button 
-            className="product-card-btn-add btn-add-cart" 
-            title="Thêm vào giỏ"
-            onClick={(e) => {
-              e.preventDefault();
-              alert('Đã thêm vào giỏ hàng!');
-            }}
-          >
-            <i className="bi bi-plus"></i>
-          </button>
-        </div>
       </div>
       <div className="product-card-body">
         <div className="product-category">{category}</div>
@@ -130,6 +104,20 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           <span className="product-price">{price.toLocaleString('vi-VN')}đ</span>
           {(originalPrice > price || product.originalPrice) && (
             <span className="product-price-old">{(originalPrice || product.originalPrice).toLocaleString('vi-VN')}đ</span>
+          )}
+        </div>
+        <div className="stars">
+          {ratingCount > 0 ? (
+            <>
+              <div style={{ display: 'flex', gap: '2px', color: '#fbbf24' }}>
+                {[...Array(5)].map((_, idx) => (
+                  <Star key={idx} size={14} fill={idx < Math.round(rating) ? "#fbbf24" : "none"} />
+                ))}
+              </div>
+              <span className="count">({ratingCount})</span>
+            </>
+          ) : (
+            <span className="count" style={{ marginLeft: 0 }}>Chưa có đánh giá</span>
           )}
         </div>
         <div 
