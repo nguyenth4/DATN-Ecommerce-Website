@@ -934,11 +934,11 @@ const AccountPage = () => {
     return 0;
   };
 
-  // Cancel is only allowed before shipping starts (pending/confirmed/preparing)
+  // Cancel is only allowed when order is pending (step 0)
   const canCancelOrder = (order: any) => {
     if (order.canceled || order.status === "canceled") return false;
     const step = getDynamicStatusStep(order);
-    return step >= 0 && step < 3;
+    return step === 0;
   };
 
   // Return is allowed when order is delivered and no return is currently requested

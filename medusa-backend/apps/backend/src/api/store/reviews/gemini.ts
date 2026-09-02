@@ -73,7 +73,8 @@ Trả về định dạng JSON chính xác như sau:
     const textResult = data.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (textResult) {
-      return JSON.parse(textResult) as GeminiResult;
+      const cleanText = textResult.replace(/```json/gi, "").replace(/```/g, "").trim();
+      return JSON.parse(cleanText) as GeminiResult;
     }
     
     throw new Error("Không nhận được phản hồi phân tích từ Gemini.");

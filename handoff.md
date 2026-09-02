@@ -6,40 +6,23 @@ Tài liệu này tổng hợp các lỗi hiện tại trên hệ thống (cả p
 
 ## 1. Các luồng chức năng chưa hoàn chỉnh (Cần ưu tiên xử lý)
 
-*   **Luồng thanh toán (Payment Flow):**
-    *   Chưa xử lý hoàn chỉnh các trường hợp thanh toán thất bại, timeout, hoặc khách hàng hủy thanh toán giữa chừng.
-    *   Cần kiểm tra kỹ tiến trình cập nhật trạng thái đơn hàng (từ `pending` sang `paid` hoặc `failed`) sau khi nhận webhook/callback từ cổng thanh toán.
-    *   *Liên quan:* Có script `fix_unpaid_orders_2.js` đang được dùng để xử lý tạm thời các đơn hàng lỗi trạng thái.
-
-*   **Thông báo hoàn tiền bằng ngân hàng (Bank Refund Notification):**
-    *   Luồng hoàn tiền (ZaloPay/Ngân hàng) chưa hoàn thiện phần gửi thông báo (email/SMS/In-app) cho khách hàng sau khi tiền đã được hoàn thành công.
-    *   *Liên quan:* File `zalopayRefund.ts`.
-
-*   **Gửi mail liên hệ (Contact Email):**
-    *   Chức năng khách hàng gửi form liên hệ chưa hoạt động trơn tru (có thể do chưa cấu hình SMTP hoặc lỗi logic gọi API gửi mail).
-
-*   **Đánh giá sản phẩm (Reviews & Ratings):**
-    *   Luồng submit đánh giá, duyệt đánh giá chưa hoàn chỉnh.
-    *   Đặc biệt cần kiểm tra phần tích hợp AI (Gemini) trong việc phân tích/duyệt đánh giá tự động.
-    *   *Liên quan:* File `gemini.ts` trong api reviews.
-
-*   **Logic Hủy Đơn Hàng (Order Cancellation):**
-    *   Chưa chặn việc khách hàng tự ý hủy đơn sau khi đơn hàng đã được Admin xác nhận/duyệt (approved). Cần cập nhật logic chỉ cho phép khách hàng hủy đơn khi đơn hàng đang ở trạng thái chờ duyệt (pending).
+*(Tất cả các luồng chức năng ưu tiên đã được xử lý hoàn tất! 🎉)*
 
 ---
 
 ## 2. Danh sách lỗi web (Bugs) đang gặp phải
 
 ### A. Phía Client (Storefront - Website bán hàng)
-*   **Trang Tài khoản (Account Page):** Cần rà soát lại UI/UX và logic load dữ liệu (như hiển thị lịch sử đơn hàng, trạng thái đơn hàng chưa đồng bộ đúng).
-*   **Xử lý lỗi UI (Error Handling):** Các thông báo lỗi khi thanh toán thất bại hoặc thêm vào giỏ hàng lỗi chưa được hiển thị rõ ràng cho người dùng.
-*   *(Cần rà soát & bổ sung thêm các lỗi về giao diện responsive, tốc độ load trang...)*
+
+- **Trang Tài khoản (Account Page):** Cần rà soát lại UI/UX và logic load dữ liệu (như hiển thị lịch sử đơn hàng, trạng thái đơn hàng chưa đồng bộ đúng).
+- **Xử lý lỗi UI (Error Handling):** Các thông báo lỗi khi thanh toán thất bại hoặc thêm vào giỏ hàng lỗi chưa được hiển thị rõ ràng cho người dùng.
+- _(Cần rà soát & bổ sung thêm các lỗi về giao diện responsive, tốc độ load trang...)_
 
 ### B. Phía Admin (Medusa Dashboard)
-*   **Giao diện Quản lý Đánh giá (Reviews):** Bảng/Trang quản lý đánh giá không hiển thị hoặc không thể truy cập được trên UI của Admin Dashboard.
-*   **Quản lý đơn hàng:** Chưa có luồng rõ ràng để Admin xử lý các đơn hàng bị kẹt ở trạng thái thanh toán (unpaid) một cách tự động, hiện tại đang phải dùng script thủ công.
-*   **Quản lý hoàn tiền:** Giao diện hoặc logic xử lý hoàn tiền qua cổng thanh toán thứ 3 từ Admin dashboard cần được kiểm thử lại toàn diện.
-*   *(Cần rà soát & bổ sung thêm các lỗi về hiển thị danh sách, phân trang, lọc dữ liệu...)*
+
+- **Quản lý đơn hàng:** Chưa có luồng rõ ràng để Admin xử lý các đơn hàng bị kẹt ở trạng thái thanh toán (unpaid) một cách tự động, hiện tại đang phải dùng script thủ công.
+- **Quản lý hoàn tiền:** Giao diện hoặc logic xử lý hoàn tiền qua cổng thanh toán thứ 3 từ Admin dashboard cần được kiểm thử lại toàn diện.
+- _(Cần rà soát & bổ sung thêm các lỗi về hiển thị danh sách, phân trang, lọc dữ liệu...)_
 
 ---
 
@@ -297,14 +280,17 @@ Yêu cầu hoàn tiền có `refund_id` để tránh duyệt/hoàn tiền trùng
 - [x] Thanh toán VNPAY sandbox (URL hợp lệ có chữ ký HMAC-SHA512)
 - [x] Ví điện tử: nạp tiền, trừ tiền khi mua, lịch sử giao dịch
 - [x] Trang tài khoản: hồ sơ cá nhân, đơn hàng, đổi mật khẩu, upload avatar
-- [x] Hủy đơn hàng (hoàn trả tồn kho)
-- [x] Đánh giá sản phẩm
+- [x] Hủy đơn hàng (hoàn trả tồn kho) và chặn hủy đơn khi đã duyệt
+- [x] Đánh giá sản phẩm (tự động kiểm duyệt bằng AI Gemini, hiển thị UI Admin)
 - [x] So sánh sản phẩm
 - [x] Wishlist
 - [x] Gợi ý sản phẩm (AI Gemini)
 - [x] Tra cứu đơn hàng
 - [x] Trang liên hệ
 - [x] Medusa Admin Dashboard kết nối đúng với DB
+- [x] Luồng thanh toán: Hoàn trả tồn kho khi thanh toán cổng VNPAY/ZaloPay thất bại
+- [x] Thông báo hoàn tiền: Đã tích hợp gửi email tự động qua SendGrid khi Admin duyệt hoàn tiền.
+- [x] Form Liên hệ: Chuyển đổi logic từ Resend sang SendGrid để gửi thành công email Contact Form.
 
 ---
 
@@ -312,7 +298,7 @@ Yêu cầu hoàn tiền có `refund_id` để tránh duyệt/hoàn tiền trùng
 
 ### Ưu tiên cao
 
-- [ ] **Email thật:** Thay `RESEND_API_KEY` bằng key thật để gửi email xác nhận đơn hàng, quên mật khẩu
+- [ ] **Email thật:** Hoàn tất cấu hình `SENDGRID_API_KEY` để thay thế toàn bộ các luồng Resend cũ (email xác nhận đơn hàng, quên mật khẩu) bằng SendGrid.
 - [ ] **VNPAY Production:** Khi go-live, thay `VNPAY_HOST`, `VNPAY_TMN_CODE`, `VNPAY_SECURE_SECRET` bằng credentials production và bỏ `testMode: true`
 - [ ] **Cấu hình kho vận chuyển thực:** Điền `GHTK_PICK_PROVINCE`, `GHTK_PICK_DISTRICT` và thay district/ward GHN hard-code bằng địa chỉ kho thực tế.
 
@@ -369,6 +355,20 @@ Yêu cầu hoàn tiền có `refund_id` để tránh duyệt/hoàn tiền trùng
 
 ---
 
+## 13. Cấu hình SendGrid Dynamic Template (Tham khảo)
+
+- **Template Hoàn Tiền (Refund Approved):** Đã tạo mã HTML sẵn trong file `sendgrid-refund-template.html` (đính kèm ở artifact).
+- Các biến (Variables) sử dụng trong template:
+  - `{{customer_name}}`: Tên khách hàng.
+  - `{{order_display_id}}`: Mã đơn hàng hiển thị (vd: SF2026-123).
+  - `{{refund_amount_formatted}}`: Số tiền hoàn (vd: 500.000 đ).
+  - `{{refund_info}}`: Phương thức hoàn tiền (Ví Sprylo, VNPay, ZaloPay, etc).
+  - `{{return_reason}}`: Lý do hoàn.
+  - `{{support_email}}`: Email hỗ trợ (SENDGRID_FROM_EMAIL).
+  - `{{is_wallet}}`: true/false (để đổi giao diện nếu hoàn vào ví).
+
+---
+
 ## 13. Thông tin tài khoản dịch vụ
 
 | Dịch vụ              | Ghi chú                                    |
@@ -377,6 +377,6 @@ Yêu cầu hoàn tiền có `refund_id` để tránh duyệt/hoàn tiền trùng
 | GHN                  | Sandbox — khachhang.ghn.vn                 |
 | VNPAY Sandbox        | TMN Code: `ALPIZLIR`                       |
 | Google Cloud Console | Client ID đã cấu hình OAuth consent screen |
-| Resend               | Cần thay API key thật trước khi gửi email  |
+| SendGrid             | `SENDGRID_API_KEY` dùng cho toàn bộ email  |
 
-*Ghi chú: Tài liệu này cần được cập nhật liên tục trong quá trình fix bug và hoàn thiện tính năng.*
+_Ghi chú: Tài liệu này cần được cập nhật liên tục trong quá trình fix bug và hoàn thiện tính năng._

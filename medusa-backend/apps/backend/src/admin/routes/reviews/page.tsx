@@ -13,6 +13,7 @@ interface ReviewItem {
   product_title?: string;
   product_thumbnail?: string;
   images?: string[];
+  user_avatar?: string;
 }
 
 // Bootstrap 5 / Standard SVG Icons
@@ -332,8 +333,11 @@ const ReviewsAdminPage = () => {
   );
 };
 
+import { Star } from "@medusajs/icons";
+
 export const config = defineRouteConfig({
   label: "Đánh giá sản phẩm",
+  icon: Star
 });
 
 export default ReviewsAdminPage;
