@@ -172,7 +172,13 @@ const ContactPage: React.FC = () => {
                 <div>
                   <div className="label">HOTLINE TƯ VẤN (MIỄN PHÍ)</div>
                   <div className="value">
-                    <a href="tel:09824421498">09824421498</a>
+                    <a
+                      href="https://zalo.me/0824421498"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      0824421498
+                    </a>
                   </div>
                 </div>
               </div>
@@ -197,9 +203,9 @@ const ContactPage: React.FC = () => {
                 <div>
                   <div className="label">ĐỊA CHỈ TRỤ SỞ & CỬA HÀNG</div>
                   <div className="value">
-                    Tòa nhà T, Công viên Phần mềm Quang Trung
+                    Đ.Số 22, Thường Thạnh, Cái Răng
                     <br />
-                    P. Tân Chánh Hiệp, Quận 12, TP. Hồ Chí Minh
+                    Tòa nhà FPT Polytechnic, Cần Thơ 900000
                   </div>
                 </div>
               </div>
