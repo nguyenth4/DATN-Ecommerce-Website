@@ -151,14 +151,19 @@ STORE_FRONTEND_URL=http://localhost:5174
 ### Trạng thái hiện tại
 
 - Checkout gọi API báo giá thật của GHN qua `POST /store/ghn/fee` và GHTK qua `POST /store/ghtk/fee`; không dùng bảng giá mock khi API trả về thành công.
-- Hai hãng hiện được so sánh với cùng mức khai giá tối đa `5.000.000đ` từ checkout. Đây là giới hạn tích hợp để tránh phí bảo hiểm chênh lệch khi giỏ hàng có giá trị cao.
+- Checkout gửi đồng nhất cho cả hai hãng: cân nặng thực tế, chiều dài, chiều rộng, chiều cao và giá trị bảo hiểm. Giá trị bảo hiểm được giới hạn tối đa `5.000.000đ` để tránh phí bảo hiểm chênh lệch khi giỏ hàng có giá trị cao.
+- GHN nhận trực tiếp cân nặng, kích thước và giá trị bảo hiểm theo payload API của hãng. API báo giá GHTK chỉ nhận trường `weight`, vì vậy backend quy đổi kích thước sang trọng lượng thể tích rồi gửi trọng lượng tính cước cho GHTK. Công thức áp dụng: `ceil(dài × rộng × cao × 1000 / 5000)` (gram); trọng lượng tính cước là giá trị lớn hơn giữa cân nặng thực tế và trọng lượng thể tích.
 - Kiểm tra trực tiếp qua backend ngày 2026-09-01, với kiện mẫu 500g, khai giá `5.000.000đ`, giao nội thành TP.HCM, đã nhận phản hồi hợp lệ: GHN `46.001đ`, GHTK `48.397đ`. Chênh lệch nhỏ là bình thường vì mỗi hãng có bảng giá, phụ phí và chính sách hợp đồng riêng.
+
+### Tóm tắt cho báo cáo
+
+Hệ thống báo giá vận chuyển tại trang Checkout được đồng bộ dữ liệu đầu vào giữa GHN và GHTK, bao gồm cân nặng, kích thước kiện hàng (dài, rộng, cao) và giá trị bảo hiểm. GHN sử dụng trực tiếp toàn bộ thông số theo API của hãng. Do API báo giá GHTK không nhận kích thước riêng lẻ, hệ thống quy đổi kích thước thành trọng lượng thể tích với công thức `ceil(dài × rộng × cao × 1000 / 5000)` gram và chọn giá trị lớn hơn giữa trọng lượng thực tế và trọng lượng thể tích làm trọng lượng tính cước. Nhờ đó, các kiện hàng cồng kềnh được tính phí nhất quán theo đặc tính vật lý, đồng thời cả hai hãng dùng cùng mức khai giá bảo hiểm tối đa `5.000.000đ`. Mức phí cuối cùng vẫn có thể khác nhau do bảng giá, phụ phí và chính sách riêng của từng đơn vị vận chuyển.
 
 ### Điều kiện để phí là giá vận hành thực tế
 
 - GHN đang lấy hàng từ district `1442`, ward `21211` trong `CheckoutPage.tsx`. Cần thay bằng district/ward đúng của kho trước khi triển khai.
 - GHTK dùng `GHTK_PICK_PROVINCE` và `GHTK_PICK_DISTRICT`; nếu không đặt, hệ thống mặc định `TP. Hồ Chí Minh / Quận 1`. Cần cấu hình đúng địa chỉ kho lấy hàng.
-- GHTK hiện chỉ gửi trọng lượng; GHN gửi cả trọng lượng và kích thước. Hàng cồng kềnh có thể chênh phí do trọng lượng quy đổi.
+- GHTK được gửi trọng lượng tính cước sau quy đổi thể tích; cần xác nhận hệ số quy đổi `5000` phù hợp với hợp đồng GHTK khi triển khai production.
 - Khi API GHTK lỗi, giao diện đang hiển thị giá dự phòng `30.000đ`. Giá này không phải báo giá hãng; kiểm tra console hoặc Network trước khi xác nhận đơn.
 
 ### Lấy bảng giá theo hợp đồng
