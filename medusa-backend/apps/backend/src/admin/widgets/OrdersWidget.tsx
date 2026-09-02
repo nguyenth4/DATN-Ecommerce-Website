@@ -30,9 +30,8 @@ export const OrdersWidget = () => {
       const response = await fetch(`/admin/orders?limit=${limit}&offset=${page * limit}&order=-created_at`);
       if (response.ok) {
         const data = await response.json();
-        // Lọc bỏ những đơn hàng cũ (không có shipping_method trong metadata)
-        const validOrders = (data.orders || []).filter((o: any) => o.metadata?.shipping_method);
-        setOrders(validOrders);
+        // Hiển thị tất cả đơn hàng để Admin có thể duyệt
+        setOrders(data.orders || []);
       }
     } catch (e) {
       console.error("Failed to fetch orders", e)
@@ -114,7 +113,7 @@ export const OrdersWidget = () => {
   const [filter, setFilter] = useState<"all" | "need_refund" | "return_request">("all")
 
   const displayedOrders = filter === "need_refund"
-    ? orders.filter(o => o.status === "canceled" && o.payment_status === "captured")
+    ? orders.filter(o => o.payment_status !== "refunded" && o.metadata?.cancel_requested)
     : filter === "return_request"
       ? orders.filter(o => o.metadata?.return_requested)
       : orders;
@@ -139,7 +138,7 @@ export const OrdersWidget = () => {
             variant={filter === "need_refund" ? "primary" : "secondary"}
             onClick={() => setFilter("need_refund")}
           >
-            Cần hoàn tiền
+            Yêu cầu hoàn tiền
           </Button>
           <Button
             size="small"
@@ -179,8 +178,17 @@ export const OrdersWidget = () => {
                 {order.metadata?.return_requested && (
                   <div style={{ color: '#d97706', fontSize: '0.8rem', marginTop: '4px' }}>
                     Yêu cầu trả hàng: <strong>{order.metadata?.return_reason}</strong>
+                  </div>
+                )}
+                {order.metadata?.cancel_requested && (
+                  <div style={{ color: '#dc2626', fontSize: '0.8rem', marginTop: '4px' }}>
+                    Yêu cầu huỷ: <strong>{order.metadata?.cancel_reason || "Không có lý do"}</strong>
+                  </div>
+                )}
+                {(order.metadata?.refund_destination || order.metadata?.refund_info) && (
+                  <div style={{ fontSize: '0.8rem', marginTop: '4px', backgroundColor: '#f3f4f6', padding: '4px', borderRadius: '4px' }}>
                     {order.metadata?.refund_destination && (
-                      <div style={{ marginTop: '2px', color: order.metadata.refund_destination === 'wallet' ? '#7c3aed' : '#059669' }}>
+                      <div style={{ color: order.metadata.refund_destination === 'wallet' ? '#7c3aed' : '#059669' }}>
                         Hoàn tiền về: <strong>{order.metadata.refund_destination === 'wallet' ? '💰 Ví Sprylo' : '🏦 Ngân hàng'}</strong>
                       </div>
                     )}
@@ -203,12 +211,12 @@ export const OrdersWidget = () => {
                     </Button>
                   </>
                 )}
-                {(order.payment_status === "captured" || order.metadata?.return_requested) && (
+                {(order.metadata?.cancel_requested || order.metadata?.return_requested) && order.payment_status !== "refunded" && (
                   <Button size="small" variant="danger" onClick={async () => {
                     if (!confirm("Bạn có chắc chắn muốn hoàn tiền cho đơn hàng này?")) return;
                     try {
                       // Note: We need to know the payment method, but for now we try zalopay or vnpay based on metadata
-                      const method = order.metadata?.payment_method || 'zalopay';
+                      const method = order.metadata?.payment_method || (order.payments && order.payments.length > 0 ? order.payments[0].provider_id : 'zalopay');
                       const res = await fetch(`/admin/orders/${order.id}/refund`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
