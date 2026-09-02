@@ -20,7 +20,7 @@ export async function checkImageSafety(
   // Remove data:image/...;base64, prefix if present
   const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "");
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
 
   const payload = {
     contents: [
@@ -83,5 +83,71 @@ Trả về định dạng JSON chính xác như sau:
     // Fallback to true if API fails so it doesn't block users if there's an API outage,
     // or we can reject. Let's allow but log to be safe.
     return { safe: true, relevant: true, reason: "Lỗi kết nối API Gemini: " + error.message };
+  }
+}
+
+export async function checkTextSafety(
+  comment: string
+): Promise<GeminiResult> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    return { safe: true, relevant: true, reason: "Bypass do thiếu API key" };
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`;
+
+  const payload = {
+    contents: [
+      {
+        parts: [
+          {
+            text: `Bạn là một hệ thống kiểm duyệt bình luận (review) cho trang thương mại điện tử. 
+Hãy phân tích nội dung bình luận sau:
+"${comment}"
+
+Kiểm tra yếu tố:
+1. "safe": Bình luận có an toàn không (không chứa từ ngữ thô tục, chửi thề, xúc phạm, phân biệt chủng tộc, đả kích cá nhân, chính trị)?
+2. "relevant": (Không bắt buộc với bình luận ngắn) Nội dung có phải là spam vô nghĩa (như asdfghjk) hay quảng cáo website khác không? Bình luận ngắn gọn khen/chê sản phẩm bình thường vẫn hợp lệ.
+
+Trả về định dạng JSON chính xác như sau:
+{
+  "safe": true hoặc false,
+  "relevant": true hoặc false,
+  "reason": "Lý do ngắn gọn bằng tiếng Việt giải thích cho quyết định"
+}`
+          }
+        ]
+      }
+    ],
+    generationConfig: {
+      responseMimeType: "application/json"
+    }
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.status}`);
+    }
+
+    const data = await response.json() as any;
+    const textResult = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    
+    if (textResult) {
+      const cleanText = textResult.replace(/```json/gi, "").replace(/```/g, "").trim();
+      return JSON.parse(cleanText) as GeminiResult;
+    }
+    
+    throw new Error("No response from Gemini.");
+  } catch (error: any) {
+    console.error("Lỗi khi kiểm duyệt văn bản với Gemini:", error);
+    return { safe: true, relevant: true, reason: "Lỗi API: " + error.message };
   }
 }

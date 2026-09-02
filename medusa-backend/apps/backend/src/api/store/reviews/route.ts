@@ -1,5 +1,5 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
-import { checkImageSafety } from "./gemini";
+import { checkImageSafety, checkTextSafety } from "./gemini";
 
 export async function GET(
   req: MedusaRequest,
@@ -137,9 +137,10 @@ export async function POST(
 
     // Resolve real Medusa product_id
     let realProductId = product_id;
+    let productTitle = "";
     try {
       const prodRes = await db.raw(`
-        SELECT p.id
+        SELECT p.id, p.title
         FROM product p
         LEFT JOIN product_variant pv ON pv.product_id = p.id
         WHERE p.id = ? OR pv.id = ? OR ? ILIKE '%' || p.title || '%' OR ? ILIKE '%' || replace(p.title, ' ', '') || '%'
@@ -147,6 +148,7 @@ export async function POST(
       `, [product_id, product_id, product_id, product_id]);
       if (prodRes.rows?.[0]?.id) {
         realProductId = prodRes.rows[0].id;
+        productTitle = prodRes.rows[0].title || "";
       }
     } catch (_) {}
 
@@ -245,6 +247,21 @@ export async function POST(
         imagesArray = [image_base64];
       } catch (err: any) {
         console.error("Image safety check failed", err);
+      }
+    }
+
+    // Kiểm duyệt văn bản (bình luận) với Gemini
+    if (comment && comment.trim().length > 0) {
+      try {
+        const textSafety = await checkTextSafety(comment);
+        if (!textSafety.safe) {
+          return res.status(400).json({ message: `Nội dung đánh giá vi phạm chính sách cộng đồng: ${textSafety.reason}` });
+        }
+        if (!textSafety.relevant) {
+          return res.status(400).json({ message: `Nội dung không hợp lệ: ${textSafety.reason}` });
+        }
+      } catch (err: any) {
+        console.error("Text safety check failed", err);
       }
     }
 
@@ -369,6 +386,21 @@ export async function PUT(
     } else if (image_base64 === '') {
       // Clear image if explicitly empty string passed
       imagesArray = [];
+    }
+
+    // Kiểm duyệt văn bản (bình luận) với Gemini
+    if (comment && comment.trim().length > 0) {
+      try {
+        const textSafety = await checkTextSafety(comment);
+        if (!textSafety.safe) {
+          return res.status(400).json({ message: `Nội dung đánh giá vi phạm chính sách cộng đồng: ${textSafety.reason}` });
+        }
+        if (!textSafety.relevant) {
+          return res.status(400).json({ message: `Nội dung không hợp lệ: ${textSafety.reason}` });
+        }
+      } catch (err: any) {
+        console.error("Text safety check failed", err);
+      }
     }
 
     // Cập nhật rating và comment
