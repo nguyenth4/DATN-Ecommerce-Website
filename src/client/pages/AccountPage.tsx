@@ -468,10 +468,19 @@ const AccountPage = () => {
   const [districts, setDistricts] = useState<any[]>([]);
   const [wards, setWards] = useState<any[]>([]);
 
+<<<<<<< HEAD
   const [selectedProvince, setSelectedProvince] = useState<string>("");
   const [selectedDistrict, setSelectedDistrict] = useState<string>("");
   const [selectedWard, setSelectedWard] = useState<string>("");
 
+=======
+  const [selectedProvince, setSelectedProvince] = useState<string>('');
+  const [selectedDistrict, setSelectedDistrict] = useState<string>('');
+  const [selectedWard, setSelectedWard] = useState<string>('');
+  const [showTopupModal, setShowTopupModal] = useState(false);
+  const [topupAmount, setTopupAmount] = useState<string>('');
+  const [topupLoading, setTopupLoading] = useState(false);
+>>>>>>> 8be84ef (hoàn tiền +ví +nạp tiền vào ví)
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [editingAddress, setEditingAddress] = useState<any | null>(null);
   const [addrFullName, setAddrFullName] = useState("");
@@ -963,7 +972,7 @@ const AccountPage = () => {
   const [customReturnReason, setCustomReturnReason] = useState<string>('');
   
   // Refund info state
-  const [refundMethod, setRefundMethod] = useState<string>('bank_transfer');
+  const [refundDestination, setRefundDestination] = useState<'wallet' | 'bank_transfer'>('wallet');
   const [refundBankName, setRefundBankName] = useState<string>('');
   const [refundAccountNumber, setRefundAccountNumber] = useState<string>('');
   const [refundAccountName, setRefundAccountName] = useState<string>('');
@@ -982,7 +991,7 @@ const AccountPage = () => {
   }, []);
 
   useEffect(() => {
-    if (refundMethod === 'bank_transfer' && refundBankName && refundAccountNumber && refundAccountNumber.length >= 5) {
+    if (refundDestination === 'bank_transfer' && refundBankName && refundAccountNumber && refundAccountNumber.length >= 5) {
       const timer = setTimeout(async () => {
         setIsLookingUp(true);
         try {
@@ -1012,7 +1021,7 @@ const AccountPage = () => {
       }, 800);
       return () => clearTimeout(timer);
     }
-  }, [refundBankName, refundAccountNumber, refundMethod]);
+  }, [refundBankName, refundAccountNumber, refundDestination]);
 
   const getCancelBlockedReason = (order: any) => {
     if (order.canceled || order.status === "canceled") return null;
@@ -1205,7 +1214,8 @@ const AccountPage = () => {
         shippingFee: selectedRealOrder.shippingFee || 35000,
         paymentStatus:
           selectedRealOrder.payment_status === "captured" ||
-          selectedRealOrder.payment_status === "paid"
+          selectedRealOrder.payment_status === "paid" ||
+          selectedRealOrder.metadata?.payment_status === "paid"
             ? "Đã thanh toán"
             : "Chưa thanh toán",
         shippingStatus: getOrderFulfillmentBadgeText(selectedRealOrder),
@@ -1226,7 +1236,6 @@ const AccountPage = () => {
                   : selectedRealOrder.paymentMethod === "vnpay"
                     ? "VNPay"
                     : selectedRealOrder.paymentMethod || "VNPay",
-
         items: selectedRealOrder.items.map((item: any) => ({
           name: item.title || item.name || "Sản phẩm",
           title: item.title || item.name || "Sản phẩm",
@@ -1350,6 +1359,7 @@ const AccountPage = () => {
     }
   };
 
+<<<<<<< HEAD
   const handleReturnOrder = async (
     orderId: string,
     reason: string,
@@ -1383,15 +1393,36 @@ const AccountPage = () => {
                 },
               }
             : order,
+=======
+  const handleReturnOrder = async (orderId: string, reason: string, refund_info: string = '', refund_destination: 'wallet' | 'bank_transfer' = 'wallet') => {
+    setReturningOrderId(orderId);
+    try {
+      const response = await authService.authFetch(`${MEDUSA_BACKEND_URL}/store/orders/${orderId}/request-return`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason, refund_info, refund_destination }),
+      });
+      if (response.ok) {
+        const updated = realOrders.map(o =>
+          o.orderId === orderId ? { ...o, metadata: { ...o.metadata, return_requested: true, return_reason: reason, refund_info, refund_destination } } : o
+>>>>>>> 8be84ef (hoàn tiền +ví +nạp tiền vào ví)
         );
         localStorage.setItem("sprylo_orders", JSON.stringify(updated));
         setRealOrders(updated);
         setReturnModalOrderId(null);
+<<<<<<< HEAD
         setRefundMethod("bank_transfer");
         setRefundBankName("");
         setRefundAccountNumber("");
         setRefundAccountName("");
         alert("Yêu cầu trả hàng đã được gửi thành công.");
+=======
+        setRefundDestination('wallet');
+        setRefundBankName('');
+        setRefundAccountNumber('');
+        setRefundAccountName('');
+        alert('Yêu cầu trả hàng đã được gửi thành công.');
+>>>>>>> 8be84ef (hoàn tiền +ví +nạp tiền vào ví)
       } else {
         const error = await response.json();
         alert("Gửi yêu cầu thất bại: " + (error.error || "Vui lòng thử lại."));
@@ -1403,6 +1434,39 @@ const AccountPage = () => {
       setReturningOrderId(null);
     }
   };
+<<<<<<< HEAD
+=======
+
+  const handleTopupSubmit = async () => {
+    if (!topupAmount || isNaN(Number(topupAmount)) || Number(topupAmount) < 10000) {
+      alert("Vui lòng nhập số tiền hợp lệ (tối thiểu 10.000đ).");
+      return;
+    }
+    
+    setTopupLoading(true);
+    try {
+      const res = await authService.authFetch(`${MEDUSA_BACKEND_URL}/store/wallet/topup/init`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: Number(topupAmount), customer_id: customerId })
+      });
+      
+      const data = await res.json();
+      if (res.ok && data.paymentUrl) {
+        window.location.href = data.paymentUrl;
+      } else {
+        alert(data.message || data.error || "Lỗi tạo giao dịch nạp tiền.");
+      }
+    } catch (e: any) {
+      alert("Lỗi kết nối: " + e.message);
+    } finally {
+      setTopupLoading(false);
+      setShowTopupModal(false);
+    }
+  };
+
+
+>>>>>>> 8be84ef (hoàn tiền +ví +nạp tiền vào ví)
   const getShippingBadgeClass = (status: string) => {
     switch (status) {
       case "Đang giao":
@@ -1816,6 +1880,7 @@ const AccountPage = () => {
                                     formatOrderId(order.orderId)}
                                 </td>
                                 <td>
+<<<<<<< HEAD
                                   {new Date(
                                     order.created_at,
                                   ).toLocaleDateString("vi-VN")}
@@ -1837,6 +1902,9 @@ const AccountPage = () => {
                                 <td>
                                   {order.payment_status === "captured" ||
                                   order.payment_status === "paid" ? (
+=======
+                                  {(order.payment_status === 'captured' || order.payment_status === 'paid' || order.status === 'completed') ? (
+>>>>>>> 8be84ef (hoàn tiền +ví +nạp tiền vào ví)
                                     <span className="status-badge badge-completed">
                                       <i className="bi bi-check-circle-fill"></i>{" "}
                                       Đã thanh toán
@@ -1936,8 +2004,17 @@ const AccountPage = () => {
                                         style={{ borderColor: "#f59e0b", color: "#b45309" }}
                                         onClick={() => {
                                           setReturnModalOrderId(order.orderId);
+<<<<<<< HEAD
                                           setReturnReason("Hàng lỗi / Không hoạt động");
                                           setCustomReturnReason("");
+=======
+                                          setReturnReason('Hàng lỗi / Không hoạt động');
+                                          setCustomReturnReason('');
+                                          // Smart default: online payments → wallet, COD → bank_transfer
+                                          const pm = order.metadata?.payment_method;
+                                          setRefundDestination((pm === 'zalopay' || pm === 'vnpay') ? 'wallet' : 'bank_transfer');
+                                          setRefundBankName(''); setRefundAccountNumber(''); setRefundAccountName('');
+>>>>>>> 8be84ef (hoàn tiền +ví +nạp tiền vào ví)
                                         }}
                                         disabled={returningOrderId === order.orderId}
                                       >
@@ -2504,6 +2581,7 @@ const AccountPage = () => {
                               <span>{formatPrice(selectedOrder.total)}</span>
                             </div>
                           </div>
+<<<<<<< HEAD
                           <div
                             style={{
                               marginTop: "1.5rem",
@@ -2590,6 +2668,59 @@ const AccountPage = () => {
                                   Hủy đơn hàng này
                                 </button>
                               )}
+=======
+                          {/* CANCEL BUTTON - only allowed before shipping starts (pending/confirmed/preparing) */}
+                          {selectedRealOrder && canCancelOrder(selectedRealOrder) && (
+                            <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--rule)', display: 'flex', justifyContent: 'flex-end' }}>
+                              <button
+                                className="btn-order-action btn-order-cancel"
+                                style={{ padding: '0.6rem 1.5rem', borderRadius: '8px', fontSize: '0.85rem' }}
+                                onClick={() => {
+                                  setCancelModalOrderId(selectedOrderId!);
+                                  setCancelReason('Thay đổi ý định mua sắm / Không còn nhu cầu');
+                                  setCustomCancelReason('');
+                                }}
+                                disabled={cancelingOrderId === selectedOrderId}
+                              >
+                                <i className="bi bi-x-circle" style={{ fontSize: '1rem' }}></i> Hủy đơn hàng này
+                              </button>
+                            </div>
+                          )}
+                          {selectedRealOrder && canReturnOrder(selectedRealOrder) && (
+                            <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--rule)', display: 'flex', justifyContent: 'flex-end' }}>
+                              <button
+                                className="btn-order-action btn-order-cancel"
+                                style={{ padding: '0.6rem 1.5rem', borderRadius: '8px', fontSize: '0.85rem', borderColor: '#f59e0b', color: '#b45309' }}
+                                onClick={() => {
+                                  setReturnModalOrderId(selectedOrderId!);
+                                  // Smart default based on payment method
+                                  const pm2 = realOrders.find(o => o.orderId === selectedOrderId)?.metadata?.payment_method;
+                                  setRefundDestination((pm2 === 'zalopay' || pm2 === 'vnpay') ? 'wallet' : 'bank_transfer');
+                                  setRefundBankName(''); setRefundAccountNumber(''); setRefundAccountName('');
+                                  setReturnReason('Hàng lỗi / Không hoạt động');
+                                  setCustomReturnReason('');
+                                }}
+                                disabled={returningOrderId === selectedOrderId}
+                              >
+                                <i className="bi bi-arrow-return-left" style={{ fontSize: '1rem' }}></i> Yêu cầu trả hàng
+                              </button>
+                            </div>
+                          )}
+                          {selectedRealOrder && selectedRealOrder.metadata?.return_requested && (
+                            <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--rule)', display: 'flex', justifyContent: 'flex-end' }}>
+                              <span style={{ fontSize: '0.85rem', color: '#b45309', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <i className="bi bi-hourglass-split"></i> Đang chờ duyệt yêu cầu trả hàng
+                              </span>
+                            </div>
+                          )}
+                          {selectedRealOrder && !canCancelOrder(selectedRealOrder) && !canReturnOrder(selectedRealOrder) && !selectedRealOrder.metadata?.return_requested && getCancelBlockedReason(selectedRealOrder) && (
+                            <div style={{ marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--rule)', display: 'flex', justifyContent: 'flex-end' }}>
+                              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted, #888)', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <i className="bi bi-info-circle"></i> {getCancelBlockedReason(selectedRealOrder)}
+                              </span>
+                            </div>
+                          )}
+>>>>>>> 8be84ef (hoàn tiền +ví +nạp tiền vào ví)
 
                             {selectedRealOrder &&
                               canReturnOrder(selectedRealOrder) && (
@@ -3166,6 +3297,7 @@ const AccountPage = () => {
                       }}
                     >
                       Ví điện tử Sprylo
+<<<<<<< HEAD
                       <button
                         className="btn btn-sm btn--ghost"
                         onClick={() =>
@@ -3175,9 +3307,15 @@ const AccountPage = () => {
                         }
                       >
                         Nạp 5.000.000đ (Demo)
+=======
+                      <button className="btn btn-sm btn--primary" onClick={() => setShowTopupModal(true)}>
+                        <i className="bi bi-wallet2" style={{ marginRight: '6px' }}></i>
+                        Nạp tiền
+>>>>>>> 8be84ef (hoàn tiền +ví +nạp tiền vào ví)
                       </button>
                     </div>
 
+<<<<<<< HEAD
                     <div
                       className="wallet-card-bg"
                       style={{
@@ -3360,6 +3498,41 @@ const AccountPage = () => {
                               </div>
                             </div>
                           ))}
+=======
+                    <h4 style={{ fontFamily: 'var(--ff-display)', fontWeight: 700, fontSize: '1.1rem', marginBottom: '1rem' }}>Lịch sử giao dịch</h4>
+                    
+                    {walletData?.transactions?.length > 0 ? (
+                      <div className="wallet-transactions">
+                        {[...walletData.transactions].sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).map((tx: any) => {
+                          const isRefund = tx.type === 'refund';
+                          const isPayment = tx.type === 'payment';
+                          const bgColor = isRefund ? '#fef3c7' : isPayment ? 'var(--rose-soft)' : 'var(--emerald-soft, #d1fae5)';
+                          const fgColor = isRefund ? '#d97706' : isPayment ? 'var(--rose)' : 'var(--emerald)';
+                          const amountColor = isRefund ? '#d97706' : isPayment ? 'var(--ink)' : 'var(--emerald)';
+                          const sign = isPayment ? '-' : '+';
+                          const defaultDesc = isRefund ? 'Hoàn tiền đơn hàng' : isPayment ? 'Thanh toán đơn hàng' : 'Nạp tiền';
+                          
+                          return (
+                          <div key={tx.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 0', borderBottom: '1px solid var(--rule)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                              <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: bgColor, color: fgColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {isRefund ? <i className="bi bi-arrow-return-left" style={{ fontSize: '16px' }}></i> : isPayment ? <Wallet size={18} /> : <CheckCircle size={18} />}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 600, color: 'var(--ink)' }}>
+                                  {tx.description || defaultDesc}
+                                  {isRefund && <span style={{ marginLeft: '6px', fontSize: '0.7rem', background: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>HOÀN TIỀN</span>}
+                                </div>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--fg-mute)' }}>{new Date(tx.created_at).toLocaleString('vi-VN')}</div>
+                              </div>
+                            </div>
+                            <div style={{ fontWeight: 700, color: amountColor }}>
+                              {sign}{formatPrice(Number(tx.amount))}
+                            </div>
+                          </div>
+                          );
+                        })}
+>>>>>>> 8be84ef (hoàn tiền +ví +nạp tiền vào ví)
                       </div>
                     ) : (
                       <div
@@ -4304,6 +4477,7 @@ const AccountPage = () => {
                 {(() => {
                   const modalOrder = realOrders.find(o => o.orderId === returnModalOrderId);
                   const pMethod = modalOrder?.metadata?.payment_method;
+<<<<<<< HEAD
                   const isZalopayOrVnpay = pMethod === 'zalopay' || pMethod === 'vnpay';
                   if (!isZalopayOrVnpay) {
                     return (
@@ -4344,8 +4518,93 @@ const AccountPage = () => {
                             Ví điện tử Sprylo
                           </label>
                         </div>
+=======
+                  const isOnlinePayment = pMethod === 'zalopay' || pMethod === 'vnpay';
+                  
+                  return (
+                    <motion.div 
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed var(--rule)' }}
+                    >
+                      <h4 style={{ fontSize: '0.9rem', marginBottom: '1rem', color: '#d97706', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <i className="bi bi-wallet2"></i> Phương thức nhận tiền hoàn
+                      </h4>
+>>>>>>> 8be84ef (hoàn tiền +ví +nạp tiền vào ví)
 
-                        {refundMethod === 'bank_transfer' && (
+
+                      <div style={{ display: 'flex', gap: '10px', marginBottom: '1rem' }}>
+                        <label style={{ 
+                          display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', cursor: 'pointer',
+                          padding: '0.7rem 1rem', borderRadius: '10px', flex: 1,
+                          border: refundDestination === 'wallet' ? '2px solid #7c3aed' : '1.5px solid var(--rule)',
+                          background: refundDestination === 'wallet' ? '#f5f3ff' : 'white',
+                          transition: 'all 0.15s ease'
+                        }}>
+                          <input 
+                            type="radio" 
+                            name="refundDestination" 
+                            value="wallet" 
+                            checked={refundDestination === 'wallet'} 
+                            onChange={() => setRefundDestination('wallet')} 
+                            style={{ accentColor: '#7c3aed' }}
+                          />
+                          <div>
+                            <div style={{ fontWeight: 600, color: refundDestination === 'wallet' ? '#7c3aed' : 'var(--ink)' }}>
+                              <i className="bi bi-wallet2" style={{ marginRight: '4px' }}></i> Ví Sprylo
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--fg-mute)', marginTop: '2px' }}>Nhận tiền ngay lập tức</div>
+                          </div>
+                        </label>
+                        <label style={{ 
+                          display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', cursor: 'pointer',
+                          padding: '0.7rem 1rem', borderRadius: '10px', flex: 1,
+                          border: refundDestination === 'bank_transfer' ? '2px solid #d97706' : '1.5px solid var(--rule)',
+                          background: refundDestination === 'bank_transfer' ? '#fffbeb' : 'white',
+                          transition: 'all 0.15s ease'
+                        }}>
+                          <input 
+                            type="radio" 
+                            name="refundDestination" 
+                            value="bank_transfer" 
+                            checked={refundDestination === 'bank_transfer'} 
+                            onChange={() => setRefundDestination('bank_transfer')} 
+                            style={{ accentColor: '#d97706' }}
+                          />
+                          <div>
+                            <div style={{ fontWeight: 600, color: refundDestination === 'bank_transfer' ? '#d97706' : 'var(--ink)' }}>
+                              <i className="bi bi-bank" style={{ marginRight: '4px' }}></i> Ngân hàng
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--fg-mute)', marginTop: '2px' }}>Chuyển khoản 1-3 ngày</div>
+                          </div>
+                        </label>
+                      </div>
+
+                      {refundDestination === 'wallet' && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          style={{ background: '#f5f3ff', borderRadius: '10px', padding: '1rem 1.2rem', border: '1px solid #ddd6fe' }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #a78bfa)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '1.1rem' }}>
+                              <i className="bi bi-wallet-fill"></i>
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 700, color: '#5b21b6', fontSize: '0.95rem' }}>Hoàn tiền về Ví Sprylo</div>
+                              <div style={{ fontSize: '0.8rem', color: '#7c3aed' }}>
+                                Số dư ví sẽ được cộng ngay sau khi admin duyệt hoàn tiền. Bạn có thể sử dụng số dư ví để thanh toán các đơn hàng tiếp theo.
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {refundDestination === 'bank_transfer' && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                        >
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             <div>
                               <label className="form-label" style={{ fontSize: '0.78rem' }}>Ngân Hàng *</label>
@@ -4396,8 +4655,10 @@ const AccountPage = () => {
                               />
                             </div>
                           </div>
-                        )}
+                        </motion.div>
+                      )}
 
+<<<<<<< HEAD
                         {refundMethod === 'wallet' && (
                           <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted, #64748b)' }}>
                             Tiền hoàn sẽ được cộng vào Ví điện tử Sprylo của bạn sau khi yêu cầu được duyệt.
@@ -4408,6 +4669,10 @@ const AccountPage = () => {
                     );
                   }
                   return null;
+=======
+                    </motion.div>
+                  );
+>>>>>>> 8be84ef (hoàn tiền +ví +nạp tiền vào ví)
                 })()}
               </div>
               <div className="address-modal-footer">
@@ -4421,11 +4686,9 @@ const AccountPage = () => {
                       alert("Vui lòng chọn hoặc nhập lý do trả hàng.");
                       return;
                     }
-                    const modalOrder = realOrders.find(o => o.orderId === returnModalOrderId);
-                    const pMethod = modalOrder?.metadata?.payment_method;
-                    const isZalopayOrVnpay = pMethod === 'zalopay' || pMethod === 'vnpay';
                     
                     let compiledRefundInfo = '';
+<<<<<<< HEAD
                     if (!isZalopayOrVnpay) {
                       if (refundMethod === 'bank_transfer') {
                         if (!refundBankName.trim() || !refundAccountNumber.trim() || !refundAccountName.trim()) {
@@ -4435,14 +4698,67 @@ const AccountPage = () => {
                         compiledRefundInfo = `Ngân hàng: ${refundBankName.trim()} - STK: ${refundAccountNumber.trim()} - Chủ thẻ: ${refundAccountName.trim()}`;
                       } else if (refundMethod === 'wallet') {
                         compiledRefundInfo = 'Ví điện tử Sprylo';
+=======
+                    if (refundDestination === 'bank_transfer') {
+                      if (!refundBankName.trim() || !refundAccountNumber.trim() || !refundAccountName.trim()) {
+                        alert("Vui lòng điền đầy đủ thông tin ngân hàng.");
+                        return;
+>>>>>>> 8be84ef (hoàn tiền +ví +nạp tiền vào ví)
                       }
+                      compiledRefundInfo = `Ngân hàng: ${refundBankName.trim()} - STK: ${refundAccountNumber.trim()} - Chủ thẻ: ${refundAccountName.trim()}`;
                     }
 
-                    handleReturnOrder(returnModalOrderId, finalReason, compiledRefundInfo);
+                    handleReturnOrder(returnModalOrderId, finalReason, compiledRefundInfo, refundDestination);
                   }}
                   disabled={returningOrderId === returnModalOrderId}
                 >
                   {returningOrderId === returnModalOrderId ? 'Đang gửi...' : 'Gửi yêu cầu trả hàng'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      {/* TOPUP MODAL */}
+        {showTopupModal && (
+          <div className="address-modal-overlay" onClick={() => setShowTopupModal(false)}>
+            <motion.div 
+              className="address-modal-container"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="address-modal-header">
+                <h3>Nạp tiền vào Ví Sprylo</h3>
+                <button className="close-btn" onClick={() => setShowTopupModal(false)}>
+                  <i className="bi bi-x-lg"></i>
+                </button>
+              </div>
+              <div className="address-modal-body">
+                <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Số tiền cần nạp (VNĐ)</label>
+                  <input 
+                    type="number" 
+                    className="form-control" 
+                    value={topupAmount} 
+                    onChange={e => setTopupAmount(e.target.value)} 
+                    placeholder="VD: 100000"
+                    min="10000"
+                    style={{ width: '100%', padding: '0.8rem', borderRadius: 'var(--r-md)', border: '1px solid var(--border)' }}
+                  />
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginTop: '0.5rem' }}>
+                    Thanh toán qua cổng VNPAY.
+                  </p>
+                </div>
+              </div>
+              <div className="address-modal-footer">
+                <button className="btn btn--ghost" onClick={() => setShowTopupModal(false)}>Hủy</button>
+                <button 
+                  className="btn btn--primary" 
+                  onClick={handleTopupSubmit}
+                  disabled={topupLoading}
+                >
+                  {topupLoading ? 'Đang xử lý...' : 'Thanh toán'}
                 </button>
               </div>
             </motion.div>

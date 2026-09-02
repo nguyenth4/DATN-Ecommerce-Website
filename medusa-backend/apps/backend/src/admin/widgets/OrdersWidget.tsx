@@ -110,8 +110,8 @@ export const OrdersWidget = () => {
   const displayedOrders = filter === "need_refund"
     ? orders.filter(o => o.status === "canceled" && o.payment_status === "captured")
     : filter === "return_request"
-    ? orders.filter(o => o.metadata?.return_requested === true && o.payment_status === "captured")
-    : orders;
+      ? orders.filter(o => o.metadata?.return_requested)
+      : orders;
 
   return (
     <Container className="p-6 mb-6">
@@ -168,6 +168,11 @@ export const OrdersWidget = () => {
                 {order.metadata?.return_requested && (
                   <div style={{ color: '#d97706', fontSize: '0.8rem', marginTop: '4px' }}>
                     Yêu cầu trả hàng: <strong>{order.metadata?.return_reason}</strong>
+                    {order.metadata?.refund_destination && (
+                      <div style={{ marginTop: '2px', color: order.metadata.refund_destination === 'wallet' ? '#7c3aed' : '#059669' }}>
+                        Hoàn tiền về: <strong>{order.metadata.refund_destination === 'wallet' ? '💰 Ví Sprylo' : '🏦 Ngân hàng'}</strong>
+                      </div>
+                    )}
                     {order.metadata?.refund_info && (
                       <div style={{ marginTop: '2px', color: '#059669' }}>
                         Thông tin nhận tiền: <strong>{order.metadata.refund_info}</strong>
@@ -196,7 +201,7 @@ export const OrdersWidget = () => {
                       const res = await fetch(`/admin/orders/${order.id}/refund`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ payment_method: method })
+                        body: JSON.stringify({ payment_method: method, amount: order.total || 0 })
                       });
                       if (res.ok) {
                         alert("Hoàn tiền thành công!");
@@ -205,7 +210,7 @@ export const OrdersWidget = () => {
                         const err = await res.json();
                         alert("Lỗi hoàn tiền: " + (err.message || "Unknown error"));
                       }
-                    } catch(e: any) {
+                    } catch (e: any) {
                       alert("Lỗi kết nối: " + e.message);
                     }
                   }}>
