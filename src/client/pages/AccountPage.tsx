@@ -1370,7 +1370,10 @@ const AccountPage = () => {
     try {
       const response = await fetch(`${MEDUSA_BACKEND_URL}/store/orders/${orderId}/payment-link`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-publishable-api-key": (import.meta as any).env?.VITE_MEDUSA_PUBLISHABLE_KEY || "pk_test"
+        },
       });
       const data = await response.json();
       if (response.ok && data.paymentUrl) {
@@ -1990,7 +1993,7 @@ const AccountPage = () => {
                                         )}
                                       </button>
                                     )}
-                                    {order.payment_status === "awaiting" && (order.paymentMethod === "zalopay" || order.paymentMethod === "vnpay") && order.status !== "canceled" && (
+                                    {order.payment_status !== "captured" && order.payment_status !== "paid" && (order.paymentMethod === "zalopay" || order.paymentMethod === "vnpay") && order.status !== "canceled" && (
                                       <button
                                         className="btn-order-action btn-order-cancel"
                                         style={{ borderColor: "#2563eb", color: "#2563eb" }}
@@ -2654,7 +2657,7 @@ const AccountPage = () => {
                                   )}
                                 </button>
                               )}
-                            {selectedRealOrder && selectedRealOrder.payment_status === "awaiting" && (selectedRealOrder.paymentMethod === "zalopay" || selectedRealOrder.paymentMethod === "vnpay") && selectedRealOrder.status !== "canceled" && (
+                            {selectedRealOrder && selectedRealOrder.payment_status !== "captured" && selectedRealOrder.payment_status !== "paid" && (selectedRealOrder.paymentMethod === "zalopay" || selectedRealOrder.paymentMethod === "vnpay") && selectedRealOrder.status !== "canceled" && (
                               <button
                                 className="btn-order-action btn-order-cancel"
                                 style={{
