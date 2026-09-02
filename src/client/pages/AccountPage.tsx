@@ -56,7 +56,7 @@ const formatOrderId = (id: string) => {
 const formatTiktokOrderId = (displayId?: string | number | null, orderId?: string) => {
   if (displayId != null) {
     // Generate an 18-digit ID like Tiktok Shop: prefix 57760810 + pad 10 digits
-    return `57760810${displayId.toString().padStart(10, '0')}`;
+    return `#57760810${displayId.toString().padStart(10, '0')}`;
   }
   return formatOrderId(orderId || '');
 };

@@ -133,6 +133,15 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
 
   const currentStepIndex = steps.findIndex((s) => s.key === customStatus);
 
+  const formatTiktokOrderId = (displayId?: string | number | null, orderId?: string) => {
+    if (displayId != null) {
+      return `#57760810${displayId.toString().padStart(10, '0')}`;
+    }
+    return orderId || '';
+  };
+
+  const formattedOrderCode = formatTiktokOrderId(order.display_id, order.id);
+
   return (
     <Container className="p-6 mb-4">
       <div className="flex items-center justify-between border-b pb-4 mb-4">
@@ -143,14 +152,19 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
           >
             Quy trình đơn hàng
           </Heading>
-          <div className="flex items-center gap-2 mt-1">
-            <Text className="text-xs text-gray-500 font-mono">
-              Mã đơn hàng:{" "}
-              <span className="text-gray-900 font-semibold select-all">
-                {order.id}
-              </span>
+          <div className="flex flex-col gap-1 mt-1">
+            <div className="flex items-center gap-2">
+              <Text className="text-xs text-gray-500 font-mono">
+                Mã đơn hàng:{" "}
+                <span className="text-gray-900 font-bold select-all text-sm">
+                  {formattedOrderCode}
+                </span>
+              </Text>
+              <Copy content={formattedOrderCode} className="text-xs font-mono" />
+            </div>
+            <Text className="text-[11px] text-gray-400 font-mono">
+              ID Hệ thống: {order.id}
             </Text>
-            <Copy content={order.id} className="text-xs font-mono" />
           </div>
         </div>
         <StatusBadge color={colorMap[customStatus] || "grey"}>

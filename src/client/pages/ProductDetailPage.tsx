@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { 
-  Check, 
   ChevronRight
 } from 'lucide-react';
 import { useProduct, useProducts } from '../services/product.service';
@@ -295,8 +294,7 @@ const ProductDetailPage = () => {
   // Video embed url
   const videoUrl = productData.metadata?.video_url || "";
 
-  // Seller Reputation Data
-  const seller = productData.metadata?.seller;
+
 
   const handleAddReview = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -442,97 +440,23 @@ const ProductDetailPage = () => {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--fg-soft, #475569)' }}>
                   <i className="bi bi-shield-check" style={{ fontSize: '1.2rem', color: 'var(--success, #10b981)' }}></i>
-                  <span>Bảo hành 12 tháng</span>
+                  <span>Bảo hành chính hãng 12 tháng</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--fg-soft, #475569)' }}>
                   <i className="bi bi-arrow-return-left" style={{ fontSize: '1.2rem', color: 'var(--info, #0284c7)' }}></i>
-                  <span>Đổi trả 30 ngày</span>
+                  <span>7 ngày đổi trả dễ dàng</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--fg-soft, #475569)' }}>
                   <i className="bi bi-truck" style={{ fontSize: '1.2rem', color: 'var(--accent, #f43f5e)' }}></i>
-                  <span>Giao hàng miễn phí</span>
+                  <span>Giao hàng toàn quốc</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--fg-soft, #475569)' }}>
                   <i className="bi bi-credit-card" style={{ fontSize: '1.2rem', color: 'var(--dark, #0f172a)' }}></i>
-                  <span>Thanh toán an toàn</span>
+                  <span>Thanh toán an toàn & bảo mật</span>
                 </div>
               </div>
 
-              {/* SELLER REPUTATION CARD */}
-              {seller && (
-                <div className="seller-card" style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '1.2rem',
-                  background: 'var(--bg, #f8fafc)',
-                  borderRadius: '12px',
-                  border: '1px solid var(--border, #e2e8f0)',
-                  gap: '1rem',
-                  flexWrap: 'wrap'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    {/* Seller Logo */}
-                    <div style={{
-                      width: '46px',
-                      height: '46px',
-                      borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #4f46e5, #818cf8)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#fff',
-                      fontWeight: 700,
-                      fontSize: '1.1rem',
-                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-                    }}>
-                      {seller.name?.charAt(0) || "S"}
-                    </div>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                        <span style={{ fontWeight: 700, color: 'var(--ink, #0f172a)' }}>{seller.name}</span>
-                        {seller.is_verified && (
-                          <span style={{
-                            background: 'linear-gradient(135deg, #10b981, #059669)',
-                            color: '#fff',
-                            fontSize: '0.65rem',
-                            fontWeight: 700,
-                            padding: '0.15rem 0.4rem',
-                            borderRadius: '999px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '2px',
-                            boxShadow: '0 2px 4px rgb(16 185 129 / 0.2)'
-                          }}>
-                            <Check size={10} strokeWidth={3} /> {seller.badge_text || "Uy Tín"}
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--fg-mute, #64748b)', marginTop: '0.25rem' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#f59e0b', fontWeight: 600 }}>
-                          ★ {seller.rating || "0.0"}
-                        </span>
-                        {seller.review_count && <span>({seller.review_count} đánh giá)</span>}
-                        {seller.response_rate && (
-                          <>
-                            <span>•</span>
-                            <span>Phản hồi {seller.response_rate}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className="btn btn--ghost btn--sm" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                      <i className="bi bi-shop" style={{ marginRight: '4px' }}></i> Xem shop
-                    </button>
-                    <button className="btn btn--indigo btn--sm" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', whiteSpace: 'nowrap', background: 'var(--indigo, #4f46e5)' }}>
-                      <i className="bi bi-chat-dots" style={{ marginRight: '4px' }}></i> Chat ngay
-                    </button>
-                  </div>
-                </div>
-              )}
+
             </div>
 
             {/* RIGHT COLUMN: Product Info & Actions */}
