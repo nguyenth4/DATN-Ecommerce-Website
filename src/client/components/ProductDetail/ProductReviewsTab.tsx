@@ -132,6 +132,15 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
     if (productId) {
       checkEligibility();
     }
+    
+    const handleReviewAdded = () => {
+      checkEligibility();
+    };
+
+    window.addEventListener('review-added', handleReviewAdded);
+    return () => {
+      window.removeEventListener('review-added', handleReviewAdded);
+    };
   }, [productId, isLoggedIn, customerInfo, testUser]);
 
   const handleUserChange = (val: string) => {

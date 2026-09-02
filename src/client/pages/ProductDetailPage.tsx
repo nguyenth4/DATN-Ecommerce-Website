@@ -360,7 +360,8 @@ const ProductDetailPage = () => {
     }
 
     try {
-      const res = await fetch(`http://localhost:9000/store/reviews`, {
+      const MEDUSA_BACKEND_URL = (import.meta as any).env?.VITE_MEDUSA_BACKEND_URL || 'http://localhost:9000';
+      const res = await fetch(`${MEDUSA_BACKEND_URL}/store/reviews`, {
         method: 'POST',
         headers,
         body: JSON.stringify({
@@ -377,6 +378,7 @@ const ProductDetailPage = () => {
         toast.success("Cảm ơn bạn đã đánh giá sản phẩm!");
         setNewReviewComment("");
         fetchReviews(); // Refresh review list
+        window.dispatchEvent(new Event('review-added'));
       } else {
         setErrorMessage(data.message || "Gửi đánh giá thất bại.");
         toast.error(data.message || "Gửi đánh giá thất bại.");
