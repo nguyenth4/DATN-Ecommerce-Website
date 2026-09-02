@@ -1747,13 +1747,6 @@ const AccountPage = () => {
                   <Lock size={18} style={{ marginRight: "12px" }} /> Đổi mật
                   khẩu
                 </div>
-                <div
-                  className={`account-nav-item ${activeTab === "policies" ? "active" : ""}`}
-                  onClick={() => handleTabChange("policies")}
-                >
-                  <CheckCircle size={18} style={{ marginRight: "12px" }} /> Quản
-                  lý chính sách (Seller)
-                </div>
                 <div className="account-nav-divider"></div>
                 <Link
                   to="#"

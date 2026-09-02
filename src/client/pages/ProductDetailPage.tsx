@@ -577,7 +577,7 @@ const ProductDetailPage = () => {
                       : ((activeVariant.stock !== undefined && activeVariant.stock !== null)
                           ? activeVariant.stock
                           : 0);
-                  setQty(q => action === 'inc' ? Math.min(computedStock, q + 1) : Math.max(1, q - 1));
+                  setQty(q => typeof action === 'number' ? Math.min(computedStock, Math.max(1, action)) : (action === 'inc' ? Math.min(computedStock, q + 1) : Math.max(1, q - 1)));
                 }}
               />
             </div>

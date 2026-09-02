@@ -87,16 +87,76 @@ const CheckoutPage = () => {
     if (buyNowItem) return [buyNowItem];
     return getCart();
   });
+  const [stockInfo, setStockInfo] = useState<Record<string, number>>({});
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // Validate stock when cart items change
   useEffect(() => {
-    if (validationErrors.length > 0) {
-      setTimeout(() => {
-        setValidationErrors([]);
-      }, 0);
+    let isMounted = true;
+    const fetchStock = async () => {
+      try {
+        const { productService } = await import("../services/product.service");
+        const stockMap: Record<string, number> = {};
+        const errors: string[] = [];
+
+        const productIds = Array.from(
+          new Set(cartItems.map((item) => item.productId).filter(Boolean))
+        );
+        const products = await Promise.all(
+          productIds.map((pid) =>
+            productService.getProduct(pid).catch(() => null)
+          )
+        );
+
+        cartItems.forEach((item) => {
+          const product = products.find((p: any) => p?.id === item.productId);
+          const variant = product?.variants?.find((v: any) => v.id === item.id);
+
+          let availableStock: number | undefined;
+          if (variant) {
+            availableStock =
+              variant.inventory_quantity !== undefined &&
+              variant.inventory_quantity !== null
+                ? variant.inventory_quantity
+                : variant.stock !== undefined && variant.stock !== null
+                  ? variant.stock
+                  : undefined;
+          } else if (item.stock !== undefined && item.stock !== null) {
+            availableStock = item.stock;
+          }
+
+          if (availableStock !== undefined) {
+            stockMap[item.id] = availableStock;
+            if (availableStock === 0) {
+              errors.push(`Sản phẩm "${item.name}" hiện tại đã hết hàng.`);
+            } else if (item.qty > availableStock) {
+              errors.push(
+                `Sản phẩm "${item.name}" chỉ còn ${availableStock} sản phẩm trong kho (bạn chọn ${item.qty}).`
+              );
+            }
+          }
+        });
+
+        if (isMounted) {
+          setStockInfo(stockMap);
+          setValidationErrors(errors);
+        }
+      } catch (err) {
+        console.error("Failed to validate stock in CheckoutPage", err);
+      }
+    };
+
+    if (cartItems.length > 0) {
+      fetchStock();
+    } else {
+      setStockInfo({});
+      setValidationErrors([]);
     }
-  }, [cartItems, validationErrors.length]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [cartItems]);
 
   const [promoCode, setPromoCode] = useState(
     () => localStorage.getItem("applied_promo_code") || "",
@@ -761,6 +821,20 @@ const CheckoutPage = () => {
       return;
     }
 
+    for (const item of cartItems) {
+      const available = stockInfo[item.id] ?? item.stock;
+      if (available !== undefined && available !== null && item.qty > available) {
+        showToast(
+          available > 0
+            ? `Sản phẩm "${item.name}" không đủ số lượng tồn kho (Còn lại: ${available}, Bạn chọn: ${item.qty}).`
+            : `Sản phẩm "${item.name}" hiện tại đã hết hàng.`,
+          "error"
+        );
+        setIsProcessing(false);
+        return;
+      }
+    }
+
     const orderData = {
       customer: {
         fullName: finalOrderFullName,
@@ -1041,24 +1115,19 @@ const CheckoutPage = () => {
 
       Promise.all([fetchFee(2), fetchFee(5), fetchGhtkFee()])
         .then(([expressData, economyData, ghtkData]) => {
-          if (expressData.data?.total) {
-            setGhnExpressFee(expressData.data.total);
-            if (
-              expressData.data.resolved_district_id &&
-              expressData.data.resolved_ward_code
-            ) {
-              setResolvedGhnDistrictId(expressData.data.resolved_district_id);
-              setResolvedGhnWardCode(expressData.data.resolved_ward_code);
-            }
-          } else {
-            setGhnExpressFee(0);
+          const feeExpress = expressData?.data?.total || economyData?.data?.total || 59000;
+          const feeEconomy = economyData?.data?.total || expressData?.data?.total || 35000;
+
+          setGhnExpressFee(feeExpress);
+          if (
+            expressData?.data?.resolved_district_id &&
+            expressData?.data?.resolved_ward_code
+          ) {
+            setResolvedGhnDistrictId(expressData.data.resolved_district_id);
+            setResolvedGhnWardCode(expressData.data.resolved_ward_code);
           }
 
-          if (economyData.data?.total) {
-            setGhnEconomyFee(economyData.data.total);
-          } else {
-            setGhnEconomyFee(0);
-          }
+          setGhnEconomyFee(feeEconomy);
 
           if (ghtkData?.fee?.fee) {
             setGhtkFee(ghtkData.fee.fee);
@@ -1068,14 +1137,14 @@ const CheckoutPage = () => {
         })
         .catch((error) => {
           console.error("Fee API error:", error);
-          setGhnExpressFee(0);
-          setGhnEconomyFee(0);
+          setGhnExpressFee(59000);
+          setGhnEconomyFee(35000);
         });
     } else {
-      // Default initial prices before location is selected
+      // Default initial display fees before location selection
       setTimeout(() => {
-        setGhnExpressFee(0);
-        setGhnEconomyFee(0);
+        setGhnExpressFee(59000);
+        setGhnEconomyFee(35000);
       }, 0);
     }
   }, [

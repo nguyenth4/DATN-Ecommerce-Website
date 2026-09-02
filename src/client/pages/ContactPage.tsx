@@ -13,7 +13,6 @@ import {
   ChevronDown,
   ChevronUp,
   Send,
-  Building2,
   Headphones
 } from 'lucide-react';
 
@@ -71,6 +70,10 @@ const ContactPage: React.FC = () => {
     }
     if (!message.trim()) {
       setError('Vui lòng nhập nội dung tin nhắn liên hệ.');
+      return;
+    }
+    if (!orderId.trim()) {
+      setError('Vui lòng nhập Mã đơn hàng.');
       return;
     }
 
@@ -222,53 +225,7 @@ const ContactPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* B2B / Wholesale Card */}
-              <div
-                style={{
-                  marginTop: 'var(--s7)',
-                  padding: 'var(--s6)',
-                  background: 'linear-gradient(135deg, var(--indigo), var(--card-purple))',
-                  color: 'var(--paper)',
-                  borderRadius: 'var(--r-lg)',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  boxShadow: '0 8px 24px rgba(79, 70, 229, 0.25)'
-                }}
-              >
-                <div
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    backgroundImage: 'radial-gradient(circle at 80% 20%, rgba(255,255,255,0.18) 0, transparent 40%)',
-                    pointerEvents: 'none',
-                  }}
-                ></div>
-                <div style={{ position: 'relative' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                    <Building2 size={22} color="#ffffff" />
-                    <h3 style={{ color: 'var(--paper)', fontSize: 'var(--text-lg)', margin: 0, fontWeight: 700 }}>
-                      Khách hàng Doanh nghiệp / Bán buôn?
-                    </h3>
-                  </div>
-                  <p
-                    style={{
-                      color: 'rgba(255,255,255,0.88)',
-                      fontSize: 'var(--text-sm)',
-                      lineHeight: 1.6,
-                      marginBottom: 'var(--s4)',
-                    }}
-                  >
-                    Các đơn hàng mua số lượng lớn từ 10 sản phẩm trở lên sẽ nhận mức chiết khấu ưu đãi riêng, hỗ trợ xuất hóa đơn VAT và có chuyên viên chăm sóc riêng.
-                  </p>
-                  <a 
-                    href="mailto:b2b@sprylo.vn?subject=Yêu cầu báo giá bán buôn" 
-                    className="btn btn--paper"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}
-                  >
-                    Gửi yêu cầu B2B <ArrowRight size={16} />
-                  </a>
-                </div>
-              </div>
+
             </div>
 
             {/* RIGHT: CONTACT FORM */}
@@ -390,16 +347,16 @@ const ContactPage: React.FC = () => {
                       <option>Tư vấn chọn mua sản phẩm</option>
                       <option>Đổi trả hoặc hoàn tiền</option>
                       <option>Khiếu nại bảo hành hoặc sự cố kỹ thuật</option>
-                      <option>Yêu cầu báo giá bán buôn / B2B</option>
                       <option>Vấn đề khác</option>
                     </select>
                   </div>
 
                   <div className="field">
-                    <label htmlFor="c-order">Mã đơn hàng (nếu có)</label>
+                    <label htmlFor="c-order">Mã đơn hàng *</label>
                     <input 
                       id="c-order" 
-                      type="text" 
+                      type="text"
+                      required
                       placeholder="Mã đơn hàng vd: #SF2026-8921"
                       value={orderId}
                       onChange={(e) => setOrderId(e.target.value)}

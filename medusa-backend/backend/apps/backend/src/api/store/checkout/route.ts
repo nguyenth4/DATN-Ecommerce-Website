@@ -92,6 +92,54 @@ export const POST = async (
     const db = req.scope.resolve("__pg_connection__")
     const { customer, items, paymentMethod, use_wallet, customer_id, address, shippingMethod, note, shippingFee, promo_code } = req.body as any
     
+    // ─── Validate Inventory Stock ──────────────────────────────────────────────
+    const variantIds = items.map((item: any) => item.id).filter(Boolean)
+    if (variantIds.length > 0) {
+      try {
+        const stockCheckRes = await db.raw(`
+          SELECT 
+            v.id AS variant_id,
+            v.title AS variant_title,
+            p.title AS product_title,
+            COALESCE(v.manage_inventory, true) AS manage_inventory,
+            COALESCE(v.allow_backorder, false) AS allow_backorder,
+            COALESCE(SUM(il.stocked_quantity - COALESCE(il.reserved_quantity, 0)), 0) AS available_quantity,
+            COUNT(il.id) AS has_inventory_level
+          FROM product_variant v
+          JOIN product p ON v.product_id = p.id
+          LEFT JOIN product_variant_inventory_item pvii ON v.id = pvii.variant_id
+          LEFT JOIN inventory_level il ON pvii.inventory_item_id = il.inventory_item_id
+          WHERE v.id = ANY(?)
+          GROUP BY v.id, v.title, p.title, v.manage_inventory, v.allow_backorder
+        `, [variantIds])
+
+        for (const item of items) {
+          const stockInfo = stockCheckRes.rows.find((r: any) => r.variant_id === item.id)
+          if (stockInfo) {
+            const isManaged = stockInfo.manage_inventory !== false
+            const allowBackorder = stockInfo.allow_backorder === true
+            const hasLevels = Number(stockInfo.has_inventory_level) > 0
+
+            if (isManaged && !allowBackorder && hasLevels) {
+              const available = Number(stockInfo.available_quantity)
+              if (item.qty > available) {
+                const productName = stockInfo.product_title || item.name || "Sản phẩm"
+                const variantTitle = stockInfo.variant_title ? ` (${stockInfo.variant_title})` : ""
+                return res.status(400).json({
+                  success: false,
+                  message: available > 0 
+                    ? `Sản phẩm "${productName}${variantTitle}" chỉ còn ${available} sản phẩm trong kho. Bạn đang chọn ${item.qty} sản phẩm.`
+                    : `Sản phẩm "${productName}${variantTitle}" hiện tại đã hết hàng.`
+                })
+              }
+            }
+          }
+        }
+      } catch (stockErr: any) {
+        console.warn("[Checkout Route] Stock verification warning:", stockErr.message)
+      }
+    }
+    
     // Calculate subtotal from items
     const subtotal = items.reduce((acc: number, item: any) => acc + (item.price * item.qty), 0)
 
@@ -242,7 +290,6 @@ export const POST = async (
     const currencyCode = regionRes.rows[0]?.currency_code || "vnd"
 
     // Resolve products and variants dynamically to populate all order line item columns
-    const variantIds = items.map((item: any) => item.id).filter(Boolean)
     let dbItems: any[] = []
     if (variantIds.length > 0) {
       try {
