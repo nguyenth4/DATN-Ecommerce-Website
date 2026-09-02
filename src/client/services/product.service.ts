@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { medusa } from '../../shared/lib/medusa';
 
 export interface ProductQueryParams {
@@ -141,6 +141,7 @@ export const useProducts = (params?: ProductQueryParams) => {
     queryKey: ['store_products', params],
     queryFn: () => productService.getProducts(params),
     staleTime: 1000 * 60 * 5, // 5 minutes cache
+    placeholderData: keepPreviousData,
   });
 };
 
@@ -149,6 +150,7 @@ export const useCategories = () => {
     queryKey: ['store_categories'],
     queryFn: () => productService.getCategories(),
     staleTime: 1000 * 60 * 60, // 1 hour cache
+    placeholderData: keepPreviousData,
   });
 };
 

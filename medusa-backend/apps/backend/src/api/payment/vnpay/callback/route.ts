@@ -91,6 +91,21 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
               console.warn(`[VNPay Callback] Could not mark order as paid:`, updateErr.message);
             }
 
+            // Force update the order status via raw query just in case workflow fails
+            try {
+              const db = req.scope.resolve("__pg_connection__");
+              // Removed forced status=completed update
+              const pcRes = await db.raw(`SELECT payment_collection_id FROM order_payment_collection WHERE order_id = ?`, [medusaOrderId]);
+              if (pcRes.rows.length > 0) {
+                const pcId = pcRes.rows[0].payment_collection_id;
+                await db.raw(`UPDATE payment_collection SET status = 'authorized', captured_amount = amount, raw_captured_amount = raw_amount WHERE id = ?`, [pcId]);
+                await db.raw(`UPDATE payment SET captured_at = NOW() WHERE payment_collection_id = ?`, [pcId]);
+              }
+              console.log(`[VNPay Callback] Forced update payment_collection to 'authorized' for VNPay order ${medusaOrderId}`);
+            } catch (e: any) {
+              console.warn(`[VNPay Callback] Failed to force update payment_status:`, e.message);
+            }
+
             console.log(`[VNPay Callback] Successfully created Medusa order for ${orderId}`);
             pendingData.medusa_created = true; // prevent duplicate creation
 

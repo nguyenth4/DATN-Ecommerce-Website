@@ -160,10 +160,19 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   }
 
   try {
+    const districtId = Number.parseInt(String(to_district_id), 10);
+    const wardCode = to_ward_code?.toString().trim();
+
+    if (!Number.isInteger(districtId) || !wardCode) {
+      return res.status(422).json({
+        error: "Unable to resolve the GHN district and ward for this address",
+      });
+    }
+
     const payload = {
       ...body,
-      to_district_id: parseInt(to_district_id) || 1442,
-      to_ward_code: (to_ward_code || "21211").toString(),
+      to_district_id: districtId,
+      to_ward_code: wardCode,
     };
 
     // Remove storefront-only properties so GHN doesn't complain

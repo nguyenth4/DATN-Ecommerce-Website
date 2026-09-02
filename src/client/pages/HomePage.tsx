@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { getCompareList } from '../utils/compare';
 import { getWishlist } from '../utils/wishlist';
@@ -185,13 +185,17 @@ const HomePage = () => {
     localStorage.setItem('session_id', sessionId);
   }
 
-  // Fetch categories & products
+  // Fetch categories & products once
   const { data: categories = [] } = useCategories();
-  const { data, isLoading } = useProducts({ 
-    limit: 20,
-    ...(selectedCatId ? { category_id: [selectedCatId] } : {})
-  });
-  const products = data?.products || [];
+  const { data, isLoading } = useProducts({ limit: 100 });
+  const allProducts = data?.products || [];
+
+  const products = useMemo(() => {
+    if (!selectedCatId) return allProducts;
+    return allProducts.filter((p: any) =>
+      (p.categories || []).some((c: any) => c.id === selectedCatId)
+    );
+  }, [allProducts, selectedCatId]);
 
   // Lấy dữ liệu gợi ý cho user
   const { data: recommendedProductsData } = useRecommendedProducts(sessionId);
@@ -475,7 +479,7 @@ const HomePage = () => {
           </div>
 
           <div className="products">
-            {isLoading ? (
+            {(isLoading && allProducts.length === 0) ? (
               <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem 0', color: 'var(--fg-mute)' }}>
                 Đang tải sản phẩm...
               </div>

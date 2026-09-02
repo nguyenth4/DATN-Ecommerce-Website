@@ -625,14 +625,6 @@ const CheckoutPage = () => {
 
   // Sync selected saved address's province and ward IDs
   useEffect(() => {
-    console.log("Sync Effect triggered", {
-      addressMode,
-      selectedSavedAddressId,
-      hasCustomer: !!customer,
-      addressesCount: customer?.addresses?.length,
-      provincesCount: provinces.length,
-      wardsCount: wards.length,
-    });
     if (
       addressMode === "saved" &&
       selectedSavedAddressId &&
@@ -641,16 +633,9 @@ const CheckoutPage = () => {
       const selectedAddr = customer.addresses.find(
         (addr) => addr.id === selectedSavedAddressId,
       );
-      console.log("Selected Address found:", selectedAddr);
       if (selectedAddr) {
         const metadata = selectedAddr.metadata || {};
-        console.log("Address Metadata:", metadata);
         if (metadata.province_id && metadata.ward_id) {
-          console.log(
-            "Using metadata IDs directly:",
-            metadata.province_id,
-            metadata.ward_id,
-          );
           // If metadata exists, use it directly
           if (selectedProvince !== metadata.province_id) {
             setSelectedProvince(metadata.province_id);
@@ -662,17 +647,12 @@ const CheckoutPage = () => {
             setSelectedWard(metadata.ward_id);
           }
         } else {
-          console.log("No metadata IDs found. Cleaning names:", {
-            provinceName: selectedAddr.province,
-            wardName: selectedAddr.address_2,
-          });
           // Fallback to name matching
           if (selectedAddr.province && provinces.length > 0) {
             const matchedProv = provinces.find(
               (p) =>
                 cleanName(p.name) === cleanName(selectedAddr.province || ""),
             );
-            console.log("Matched Province from list:", matchedProv);
             if (matchedProv && selectedProvince !== matchedProv.id) {
               setSelectedProvince(matchedProv.id);
             }
@@ -682,7 +662,6 @@ const CheckoutPage = () => {
               (w) =>
                 cleanName(w.name) === cleanName(selectedAddr.address_2 || ""),
             );
-            console.log("Matched Ward from list:", matchedWard);
             if (matchedWard && selectedWard !== matchedWard.id) {
               setSelectedWard(matchedWard.id);
               setSelectedDistrict("default");
@@ -822,8 +801,6 @@ const CheckoutPage = () => {
       promo_code: promoCode || undefined,
     };
 
-    console.log("Placing order...", orderData);
-
     // Save order data for the success page
     const finalPaymentMethod =
       useWallet && walletBalance >= calculatedTotal ? "wallet" : paymentMethod;
@@ -860,7 +837,7 @@ const CheckoutPage = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        showToast(data.message || "Thanh toán thất bại", "error");
+        showToast(data.error || data.message || "Thanh toán thất bại", "error");
         setIsProcessing(false);
         return;
       }
@@ -1000,15 +977,6 @@ const CheckoutPage = () => {
         wardName = wardObj ? wardObj.name : "";
       }
 
-      console.log("Fetching shipping fee for names/IDs:", {
-        selectedProvince,
-        selectedDistrict,
-        selectedWard,
-        provinceName,
-        districtName,
-        wardName,
-      });
-
       const fetchFee = (serviceTypeId: number) => {
         return fetch(`${MEDUSA_BACKEND_URL}/store/ghn/fee`, {
           method: "POST",
@@ -1020,8 +988,8 @@ const CheckoutPage = () => {
             from_district_id: 1442,
             from_ward_code: "21211",
             service_type_id: serviceTypeId,
-            to_district_id: parseInt(selectedDistrict) || 1442,
-            to_ward_code: selectedWard || "21211",
+            to_district_id: parseInt(selectedDistrict),
+            to_ward_code: selectedWard,
             province_name: provinceName,
             ward_name: wardName,
             height: totalHeight || 10,
@@ -1033,7 +1001,13 @@ const CheckoutPage = () => {
             cod_failed_amount: 2000,
             coupon: null,
           }),
-        }).then((res) => res.json());
+        }).then(async (res) => {
+          const data = await res.json();
+          if (!res.ok) {
+            throw new Error(data.message || data.error || "Unable to calculate GHN fee");
+          }
+          return data;
+        });
       };
 
       const fetchGhtkFee = () => {
@@ -1081,10 +1055,6 @@ const CheckoutPage = () => {
           if (ghtkData?.fee?.fee) {
             setGhtkFee(ghtkData.fee.fee);
           } else {
-            console.warn(
-              "Could not get GHTK fee, falling back to default",
-              ghtkData,
-            );
             setGhtkFee(30000);
           }
         })
@@ -1094,10 +1064,6 @@ const CheckoutPage = () => {
           setGhnEconomyFee(0);
         });
     } else {
-      console.log("Skipping shipping fee fetch - missing IDs:", {
-        selectedDistrict,
-        selectedWard,
-      });
       // Default initial prices before location is selected
       setTimeout(() => {
         setGhnExpressFee(0);
@@ -2076,6 +2042,20 @@ const CheckoutPage = () => {
                           <CheckCircle2 size={12} />
                         </div>
                       )}
+                    </div>
+                    <div 
+                      className={`option-card ${paymentMethod === 'wallet' ? 'selected' : ''}`}
+                      onClick={() => setPaymentMethod('wallet')}
+                    >
+                      <div className="option-card-header">
+                        <span className="option-name" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Wallet size={16} /> Ví Sprylo
+                        </span>
+                      </div>
+                      <span className="option-desc">
+                        {isLoggedIn ? `Số dư: ${walletBalance.toLocaleString('vi-VN')}đ` : 'Cần đăng nhập'}
+                      </span>
+                      {paymentMethod === 'wallet' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
                     </div>
                   </div>
                 </motion.div>
