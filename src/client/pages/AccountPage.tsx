@@ -25,6 +25,7 @@ import {
   AlertCircle,
   Loader2,
   Shield,
+  Star,
 } from "lucide-react";
 import { useProducts } from "../services/product.service";
 import { walletService } from "../services/wallet.service";
@@ -2826,7 +2827,7 @@ const AccountPage = () => {
                                     textAlign: "left",
                                   }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "1rem" }}>
-                                      <span style={{ fontSize: "1.3rem" }}>⭐</span>
+                                      <Star size={20} fill="#f59e0b" color="#f59e0b" />
                                       <span style={{ fontWeight: 700, fontSize: "1rem", color: "#5b21b6" }}>
                                         Đánh giá sản phẩm trong đơn hàng
                                       </span>
@@ -2856,28 +2857,86 @@ const AccountPage = () => {
                                             </div>
                                           </div>
 
-                                          {rs.done || isAlreadyReviewed ? (
-                                            <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#059669", fontWeight: 600, fontSize: "0.88rem" }}>
-                                              <i className="bi bi-check-circle-fill" />{" "}Đã gửi đánh giá — cảm ơn bạn!
+                                          {rs.done && !isEditing ? (
+                                            /* SAVED REVIEW DISPLAY VIEW */
+                                            <div style={{
+                                              background: "#f8fafc",
+                                              borderRadius: "10px",
+                                              border: "1px solid #e2e8f0",
+                                              padding: "0.85rem 1rem"
+                                            }}>
+                                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                                  <span style={{ color: "#059669", fontWeight: 700, fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "4px" }}>
+                                                    <i className="bi bi-check-circle-fill" /> Đã gửi đánh giá
+                                                  </span>
+                                                  <span style={{ color: "#f59e0b", fontWeight: 700, fontSize: "0.95rem" }}>
+                                                    {"★".repeat(rs.rating)}{"☆".repeat(5 - rs.rating)} ({rs.rating}/5)
+                                                  </span>
+                                                </div>
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    const currentData = {
+                                                      rating: rs.rating || saved?.rating || 5,
+                                                      comment: rs.comment || saved?.comment || "",
+                                                      loading: false,
+                                                      done: true,
+                                                      isEditing: true,
+                                                      reviewId: rs.reviewId || saved?.reviewId || "",
+                                                      error: ""
+                                                    };
+                                                    setReviewState(prev => ({
+                                                      ...prev,
+                                                      [key]: currentData,
+                                                      [pid]: currentData
+                                                    }));
+                                                  }}
+                                                  style={{
+                                                    background: "#ffffff",
+                                                    border: "1px solid #cbd5e1",
+                                                    borderRadius: "6px",
+                                                    padding: "4px 10px",
+                                                    fontSize: "0.78rem",
+                                                    fontWeight: 600,
+                                                    color: "#475569",
+                                                    cursor: "pointer",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: "4px"
+                                                  }}
+                                                >
+                                                  <i className="bi bi-pencil-square" /> Chỉnh sửa
+                                                </button>
+                                              </div>
+
+                                              <div style={{ fontSize: "0.88rem", color: "#334155", fontStyle: "italic", lineHeight: "1.5" }}>
+                                                "{rs.comment || "Đánh giá xuất sắc!"}"
+                                              </div>
                                             </div>
                                           ) : (
                                             <>
                                               {/* Star Rating */}
                                               <div style={{ display: "flex", gap: "4px", marginBottom: "0.6rem" }}>
-                                                {[1,2,3,4,5].map(star => (
+                                                {[1, 2, 3, 4, 5].map(star => (
                                                   <button
                                                     key={star}
-                                                    onClick={() => setReviewState(prev => ({ ...prev, [pid]: { ...rs, rating: star } }))}
+                                                    type="button"
+                                                    onClick={() => setReviewState(prev => ({
+                                                      ...prev,
+                                                      [key]: { ...rs, rating: star },
+                                                      [pid]: { ...rs, rating: star }
+                                                    }))}
                                                     style={{
                                                       background: "none", border: "none", cursor: "pointer",
-                                                      fontSize: "1.4rem", padding: "0 2px",
+                                                      fontSize: "1.5rem", padding: "0 2px",
                                                       color: star <= rs.rating ? "#f59e0b" : "#d1d5db",
                                                       transition: "color 0.15s",
                                                     }}
                                                   >★</button>
                                                 ))}
-                                                <span style={{ fontSize: "0.8rem", color: "#6b7280", alignSelf: "center", marginLeft: "4px" }}>
-                                                  {["Rất tệ","Tệ","Bình thường","Tốt","Xuất sắc"][rs.rating - 1]}
+                                                <span style={{ fontSize: "0.82rem", color: "#6b7280", alignSelf: "center", marginLeft: "6px", fontWeight: 600 }}>
+                                                  {["Rất tệ", "Tệ", "Bình thường", "Tốt", "Xuất sắc"][rs.rating - 1]}
                                                 </span>
                                               </div>
 

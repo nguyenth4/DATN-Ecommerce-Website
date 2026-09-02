@@ -125,8 +125,12 @@ const ProductsPage = () => {
       list.sort((a, b) => (Number(b.metadata?.rating || 0) - Number(a.metadata?.rating || 0)));
     } else if (sortBy === 'popular') {
       list.sort((a, b) => {
-        const scoreA = (Number(a.metadata?.rating || 5) * 10) + (Number(a.metadata?.view_count || 10));
-        const scoreB = (Number(b.metadata?.rating || 5) * 10) + (Number(b.metadata?.view_count || 10));
+        const scoreA =
+          Number(a.metadata?.rating || 5) * 10 +
+          Number(a.metadata?.view_count || 10);
+        const scoreB =
+          Number(b.metadata?.rating || 5) * 10 +
+          Number(b.metadata?.view_count || 10);
         return scoreB - scoreA;
       });
     } else if (sortBy === 'price_asc') {
@@ -199,8 +203,16 @@ const ProductsPage = () => {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 'var(--s4)' }}>
               <div>
-                <h1>{isSaleFilter ? 'Chương trình Siêu Sale 2/9' : 'Tất cả sản phẩm'}</h1>
-                <p>{isSaleFilter ? 'Danh sách các sản phẩm đang được áp dụng chương trình giảm giá đặc biệt mừng đại lễ Quốc Khánh 2/9.' : 'Khám phá bộ sưu tập điện thoại công nghệ mới nhất.'}</p>
+                <h1>
+                  {isSaleFilter
+                    ? "Chương trình Siêu Sale 2/9"
+                    : "Tất cả sản phẩm"}
+                </h1>
+                <p>
+                  {isSaleFilter
+                    ? "Danh sách các sản phẩm đang được áp dụng chương trình giảm giá đặc biệt mừng đại lễ Quốc Khánh 2/9."
+                    : "Khám phá bộ sưu tập công nghệ mới nhất từ điện thoại, máy tính đến phụ kiện âm thanh."}
+                </p>
               </div>
 
               {/* Search Implementation */}
