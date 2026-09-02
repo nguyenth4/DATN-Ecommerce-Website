@@ -965,10 +965,26 @@ const AccountPage = () => {
   };
 
   // Return is allowed when order is delivered and no return is currently requested
+  // and it has been 7 days or less since delivery.
   const canReturnOrder = (order: any) => {
     if (order.canceled || order.status === 'canceled') return false;
     const step = getDynamicStatusStep(order);
-    return step === 4 && !order.metadata?.return_requested;
+    
+    if (step !== 4 || order.metadata?.return_requested) return false;
+
+    // Check if 7 days have passed since delivery
+    const deliveredDateStr = order.metadata?.delivered_at || order.updated_at;
+    if (deliveredDateStr) {
+      const deliveredDate = new Date(deliveredDateStr);
+      const now = new Date();
+      const diffTime = now.getTime() - deliveredDate.getTime();
+      const diffDays = diffTime / (1000 * 60 * 60 * 24);
+      if (diffDays > 7) {
+        return false;
+      }
+    }
+
+    return true;
   };
 
   const [returnModalOrderId, setReturnModalOrderId] = useState<string | null>(null);
