@@ -1361,7 +1361,11 @@ const AccountPage = () => {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reason, refund_info: refundInfo }),
+          body: JSON.stringify({
+            reason,
+            refund_info: refundInfo,
+            refund_method: refundMethod,
+          }),
         },
       );
       if (response.ok) {
@@ -1374,6 +1378,7 @@ const AccountPage = () => {
                   return_requested: true,
                   return_reason: reason,
                   refund_info: refundInfo,
+                  refund_method: refundMethod,
                 },
               }
             : order,
@@ -4352,7 +4357,7 @@ const AccountPage = () => {
                                 isClearable
                                 isSearchable
                                 styles={{
-                                  control: (base) => ({
+                                  control: (base: Record<string, unknown>) => ({
                                     ...base,
                                     borderRadius: '6px',
                                     borderColor: '#e5e7eb',

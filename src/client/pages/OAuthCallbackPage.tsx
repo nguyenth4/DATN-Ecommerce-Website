@@ -92,7 +92,7 @@ const OAuthCallbackPage = () => {
         // 1. Lưu token tạm
         saveToken(activeToken!);
 
-        // ── Lấy thông tin từ Custom Endpoint /custom/auth-identity ─────────
+        // ── Lấy thông tin từ Custom Endpoint /store/custom/auth-identity ───
         let email = '';
         let firstName = '';
         let lastName = '';
@@ -100,7 +100,7 @@ const OAuthCallbackPage = () => {
         let customer: any = null;
 
         try {
-          const authIdentityRes = await fetch(`${MEDUSA_BACKEND_URL}/custom/auth-identity`, {
+          const authIdentityRes = await fetch(`${MEDUSA_BACKEND_URL}/store/custom/auth-identity`, {
             headers: {
               'x-publishable-api-key': PUBLISHABLE_KEY,
               Authorization: `Bearer ${activeToken}`,

@@ -87,6 +87,36 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
     }
   };
 
+  const handleApproveReturn = async () => {
+    if (!window.confirm("Duyệt yêu cầu trả hàng và xử lý hoàn tiền?")) return;
+
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/admin/orders/${order.id}/approve-return`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result.message || "Không thể duyệt yêu cầu trả hàng.");
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["order", order.id] });
+      window.alert(
+        result.refundMethod === "wallet"
+          ? `Đã hoàn tiền vào Ví điện tử Sprylo.${result.emailSent ? " Email thông báo đã được gửi." : " Email chưa gửi được; kiểm tra cấu hình SendGrid."}`
+          : `Đã duyệt chuyển khoản. Hãy thực hiện chuyển tiền theo thông tin khách cung cấp.${result.emailSent ? " Email thông báo đã được gửi." : " Email chưa gửi được; kiểm tra cấu hình SendGrid."}`,
+      );
+    } catch (error: any) {
+      console.error(error);
+      setError(error?.message || "Không thể duyệt yêu cầu trả hàng.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const meta = (order.metadata || {}) as any;
   const dateStr = meta.confirmed_at
     ? new Date(meta.confirmed_at as string).toLocaleString("vi-VN")
@@ -228,6 +258,36 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
               </Text>
             </div>
           )}
+
+          {meta.return_requested && (
+            <div className="mt-3 bg-orange-50 p-3 rounded-lg border border-orange-200">
+              <Text className="text-sm font-semibold text-orange-800">
+                Yêu cầu trả hàng đang chờ duyệt
+              </Text>
+              <Text className="text-xs text-gray-700 mt-1">
+                Lý do: {meta.return_reason || "Không có"}
+              </Text>
+              <Text className="text-xs text-gray-700 mt-1">
+                Hoàn tiền: {meta.refund_method === "wallet" ? "Ví điện tử Sprylo" : "Chuyển khoản ngân hàng"}
+              </Text>
+              {meta.refund_info && (
+                <Text className="text-xs text-gray-700 mt-1">
+                  Thông tin nhận tiền: {meta.refund_info}
+                </Text>
+              )}
+            </div>
+          )}
+
+          {meta.refund_id && (
+            <div className="mt-3 bg-green-50 p-3 rounded-lg border border-green-200">
+              <Text className="text-sm font-semibold text-green-800">
+                Đã duyệt hoàn tiền: {Number(meta.refund_amount || 0).toLocaleString("vi-VN")} đ
+              </Text>
+              <Text className="text-xs text-gray-700 mt-1">
+                Phương thức: {meta.refund_method === "wallet" ? "Ví điện tử Sprylo" : "Chuyển khoản ngân hàng"}
+              </Text>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col justify-end gap-2 items-start md:items-end">
@@ -239,6 +299,11 @@ const CustomOrderWidget = ({ data }: DetailWidgetProps<AdminOrder>) => {
           </Heading>
 
           <div className="flex flex-wrap gap-2 justify-end w-full">
+            {meta.return_requested && (
+              <Button variant="primary" onClick={handleApproveReturn} disabled={loading}>
+                {loading ? "Đang xử lý..." : "Duyệt trả hàng & hoàn tiền"}
+              </Button>
+            )}
             {customStatus === "pending" && (
               <>
                 <Button
