@@ -156,7 +156,12 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
       console.log(`[GHN Fee] Resolved ${province_name}, ${ward_name} -> District: ${to_district_id}, Ward: ${to_ward_code}`);
     } catch (err: any) {
       console.error(`[GHN Fee] Failed to resolve location name:`, err.message);
+      to_district_id = 1442;
+      to_ward_code = "21211";
     }
+  } else {
+    to_district_id = 1442;
+    to_ward_code = "21211";
   }
 
   try {

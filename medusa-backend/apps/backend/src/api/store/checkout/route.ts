@@ -161,7 +161,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
             const txId = `tx_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
             await db.raw(`
               INSERT INTO wallet_transaction (id, wallet_id, amount, raw_amount, type, description)
-              VALUES (?, ?, ?, jsonb_build_object('value', ?::text, 'precision', 20), 'deduction', ?)
+              VALUES (?, ?, ?, jsonb_build_object('value', ?::text, 'precision', 20), 'payment', ?)
             `, [txId, wallet.id, amount, amount.toString(), `Thanh toán đơn hàng ${mockOrderId}`]);
             console.log(`[Checkout API] Wallet deducted successfully.`);
           } else {
@@ -226,6 +226,20 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
             }
           } catch (updateErr: any) {
             console.warn(`[Checkout API] Could not mark order as paid for ${medusaOrderId}:`, updateErr.message);
+          }
+
+          // Force update the order payment collection via raw query just in case workflow fails
+          try {
+            const db = req.scope.resolve("__pg_connection__");
+            const pcRes = await db.raw(`SELECT payment_collection_id FROM order_payment_collection WHERE order_id = ?`, [medusaOrderId]);
+            if (pcRes.rows.length > 0) {
+              const pcId = pcRes.rows[0].payment_collection_id;
+              await db.raw(`UPDATE payment_collection SET status = 'authorized', captured_amount = amount, raw_captured_amount = raw_amount WHERE id = ?`, [pcId]);
+              await db.raw(`UPDATE payment SET captured_at = NOW() WHERE payment_collection_id = ?`, [pcId]);
+            }
+            console.log(`[Checkout API] Forced update payment_collection to 'authorized' for Wallet order ${medusaOrderId}`);
+          } catch (e: any) {
+            console.warn(`[Checkout API] Failed to force update payment_status:`, e.message);
           }
         }
         

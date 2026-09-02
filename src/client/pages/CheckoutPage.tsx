@@ -141,7 +141,7 @@ const CheckoutPage = () => {
   const [isGuestCheckout, setIsGuestCheckout] = useState(!!location.state?.buyNowItem);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [customer, setCustomer] = useState<MedusaCustomer | null>(null);
-  const [useWallet, setUseWallet] = useState(false);
+
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [authTab, setAuthTab] = useState<'login' | 'register' | 'guest'>('login');
@@ -663,13 +663,19 @@ const CheckoutPage = () => {
 
     const calculatedTotal = Math.max(0, subtotal + shippingFee - promoDiscount);
 
+    if (paymentMethod === 'wallet' && walletBalance < calculatedTotal) {
+      showToast('Số dư ví không đủ để thanh toán đơn hàng này.', 'error');
+      setIsProcessing(false);
+      return;
+    }
+
     const orderData = {
         customer: {
             fullName: finalOrderFullName,
             phoneNumber: finalOrderPhone,
             email: isLoggedIn ? (customer?.email || email) : email,
         },
-        paymentMethod: (useWallet && walletBalance >= calculatedTotal) ? 'wallet' : paymentMethod,
+        paymentMethod,
         shippingMethod,
         shippingFee,
         address: finalOrderAddress,
@@ -689,7 +695,7 @@ const CheckoutPage = () => {
         setAsDefault: addressMode === 'new' ? setAsDefault : false,
         note,
         items: cartItems,
-        use_wallet: useWallet,
+        use_wallet: paymentMethod === 'wallet',
         customer_id: customer?.id || undefined,
         totalAmount: calculatedTotal,
         promo_code: promoCode || undefined
@@ -698,8 +704,8 @@ const CheckoutPage = () => {
     console.log("Placing order...", orderData);
     
     // Save order data for the success page
-    const finalPaymentMethod = (useWallet && walletBalance >= calculatedTotal) ? 'wallet' : paymentMethod;
-    const walletDeductedVal = useWallet && walletBalance > 0 ? (walletBalance >= calculatedTotal ? calculatedTotal : walletBalance) : 0;
+    const finalPaymentMethod = paymentMethod;
+    const walletDeductedVal = paymentMethod === 'wallet' && walletBalance > 0 ? (walletBalance >= calculatedTotal ? calculatedTotal : walletBalance) : 0;
     
     localStorage.setItem('latest_order', JSON.stringify({
       ...orderData,
@@ -721,7 +727,7 @@ const CheckoutPage = () => {
       const data = await response.json();
       
       if (!response.ok) {
-        showToast(data.message || 'Thanh toán thất bại', 'error');
+        showToast(data.error || data.message || 'Thanh toán thất bại', 'error');
         setIsProcessing(false);
         return;
       }
@@ -931,7 +937,7 @@ const CheckoutPage = () => {
   ]);
 
   const total = Math.max(0, subtotal + shippingFee - promoDiscount);
-  const walletDeduction = useWallet ? Math.min(walletBalance, total) : 0;
+  const walletDeduction = paymentMethod === 'wallet' ? Math.min(walletBalance, total) : 0;
   const remainingTotal = total - walletDeduction;
 
   if (cartItems.length === 0) {
@@ -1452,32 +1458,6 @@ const CheckoutPage = () => {
                   </div>
                 </motion.div>
 
-                {isLoggedIn && walletBalance > 0 && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="checkout-section wallet-section"
-                    style={{ border: '1px solid #c7d2fe', background: 'linear-gradient(135deg, #f5f3ff 0%, #e0e7ff 100%)' }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ background: 'var(--checkout-accent)', color: 'white', padding: '10px', borderRadius: '10px' }}>
-                          <Wallet size={20} />
-                        </div>
-                        <div>
-                          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--checkout-text)' }}>Sử dụng Ví Sprylo</h3>
-                          <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--checkout-text-soft)' }}>Số dư hiện tại: <strong style={{ color: 'var(--checkout-accent)' }}>{walletBalance.toLocaleString('vi-VN')}đ</strong></p>
-                        </div>
-                      </div>
-                      <div 
-                        className={`custom-toggle ${useWallet ? 'active' : ''}`}
-                        onClick={() => setUseWallet(!useWallet)}
-                      >
-                        <div className="toggle-knob" />
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
 
                 <motion.div 
                   initial={{ opacity: 0, y: 20 }}
@@ -1519,7 +1499,7 @@ const CheckoutPage = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
                   className="checkout-section"
-                  style={{ opacity: (useWallet && walletBalance >= (subtotal + shippingFee)) ? 0.5 : 1, pointerEvents: (useWallet && walletBalance >= (subtotal + shippingFee)) ? 'none' : 'auto' }}
+                  style={{ opacity: 1 }}
                 >
                   <h2 className="section-title">
                     <CreditCard size={22} /> Phương thức thanh toán
@@ -1554,6 +1534,20 @@ const CheckoutPage = () => {
                       </div>
                       <span className="option-desc">Thanh toán khi nhận hàng</span>
                       {paymentMethod === 'cod' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
+                    </div>
+                    <div 
+                      className={`option-card ${paymentMethod === 'wallet' ? 'selected' : ''}`}
+                      onClick={() => setPaymentMethod('wallet')}
+                    >
+                      <div className="option-card-header">
+                        <span className="option-name" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Wallet size={16} /> Ví Sprylo
+                        </span>
+                      </div>
+                      <span className="option-desc">
+                        {isLoggedIn ? `Số dư: ${walletBalance.toLocaleString('vi-VN')}đ` : 'Cần đăng nhập'}
+                      </span>
+                      {paymentMethod === 'wallet' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
                     </div>
                   </div>
                 </motion.div>
@@ -1600,7 +1594,7 @@ const CheckoutPage = () => {
                 )}
               </div>
 
-              {useWallet && walletDeduction > 0 && (
+              {paymentMethod === 'wallet' && walletDeduction > 0 && (
                 <div className="summary-row" style={{ color: '#a5f3fc', fontWeight: 600 }}>
                   <span>Khấu trừ từ Ví Sprylo</span>
                   <span>-{walletDeduction.toLocaleString('vi-VN')}đ</span>
@@ -1619,7 +1613,7 @@ const CheckoutPage = () => {
                 <span>{remainingTotal.toLocaleString('vi-VN')}đ</span>
               </div>
 
-              {remainingTotal === 0 && useWallet && (
+              {remainingTotal === 0 && paymentMethod === 'wallet' && (
                 <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '0.85rem', color: '#a5f3fc', fontWeight: 700 }}>
                   🎉 Thanh toán toàn bộ bằng Ví Sprylo!
                 </div>

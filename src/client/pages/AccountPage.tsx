@@ -2413,9 +2413,9 @@ const AccountPage = () => {
                 )}
 
                 {(() => {
-                  const modalOrder = realOrders.find(o => o.orderId === returnModalOrderId);
-                  const pMethod = modalOrder?.metadata?.payment_method;
-                  const isOnlinePayment = pMethod === 'zalopay' || pMethod === 'vnpay';
+
+
+
                   
                   return (
                     <motion.div 
