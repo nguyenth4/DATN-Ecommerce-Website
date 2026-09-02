@@ -59,7 +59,7 @@ const CartPage = () => {
               ? variant.inventory_quantity 
               : ((variant.stock !== undefined && variant.stock !== null) ? variant.stock : 10);
           } else {
-            stockMap[item.id] = 10;
+            stockMap[item.id] = 0; // Mark deleted/missing variants as out of stock
           }
         });
         

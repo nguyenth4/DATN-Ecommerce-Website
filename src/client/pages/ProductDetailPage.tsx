@@ -32,10 +32,12 @@ const ProductDetailPage = () => {
   const [activeImage, setActiveImage] = useState("");
   const [isDescExpanded, setIsDescExpanded] = useState(false);
   const [reviews, setReviews] = useState<any[]>([]);
-  const [newReviewName, setNewReviewName] = useState("");
-  const [newReviewRating, setNewReviewRating] = useState(5);
-  const [newReviewComment, setNewReviewComment] = useState("");
-  const [errorMessage, setErrorMessage] = useState("");
+  const [newReviewName, setNewReviewName] = useState<string>("");
+  const [newReviewRating, setNewReviewRating] = useState<number>(5);
+  const [newReviewComment, setNewReviewComment] = useState<string>("");
+  const [reviewImageBase64, setReviewImageBase64] = useState<string>("");
+  const [reviewMimeType, setReviewMimeType] = useState<string>("");
+  const [reviewErrorMessage, setErrorMessage] = useState<string>("");
   const [successMessage, setSuccessMessage] = useState("");
 
   const fetchReviews = async () => {
@@ -367,7 +369,9 @@ const ProductDetailPage = () => {
         body: JSON.stringify({
           product_id: id,
           rating: newReviewRating,
-          comment: newReviewComment
+          comment: newReviewComment,
+          image_base64: reviewImageBase64,
+          mime_type: reviewMimeType
         })
       });
 
@@ -377,6 +381,8 @@ const ProductDetailPage = () => {
         setSuccessMessage("Gửi đánh giá của bạn thành công!");
         toast.success("Cảm ơn bạn đã đánh giá sản phẩm!");
         setNewReviewComment("");
+        setReviewImageBase64("");
+        setReviewMimeType("");
         fetchReviews(); // Refresh review list
         window.dispatchEvent(new Event('review-added'));
       } else {
@@ -661,8 +667,12 @@ const ProductDetailPage = () => {
               setNewReviewRating={setNewReviewRating}
               setNewReviewComment={setNewReviewComment}
               onAddReview={handleAddReview}
-              errorMessage={errorMessage}
+              errorMessage={reviewErrorMessage}
               successMessage={successMessage}
+              imageBase64={reviewImageBase64}
+              mimeType={reviewMimeType}
+              setImageBase64={setReviewImageBase64}
+              setMimeType={setReviewMimeType}
             />
           </section>
 
