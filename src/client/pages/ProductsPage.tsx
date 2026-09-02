@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { addToCart, isLoggedIn } from '../utils/cart';
 import { getCompareList, toggleCompareProduct } from '../utils/compare';
@@ -38,9 +38,6 @@ const ProductsPage = () => {
     setSelectedCats(catFromUrl);
   }, [searchParams.get('category_id')]);
 
-
-
-  // Listen for compare list updates
   // Listen for compare list & wishlist updates
   useEffect(() => {
     const handleUpdate = () => {
@@ -67,25 +64,95 @@ const ProductsPage = () => {
         return params;
       });
       setPage(1);
-    }, 500);
+    }, 300);
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Fetch data from Medusa
+  // Fetch full data list from Medusa once
   const { data: productsData, isLoading: isLoadingProducts } = useProducts({
-    limit: 100,
-    q: debouncedSearch || undefined,
-    category_id: selectedCats.length > 0 ? selectedCats : undefined,
-    order: ['popular', 'views', 'sales', 'rating', 'price_asc', 'price_desc', 'createdAt'].includes(sortBy) ? undefined : sortBy
+    limit: 100
   });
 
   const { data: categoriesData } = useCategories();
 
-  const products = productsData?.products || [];
-  const totalCount = products.length;
+  const allProducts = productsData?.products || [];
   const categories = (categoriesData || []).filter((c: any) =>
     (c.name || '').toLowerCase() !== 'điện thoại'
   );
+
+  // Filter & Sort instantly in memory (0ms delay)
+  const filteredAndSortedProducts = useMemo(() => {
+    let list = [...allProducts];
+
+    // Filter by Category
+    if (selectedCats.length > 0) {
+      list = list.filter((p: any) => {
+        const catIds = (p.categories || []).map((c: any) => c.id);
+        return selectedCats.some((catId) => catIds.includes(catId));
+      });
+    }
+
+    // Filter by Sale 2/9
+    if (isSaleFilter) {
+      list = list.filter((p: any) => {
+        const variant = p.variants?.[0];
+        if (variant?.calculated_price) {
+          const pPrice = Number(variant.calculated_price.calculated_amount ?? 0);
+          const origAmt = Number(variant.calculated_price.original_amount ?? pPrice);
+          return origAmt > pPrice;
+        }
+        const saleP = variant?.prices?.find((pr: any) => pr.price_list_id);
+        return Boolean(saleP);
+      });
+    }
+
+    // Filter by Search
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase().trim();
+      list = list.filter((p: any) => {
+        const titleMatch = (p.title || '').toLowerCase().includes(q);
+        const catMatch = (p.categories || []).some((c: any) => (c.name || '').toLowerCase().includes(q));
+        return titleMatch || catMatch;
+      });
+    }
+
+    // Sorting
+    if (sortBy === 'views') {
+      list.sort((a, b) => (Number(b.metadata?.view_count || b.metadata?.views || 0) - Number(a.metadata?.view_count || a.metadata?.views || 0)));
+    } else if (sortBy === 'sales') {
+      list.sort((a, b) => (Number(b.metadata?.sale_count || b.metadata?.sales || 0) - Number(a.metadata?.sale_count || a.metadata?.sales || 0)));
+    } else if (sortBy === 'rating') {
+      list.sort((a, b) => (Number(b.metadata?.rating || 0) - Number(a.metadata?.rating || 0)));
+    } else if (sortBy === 'popular') {
+      list.sort((a, b) => {
+        const scoreA = (Number(a.metadata?.rating || 5) * 10) + (Number(a.metadata?.view_count || 10));
+        const scoreB = (Number(b.metadata?.rating || 5) * 10) + (Number(b.metadata?.view_count || 10));
+        return scoreB - scoreA;
+      });
+    } else if (sortBy === 'price_asc') {
+      list.sort((a, b) => {
+        const priceA = a.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount || a.variants?.[0]?.prices?.[0]?.amount || a.variants?.[0]?.price || a.price || 0;
+        const priceB = b.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount || b.variants?.[0]?.prices?.[0]?.amount || b.variants?.[0]?.price || b.price || 0;
+        return priceA - priceB;
+      });
+    } else if (sortBy === 'price_desc') {
+      list.sort((a, b) => {
+        const priceA = a.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount || a.variants?.[0]?.prices?.[0]?.amount || a.variants?.[0]?.price || a.price || 0;
+        const priceB = b.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount || b.variants?.[0]?.prices?.[0]?.amount || b.variants?.[0]?.price || b.price || 0;
+        return priceB - priceA;
+      });
+    } else if (sortBy === 'createdAt') {
+      list.sort((a, b) => {
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return dateB - dateA;
+      });
+    }
+
+    return list;
+  }, [allProducts, selectedCats, isSaleFilter, debouncedSearch, sortBy]);
+
+  const totalCount = filteredAndSortedProducts.length;
 
   const getProductImage = (p: any) => {
     return p.thumbnail || (p.images?.[0]?.url) || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80';
@@ -287,65 +354,16 @@ const ProductsPage = () => {
                   </div>
                 </div>
 
-                {isLoadingProducts ? (
+                {(isLoadingProducts && allProducts.length === 0) ? (
                   <div className="shop-grid">
                     {[...Array(12)].map((_, i) => (
                       <ProductCardSkeleton key={i} />
                     ))}
                   </div>
-                ) : products.length > 0 ? (
+                ) : filteredAndSortedProducts.length > 0 ? (
                   <div className="shop-grid">
                     {(() => {
-                      let sortedProducts = [...products];
-
-                      if (isSaleFilter) {
-                        sortedProducts = sortedProducts.filter((p: any) => {
-                          const variant = p.variants?.[0];
-                          if (variant?.calculated_price) {
-                            const pPrice = Number(variant.calculated_price.calculated_amount ?? 0);
-                            const origAmt = Number(variant.calculated_price.original_amount ?? pPrice);
-                            return origAmt > pPrice;
-                          }
-                          const saleP = variant?.prices?.find((pr: any) => pr.price_list_id);
-                          return Boolean(saleP);
-                        });
-                      }
-
-                      // Client-side sorting for custom options
-                      if (sortBy === 'views') {
-                        sortedProducts.sort((a, b) => (Number(b.metadata?.view_count || b.metadata?.views || 0) - Number(a.metadata?.view_count || a.metadata?.views || 0)));
-                      } else if (sortBy === 'sales') {
-                        sortedProducts.sort((a, b) => (Number(b.metadata?.sale_count || b.metadata?.sales || 0) - Number(a.metadata?.sale_count || a.metadata?.sales || 0)));
-                      } else if (sortBy === 'rating') {
-                        sortedProducts.sort((a, b) => (Number(b.metadata?.rating || 0) - Number(a.metadata?.rating || 0)));
-                      } else if (sortBy === 'popular') {
-                        // Default popular sorting (combined score or just rating)
-                        sortedProducts.sort((a, b) => {
-                          const scoreA = (Number(a.metadata?.rating || 5) * 10) + (Number(a.metadata?.view_count || 10));
-                          const scoreB = (Number(b.metadata?.rating || 5) * 10) + (Number(b.metadata?.view_count || 10));
-                          return scoreB - scoreA;
-                        });
-                      } else if (sortBy === 'price_asc') {
-                        sortedProducts.sort((a, b) => {
-                          const priceA = a.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount || a.variants?.[0]?.prices?.[0]?.amount || a.variants?.[0]?.price || a.price || 0;
-                          const priceB = b.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount || b.variants?.[0]?.prices?.[0]?.amount || b.variants?.[0]?.price || b.price || 0;
-                          return priceA - priceB;
-                        });
-                      } else if (sortBy === 'price_desc') {
-                        sortedProducts.sort((a, b) => {
-                          const priceA = a.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount || a.variants?.[0]?.prices?.[0]?.amount || a.variants?.[0]?.price || a.price || 0;
-                          const priceB = b.variants?.[0]?.prices?.find((pr: any) => pr.currency_code === 'vnd')?.amount || b.variants?.[0]?.prices?.[0]?.amount || b.variants?.[0]?.price || b.price || 0;
-                          return priceB - priceA;
-                        });
-                      } else if (sortBy === 'createdAt') {
-                        sortedProducts.sort((a, b) => {
-                          const dateA = new Date(a.created_at || 0).getTime();
-                          const dateB = new Date(b.created_at || 0).getTime();
-                          return dateB - dateA;
-                        });
-                      }
-
-                      const paginatedProducts = sortedProducts.slice((page - 1) * limit, page * limit);
+                      const paginatedProducts = filteredAndSortedProducts.slice((page - 1) * limit, page * limit);
 
                       return paginatedProducts.map((p: any) => {
                         const variant = p.variants?.[0];
