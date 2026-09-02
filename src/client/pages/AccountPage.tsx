@@ -283,8 +283,6 @@ const AccountPage = () => {
       if (response.ok) {
         const { orders } = await response.json();
         if (orders && Array.isArray(orders)) {
-          const localOrders = getRealOrders();
-
           const remoteMapped = orders.map((o: any) => {
             const items = (o.items || []).map((item: any) => ({
               name: item.title || item.product_title || "Sản phẩm",
@@ -1363,8 +1361,8 @@ const AccountPage = () => {
           body: JSON.stringify({ 
             items: order?.items || [],
             cancelReason: reason,
-            refundDestination: cancelRefundDestination,
-            refundInfo: cancelRefundInfo
+            refundDestination: refundDest ?? cancelRefundDestination,
+            refundInfo: refundInfo ?? cancelRefundInfo
           }),
         },
       );
