@@ -129,7 +129,7 @@ const AccountPage = () => {
 
   const handleSubmitReview = async (
     productId: string,
-    productName: string,
+    _productName: string,
     orderId?: string
   ) => {
     const state = reviewState[productId] || { rating: 5, comment: "", loading: false, done: false, error: "" };
@@ -363,6 +363,11 @@ const AccountPage = () => {
   };
 
   // Profile form state
+
+  const [refundDestination, setRefundDestination] = useState<"wallet" | "bank_transfer">("wallet");
+  const [showTopupModal, setShowTopupModal] = useState(false);
+  const [topupAmount, setTopupAmount] = useState<number | string>(100000);
+  const [topupLoading, setTopupLoading] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -1022,6 +1027,34 @@ const AccountPage = () => {
     }
   }, [refundBankName, refundAccountNumber, refundMethod]);
 
+  const handleTopupSubmit = async () => {
+    if (!topupAmount || isNaN(Number(topupAmount)) || Number(topupAmount) < 10000) {
+      alert("Vui lòng nhập số tiền hợp lệ (tối thiểu 10.000đ).");
+      return;
+    }
+    
+    setTopupLoading(true);
+    try {
+      const res = await authService.authFetch(`${MEDUSA_BACKEND_URL}/store/wallet/topup/init`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: Number(topupAmount), customer_id: customerId })
+      });
+      
+      const data = await res.json();
+      if (res.ok && data.paymentUrl) {
+        window.location.href = data.paymentUrl;
+      } else {
+        alert(data.message || data.error || "Lỗi tạo giao dịch nạp tiền.");
+      }
+    } catch (e: any) {
+      console.error(e);
+      alert("Lỗi mạng khi gọi API nạp tiền.");
+    } finally {
+      setTopupLoading(false);
+    }
+  };
+
   const getCancelBlockedReason = (order: any) => {
     if (order.canceled || order.status === "canceled") return null;
     const step = getDynamicStatusStep(order);
@@ -1362,6 +1395,7 @@ const AccountPage = () => {
     orderId: string,
     reason: string,
     refundInfo: string = "",
+    refundDest: string = "wallet"
   ) => {
     setReturningOrderId(orderId);
     try {
@@ -1374,6 +1408,7 @@ const AccountPage = () => {
             reason,
             refund_info: refundInfo,
             refund_method: refundMethod,
+            refund_destination: refundDest,
           }),
         },
       );
@@ -2126,13 +2161,12 @@ const AccountPage = () => {
                                   color: "var(--ink)",
                                 }}
                               >
-                                <span>{selectedOrder.id}</span>
+                                <span>{formatTiktokOrderId(selectedOrder.display_id, selectedOrder.id)}</span>
                                 <button
                                   onClick={() => {
-                                    navigator.clipboard.writeText(
-                                      selectedOrder.id,
-                                    );
-                                    setCopiedOrderId(selectedOrder.id);
+                                    const formattedId = formatTiktokOrderId(selectedOrder.display_id, selectedOrder.id).replace('#', '');
+                                    navigator.clipboard.writeText(formattedId);
+                                    setCopiedOrderId(formattedId);
                                     setTimeout(
                                       () => setCopiedOrderId(null),
                                       2000,
@@ -2144,7 +2178,7 @@ const AccountPage = () => {
                                     padding: "0 2px",
                                     cursor: "pointer",
                                     color:
-                                      copiedOrderId === selectedOrder.id
+                                      copiedOrderId === formatTiktokOrderId(selectedOrder.display_id, selectedOrder.id).replace('#', '')
                                         ? "#10b981"
                                         : "var(--text-muted)",
                                     fontSize: "0.85rem",
@@ -2157,7 +2191,7 @@ const AccountPage = () => {
                                 >
                                   <i
                                     className={
-                                      copiedOrderId === selectedOrder.id
+                                      copiedOrderId === formatTiktokOrderId(selectedOrder.display_id, selectedOrder.id).replace('#', '')
                                         ? "bi bi-clipboard-check-fill"
                                         : "bi bi-clipboard"
                                     }
@@ -3176,13 +3210,9 @@ const AccountPage = () => {
                       Ví điện tử Sprylo
                       <button
                         className="btn btn-sm btn--ghost"
-                        onClick={() =>
-                          walletService
-                            .topupMock(5000000, customerId || "cus_demo_123")
-                            .then((res) => setWalletData(res.wallet))
-                        }
+                        onClick={() => setShowTopupModal(true)}
                       >
-                        Nạp 5.000.000đ (Demo)
+                        Nạp tiền vào ví
                       </button>
                     </div>
 
@@ -4703,6 +4733,7 @@ const AccountPage = () => {
                       compiledRefundInfo = `Ngân hàng: ${refundBankName.trim()} - STK: ${refundAccountNumber.trim()} - Chủ thẻ: ${refundAccountName.trim()}`;
                     }
 
+                    if (!returnModalOrderId) return;
                     handleReturnOrder(returnModalOrderId, finalReason, compiledRefundInfo, refundDestination);
                   }}
                   disabled={returningOrderId === returnModalOrderId}

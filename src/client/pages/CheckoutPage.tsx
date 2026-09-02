@@ -157,6 +157,7 @@ const CheckoutPage = () => {
   const [customer, setCustomer] = useState<MedusaCustomer | null>(null);
 
   const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [useWallet, setUseWallet] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [authTab, setAuthTab] = useState<"login" | "register" | "guest">(
     "login",

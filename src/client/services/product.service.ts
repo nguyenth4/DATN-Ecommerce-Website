@@ -10,7 +10,7 @@ export interface ProductQueryParams {
   order?: string;
 }
 
-let cachedRegionId: string | null = null;
+let cachedRegionId: string | undefined = undefined;
 
 export const getActiveRegionId = async (): Promise<string | undefined> => {
   if (cachedRegionId) return cachedRegionId;
