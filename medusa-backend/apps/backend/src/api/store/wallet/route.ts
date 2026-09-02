@@ -1,6 +1,15 @@
-import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
+export async function OPTIONS(req: MedusaRequest, res: MedusaResponse) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-publishable-api-key, x-customer-id");
+  return res.status(200).send();
+}
 
 export async function GET(req: MedusaRequest, res: MedusaResponse) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-publishable-api-key, x-customer-id");
+
   try {
     let customerId = (req as any).auth_context?.actor_id;
 

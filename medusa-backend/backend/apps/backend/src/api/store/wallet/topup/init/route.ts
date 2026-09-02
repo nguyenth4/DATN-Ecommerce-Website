@@ -1,3 +1,6 @@
+import { MedusaRequest, MedusaResponse } from "@medusajs/medusa";
+import crypto from 'crypto';
+
 export async function OPTIONS(req: MedusaRequest, res: MedusaResponse) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");

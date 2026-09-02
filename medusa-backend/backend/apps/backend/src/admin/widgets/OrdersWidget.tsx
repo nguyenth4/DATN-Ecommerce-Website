@@ -11,17 +11,26 @@ const statusColorMap: Record<string, "grey" | "orange" | "green" | "red" | "blue
 }
 
 export const OrdersWidget = () => {
+  const formatTiktokOrderId = (displayId?: string | number | null, orderId?: string) => {
+    if (displayId != null) {
+      return `#57760810${displayId.toString().padStart(10, '0')}`;
+    }
+    return orderId || '';
+  };
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [page] = useState(0)
-  const limit = 20
+  const limit = 50
 
   const fetchOrders = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`/admin/orders?limit=${limit}&offset=${page * limit}&order=-created_at&status=pending`);
+      // Remove status=pending so we can see all recent orders, 
+      // but we will filter out legacy ones in the UI.
+      const response = await fetch(`/admin/orders?limit=${limit}&offset=${page * limit}&order=-created_at`);
       if (response.ok) {
         const data = await response.json();
+        // Hiển thị tất cả đơn hàng để Admin có thể duyệt
         setOrders(data.orders || []);
       }
     } catch (e) {
@@ -101,10 +110,45 @@ export const OrdersWidget = () => {
     setLoading(false)
   }
 
+  const [filter, setFilter] = useState<"all" | "need_refund" | "return_request">("all")
+  const [refundingId, setRefundingId] = useState<string | null>(null)
+
+  const displayedOrders = filter === "need_refund"
+    ? orders.filter(o => o.payment_status !== "refunded" && o.metadata?.cancel_requested)
+    : filter === "return_request"
+      ? orders.filter(o => o.metadata?.return_requested)
+      : orders;
+
   return (
-    <Container className="p-6">
-      <div className="flex items-center justify-between mb-4">
-        <Heading level="h2">Quản lý Đơn hàng (GHN / GHTK)</Heading>
+    <Container className="p-6 mb-6">
+      <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+        <div>
+          <Heading level="h2">Quản lý Đơn hàng (GHN / GHTK)</Heading>
+          <p className="text-xs text-gray-500 mt-1">Duyệt giao hàng và đồng bộ vận chuyển tự động</p>
+        </div>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <Button
+            size="small"
+            variant={filter === "all" ? "primary" : "secondary"}
+            onClick={() => setFilter("all")}
+          >
+            Tất cả đơn
+          </Button>
+          <Button
+            size="small"
+            variant={filter === "need_refund" ? "primary" : "secondary"}
+            onClick={() => setFilter("need_refund")}
+          >
+            Yêu cầu hoàn tiền
+          </Button>
+          <Button
+            size="small"
+            variant={filter === "return_request" ? "primary" : "secondary"}
+            onClick={() => setFilter("return_request")}
+          >
+            Yêu cầu trả hàng
+          </Button>
+        </div>
       </div>
       {loading && <div style={{ padding: "20px", textAlign: "center" }}>Đang tải...</div>}
       <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "10px" }}>
@@ -117,9 +161,14 @@ export const OrdersWidget = () => {
           </tr>
         </thead>
         <tbody>
-          {orders.map((order) => (
+          {displayedOrders.map((order) => (
             <tr key={order.id} style={{ borderBottom: "1px solid #eaeaea" }}>
-              <td style={{ padding: "8px" }}>{order.id}</td>
+              <td style={{ padding: "8px" }}>
+                <strong>{formatTiktokOrderId(order.display_id, order.id)}</strong>
+                <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '4px' }}>
+                  ID Hệ thống: {order.id}
+                </div>
+              </td>
               <td style={{ padding: "8px" }}>
                 <StatusBadge color={statusColorMap[order.status] || "grey"}>
                   {order.status}
@@ -127,6 +176,30 @@ export const OrdersWidget = () => {
               </td>
               <td style={{ padding: "8px" }}>
                 {Number(order.total || 0).toLocaleString()} ₫
+                {order.metadata?.return_requested && (
+                  <div style={{ color: '#d97706', fontSize: '0.8rem', marginTop: '4px' }}>
+                    Yêu cầu trả hàng: <strong>{order.metadata?.return_reason}</strong>
+                  </div>
+                )}
+                {order.metadata?.cancel_requested && (
+                  <div style={{ color: '#dc2626', fontSize: '0.8rem', marginTop: '4px' }}>
+                    Yêu cầu huỷ: <strong>{order.metadata?.cancel_reason || "Không có lý do"}</strong>
+                  </div>
+                )}
+                {(order.metadata?.refund_destination || order.metadata?.refund_info) && (
+                  <div style={{ fontSize: '0.8rem', marginTop: '4px', backgroundColor: '#f3f4f6', padding: '4px', borderRadius: '4px' }}>
+                    {order.metadata?.refund_destination && (
+                      <div style={{ color: order.metadata.refund_destination === 'wallet' ? '#7c3aed' : '#059669' }}>
+                        Hoàn tiền về: <strong>{order.metadata.refund_destination === 'wallet' ? '💰 Ví Sprylo' : '🏦 Ngân hàng'}</strong>
+                      </div>
+                    )}
+                    {order.metadata?.refund_info && (
+                      <div style={{ marginTop: '2px', color: '#059669' }}>
+                        Thông tin nhận tiền: <strong>{order.metadata.refund_info}</strong>
+                      </div>
+                    )}
+                  </div>
+                )}
               </td>
               <td style={{ padding: "8px", display: "flex", gap: "8px" }}>
                 {order.status !== "fulfilled" && (
@@ -139,10 +212,39 @@ export const OrdersWidget = () => {
                     </Button>
                   </>
                 )}
+                {(order.metadata?.cancel_requested || order.metadata?.return_requested) && order.payment_status !== "refunded" && !order.metadata?.refund_id && (
+                  <Button size="small" variant="danger" disabled={refundingId === order.id} onClick={async () => {
+                    if (refundingId) return;
+                    if (!confirm("Bạn có chắc chắn muốn hoàn tiền cho đơn hàng này?")) return;
+                    setRefundingId(order.id);
+                    try {
+                      // Note: We need to know the payment method, but for now we try zalopay or vnpay based on metadata
+                      const method = order.metadata?.payment_method || (order.payments && order.payments.length > 0 ? order.payments[0].provider_id : 'zalopay');
+                      const res = await fetch(`/admin/orders/${order.id}/refund`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ payment_method: method, amount: order.total || 0 })
+                      });
+                      if (res.ok) {
+                        alert("Hoàn tiền thành công!");
+                        fetchOrders();
+                      } else {
+                        const err = await res.json();
+                        alert("Lỗi hoàn tiền: " + (err.message || "Unknown error"));
+                      }
+                    } catch (e: any) {
+                      alert("Lỗi kết nối: " + e.message);
+                    } finally {
+                      setRefundingId(null);
+                    }
+                  }}>
+                    {refundingId === order.id ? 'Đang hoàn tiền...' : 'Hoàn tiền'}
+                  </Button>
+                )}
               </td>
             </tr>
           ))}
-          {orders.length === 0 && !loading && (
+          {displayedOrders.length === 0 && !loading && (
             <tr>
               <td colSpan={4} style={{ textAlign: "center", padding: "20px", color: "gray" }}>
                 Không có đơn hàng nào
@@ -156,7 +258,7 @@ export const OrdersWidget = () => {
 }
 
 export const config = defineWidgetConfig({
-  zone: "order.list.after",
+  zone: "order.list.before",
 })
 
 export default OrdersWidget
