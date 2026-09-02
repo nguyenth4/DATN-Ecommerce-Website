@@ -837,7 +837,11 @@ const CheckoutPage = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        showToast(data.error || data.message || "Thanh toán thất bại", "error");
+        let errorMessage = data.error || data.message || "Thanh toán thất bại";
+        if (errorMessage.toLowerCase().includes("not found") || errorMessage.toLowerCase().includes("không tìm thấy")) {
+          errorMessage = "Một số sản phẩm trong giỏ hàng không còn tồn tại hoặc đã bị xóa. Vui lòng kiểm tra lại giỏ hàng.";
+        }
+        showToast(errorMessage, "error");
         setIsProcessing(false);
         return;
       }

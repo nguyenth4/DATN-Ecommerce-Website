@@ -102,6 +102,8 @@ const AccountPage = () => {
   );
   const [cancelReason, setCancelReason] = useState<string>("");
   const [customCancelReason, setCustomCancelReason] = useState<string>("");
+  const [cancelRefundDestination, setCancelRefundDestination] = useState<"wallet" | "bank_transfer" | "">("");
+  const [cancelRefundInfo, setCancelRefundInfo] = useState<string>("");
   const [copiedOrderId, setCopiedOrderId] = useState<string | null>(null);
 
   // ─── Review States ──────────────────────────────────────────────────────────
@@ -231,6 +233,9 @@ const AccountPage = () => {
       case "partially_fulfilled":
         return "bi bi-box-seam";
       default:
+        if (order.paymentMethod !== "cod" && (order.payment_status === "awaiting" || order.payment_status === "requires_action")) {
+          return "bi bi-credit-card";
+        }
         return "bi bi-clock-history";
     }
   };
@@ -260,6 +265,9 @@ const AccountPage = () => {
       case "partially_fulfilled":
         return "Đã đóng gói";
       default:
+        if (order.paymentMethod !== "cod" && (order.payment_status === "awaiting" || order.payment_status === "requires_action")) {
+          return "Chờ thanh toán";
+        }
         return "Chờ xác nhận";
     }
   };
@@ -323,38 +331,9 @@ const AccountPage = () => {
             };
           });
 
-          const merged = [...localOrders];
-          remoteMapped.forEach((remoteOrder: any) => {
-            const idx = merged.findIndex(
-              (o) =>
-                o.orderId === remoteOrder.orderId ||
-                (remoteOrder.metadata?.external_id &&
-                  remoteOrder.metadata.external_id === o.orderId),
-            );
-
-            if (idx > -1) {
-              merged[idx] = {
-                ...merged[idx],
-                ...remoteOrder,
-                // Giữ nguyên mã đơn hàng từ Medusa (orderId, display_id) thay vì mã tạm 1788...
-                orderId: remoteOrder.orderId,
-                cancelReason:
-                  remoteOrder.status === "canceled"
-                    ? remoteOrder.cancelReason ||
-                      merged[idx].cancelReason ||
-                      "Hệ thống/Cửa hàng hủy"
-                    : merged[idx].cancelReason,
-              };
-            } else {
-              merged.push(remoteOrder);
-            }
-          });
-
-          // Sort by created_at DESC
-          merged.sort((a, b) => b.created_at - a.created_at);
-
-          localStorage.setItem("sprylo_orders", JSON.stringify(merged));
-          setRealOrders(merged);
+          setRealOrders(remoteMapped);
+          // Optional: Only update sprylo_orders if we want to cache it, but safer to just rely on state
+          localStorage.setItem("sprylo_orders", JSON.stringify(remoteMapped));
         }
       }
     } catch (err) {
@@ -1372,7 +1351,7 @@ const AccountPage = () => {
   };
 
   // Cancel a real order and restore inventory
-  const handleCancelOrder = async (orderId: string, reason: string) => {
+  const handleCancelOrder = async (orderId: string, reason: string, refundDest?: string, refundInfo?: string) => {
     setCancelingOrderId(orderId);
     try {
       const order = realOrders.find((o) => o.orderId === orderId);
@@ -1381,7 +1360,12 @@ const AccountPage = () => {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items: order?.items || [] }),
+          body: JSON.stringify({ 
+            items: order?.items || [],
+            cancelReason: reason,
+            refundDestination: cancelRefundDestination,
+            refundInfo: cancelRefundInfo
+          }),
         },
       );
       if (response.ok) {
@@ -4141,7 +4125,11 @@ const AccountPage = () => {
                 </h3>
                 <button
                   className="close-btn"
-                  onClick={() => setCancelModalOrderId(null)}
+                  onClick={() => {
+                    setCancelModalOrderId(null);
+                    setCancelRefundDestination("");
+                    setCancelRefundInfo("");
+                  }}
                 >
                   <i className="bi bi-x-lg"></i>
                 </button>
@@ -4235,11 +4223,51 @@ const AccountPage = () => {
                     />
                   </motion.div>
                 )}
+
+                {(() => {
+                  const orderToCancel = realOrders.find(o => o.orderId === cancelModalOrderId);
+                  const isPaid = orderToCancel && orderToCancel.paymentMethod !== "cod";
+                  if (isPaid) {
+                    return (
+                      <div style={{ marginTop: "1.5rem", padding: "1rem", backgroundColor: "#fffbeb", border: "1px solid #fcd34d", borderRadius: "8px" }}>
+                        <p style={{ fontSize: "0.85rem", color: "#b45309", marginBottom: "0.8rem", fontWeight: 600 }}>
+                          <i className="bi bi-exclamation-triangle-fill"></i> Đơn hàng này đã được thanh toán. Vui lòng chọn phương thức nhận tiền hoàn:
+                        </p>
+                        <select
+                          className="form-control"
+                          value={cancelRefundDestination}
+                          onChange={(e) => setCancelRefundDestination(e.target.value as "wallet" | "bank_transfer")}
+                          style={{ marginBottom: "0.8rem" }}
+                        >
+                          <option value="">-- Chọn phương thức hoàn tiền --</option>
+                          <option value="wallet">Hoàn vào Ví Sprylo (Nhanh nhất)</option>
+                          <option value="bank_transfer">Chuyển khoản Ngân hàng</option>
+                        </select>
+                        {cancelRefundDestination === "bank_transfer" && (
+                          <textarea
+                            className="form-control"
+                            rows={3}
+                            placeholder="Nhập thông tin ngân hàng (Tên Ngân hàng, Số Tài khoản, Chủ Tài khoản)..."
+                            value={cancelRefundInfo}
+                            onChange={(e) => setCancelRefundInfo(e.target.value)}
+                            style={{ borderRadius: "8px", resize: "none" }}
+                          />
+                        )}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
               </div>
               <div className="address-modal-footer">
                 <button
                   className="btn btn--ghost"
-                  onClick={() => setCancelModalOrderId(null)}
+                  onClick={() => {
+                    setCancelModalOrderId(null);
+                    setCancelRefundDestination("");
+                    setCancelRefundInfo("");
+                  }}
                 >
                   Quay lại
                 </button>
@@ -4254,6 +4282,9 @@ const AccountPage = () => {
                     gap: "6px",
                   }}
                   onClick={() => {
+                    const orderToCancel = realOrders.find(o => o.orderId === cancelModalOrderId);
+                    const isPaid = orderToCancel && orderToCancel.paymentMethod !== "cod";
+                    
                     const finalReason =
                       cancelReason === "Lý do khác"
                         ? customCancelReason
@@ -4262,7 +4293,15 @@ const AccountPage = () => {
                       alert("Vui lòng chọn hoặc nhập lý do hủy đơn hàng.");
                       return;
                     }
-                    handleCancelOrder(cancelModalOrderId, finalReason);
+                    if (isPaid && !cancelRefundDestination) {
+                      alert("Vui lòng chọn phương thức hoàn tiền.");
+                      return;
+                    }
+                    if (isPaid && cancelRefundDestination === "bank_transfer" && !cancelRefundInfo.trim()) {
+                      alert("Vui lòng nhập thông tin ngân hàng để nhận hoàn tiền.");
+                      return;
+                    }
+                    handleCancelOrder(cancelModalOrderId, finalReason, cancelRefundDestination, cancelRefundInfo);
                   }}
                   disabled={cancelingOrderId === cancelModalOrderId}
                 >

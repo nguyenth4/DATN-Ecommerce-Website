@@ -135,38 +135,17 @@ export const POST = async (req: Request, res: Response) => {
     }
   });
 
-  // Send Refund Notification Email
-  const resend = getResend();
-  if (resend && order.email) {
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'Sprylo <onboarding@resend.dev>';
-    const displayId = order.display_id || order.id;
-    const walletNote = refundDestination === 'wallet'
-      ? '<p style="color:#059669;font-weight:600;">💰 Tiền đã được hoàn vào Ví Sprylo của bạn. Bạn có thể kiểm tra trong mục "Ví điện tử Sprylo".</p>'
-      : '<p>Thời gian giao dịch từ ngân hàng có thể mất từ 1-3 ngày làm việc. Nếu có bất kỳ thắc mắc nào, vui lòng liên hệ CSKH.</p>';
-
-    try {
-      await resend.emails.send({
-        from: fromEmail,
-        to: order.email,
-        subject: `[Sprylo] Thông báo hoàn tiền đơn hàng #${displayId}`,
-        html: `
-          <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-            <h2 style="color: #d97706;">Hoàn tiền thành công</h2>
-            <p>Xin chào,</p>
-            <p>Chúng tôi xin thông báo yêu cầu hoàn tiền cho đơn hàng <strong>#${displayId}</strong> của bạn đã được xử lý.</p>
-            <p>Số tiền hoàn lại: <strong>${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(refundAmount)}</strong></p>
-            <p>Hình thức hoàn: <strong>${refundMethodLabel}</strong></p>
-            ${walletNote}
-            <br/>
-            <p>Trân trọng,</p>
-            <p><strong>Đội ngũ Sprylo</strong></p>
-          </div>
-        `
-      });
-    } catch (e) {
-      console.error(`Failed to send refund email to ${order.email}:`, e);
-    }
-  }
+  // Emit Refund Success Event
+  const eventBus = req.scope.resolve(Modules.EVENT_BUS);
+  await eventBus.emit({
+    name: "order.refund.success",
+    data: { 
+      id, 
+      refundAmount, 
+      method: refundMethodLabel,
+      refundDestination
+    },
+  });
 
   res.status(200).json({ success: true, refundId, refundedAmount: refundAmount, refundDestination: refundDestination });
 };

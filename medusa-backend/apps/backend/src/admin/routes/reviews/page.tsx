@@ -12,6 +12,7 @@ interface ReviewItem {
   user_name: string;
   product_title?: string;
   product_thumbnail?: string;
+  images?: string[];
 }
 
 // Bootstrap 5 / Standard SVG Icons
@@ -58,10 +59,9 @@ const ReviewsAdminPage = () => {
   const fetchReviews = async () => {
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:9000/store/reviews/admin", {
+      const res = await fetch("/admin/reviews", {
         headers: {
-          "Content-Type": "application/json",
-          "x-publishable-api-key": "pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d"
+          "Content-Type": "application/json"
         },
       });
       if (res.ok) {
@@ -84,11 +84,8 @@ const ReviewsAdminPage = () => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa đánh giá này khỏi hệ thống?")) return;
     setDeletingId(id);
     try {
-      const res = await fetch(`http://localhost:9000/store/reviews/admin?id=${id}`, {
-        method: "DELETE",
-        headers: {
-          "x-publishable-api-key": "pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d"
-        }
+      const res = await fetch(`/admin/reviews?id=${id}`, {
+        method: "DELETE"
       });
       if (res.ok) {
         setReviews(prev => prev.filter(r => r.id !== id));
@@ -294,6 +291,13 @@ const ReviewsAdminPage = () => {
                     <Text className="text-xs text-gray-700 leading-relaxed">
                       {item.comment}
                     </Text>
+                    {item.images && item.images.length > 0 && (
+                      <div className="flex gap-1 mt-1">
+                        {item.images.map((img, i) => (
+                          <img key={i} src={img} alt="review attachment" className="w-8 h-8 object-cover rounded border border-gray-200" onClick={() => window.open(img, '_blank')} style={{ cursor: 'pointer' }} />
+                        ))}
+                      </div>
+                    )}
                   </Table.Cell>
 
                   <Table.Cell className="text-xs text-gray-500">
