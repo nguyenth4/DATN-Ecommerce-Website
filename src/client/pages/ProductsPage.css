@@ -49,6 +49,19 @@
   border: 1px solid var(--border);
 }
 
+.product-sort-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--s6);
+}
+
+.product-sort-options {
+  display: flex;
+  gap: var(--s3);
+  align-items: center;
+}
+
 .shop-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);

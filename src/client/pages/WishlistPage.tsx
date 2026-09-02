@@ -19,10 +19,8 @@ const WishlistPage = () => {
     };
   }, []);
 
-  // Fetch product data from Medusa/fallback mock data for wishlist items
-  const { data: productsData, isLoading } = useProducts(
-    wishlistIds.length > 0 ? { id: wishlistIds, limit: 20 } : undefined
-  );
+  // Fetch product data from Medusa leveraging cached products list ({ limit: 100 })
+  const { data: productsData, isLoading } = useProducts({ limit: 100 });
 
   const wishlistProducts = useMemo(() => {
     if (wishlistIds.length === 0 || !productsData?.products) return [];
@@ -33,7 +31,7 @@ const WishlistPage = () => {
       .filter(Boolean);
   }, [productsData, wishlistIds]);
 
-  if (isLoading && wishlistIds.length > 0) {
+  if (isLoading && wishlistIds.length > 0 && !productsData?.products) {
     return (
       <div className="container flex-center" style={{ minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>

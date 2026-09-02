@@ -27,10 +27,8 @@ const ComparisonPage = () => {
     };
   }, []);
 
-  // Fetch dữ liệu thật từ Medusa cho các sản phẩm trong danh sách
-  const { data: productsData, isLoading } = useProducts(
-    compareIds.length > 0 ? { id: compareIds, limit: 4 } : undefined
-  );
+  // Fetch dữ liệu thật từ Medusa cho các sản phẩm trong danh sách (tận dụng cache sản phẩm)
+  const { data: productsData, isLoading } = useProducts({ limit: 100 });
 
   // Dùng searchResults cho modal thêm sản phẩm
   const { data: searchResults, isLoading: isSearchingProducts } = useProducts({
@@ -89,7 +87,7 @@ const ComparisonPage = () => {
     }
   ];
 
-  if (isLoading && compareIds.length > 0) {
+  if (isLoading && compareIds.length > 0 && !productsData?.products) {
     return (
       <div className="container flex-center" style={{ minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <p>Đang tải dữ liệu so sánh...</p>

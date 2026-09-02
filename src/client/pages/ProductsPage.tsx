@@ -417,7 +417,7 @@ const ProductsPage = () => {
                 </h2>
                 <div className="product-sort-options">
                   <button
-                    onClick={() => handleSortChange("createdAt")}
+                    onClick={() => handleSortChange("popular")}
                     style={{
                       display: "flex",
                       alignItems: "center",
@@ -426,10 +426,13 @@ const ProductsPage = () => {
                       border: "1px solid var(--border)",
                       borderRadius: "24px",
                       background:
-                        sortBy === "createdAt"
+                        sortBy === "popular" || sortBy === "createdAt"
                           ? "var(--indigo)"
                           : "var(--paper)",
-                      color: sortBy === "createdAt" ? "white" : "inherit",
+                      color:
+                        sortBy === "popular" || sortBy === "createdAt"
+                          ? "white"
+                          : "inherit",
                       cursor: "pointer",
                       fontSize: "14px",
                       transition: "all 0.2s",

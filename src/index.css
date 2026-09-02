@@ -257,8 +257,8 @@ textarea {
 }
 .site-header .container {
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: var(--s7);
+  grid-template-columns: auto auto 1fr auto;
+  gap: var(--s5);
   align-items: center;
   height: 84px;
 }
@@ -427,6 +427,13 @@ textarea {
 }
 .main-nav a:hover {
   color: var(--indigo);
+}
+.header-main-nav {
+  gap: var(--s5);
+  margin-right: 0;
+}
+.header-main-nav a {
+  white-space: nowrap;
 }
 .nav-cta {
   display: inline-flex;

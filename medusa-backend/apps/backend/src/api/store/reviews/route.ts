@@ -150,27 +150,21 @@ export async function POST(
       }
     } catch (_) {}
 
-    // Kiểm tra trùng lập: Mỗi tài khoản chỉ được đánh giá 1 lần cho từng sản phẩm
-    const existingReviewCheck = await db.raw(`
-      SELECT EXISTS (
-        SELECT 1 
-        FROM reviews r
-        LEFT JOIN product p ON p.id = r.product_id OR ('prod_' || p.title) = r.product_id OR r.product_id ILIKE '%' || p.title || '%'
-        WHERE (r.user_id = ? OR r.user_id = ? OR ( ? != '' AND r.user_id = ? ))
-          AND (
-            r.product_id = ? OR 
-            p.id = ? OR
-            ? ILIKE '%' || COALESCE(p.title, '') || '%' OR
-            (COALESCE(p.title, '') != '' AND COALESCE(p.title, '') ILIKE '%' || ? || '%')
-          )
-      ) AS already_reviewed
+    // Kiểm tra xem đã có đánh giá trước đó của khách hàng này cho sản phẩm hay chưa
+    const existingReviewRes = await db.raw(`
+      SELECT id 
+      FROM reviews r
+      LEFT JOIN product p ON p.id = r.product_id OR ('prod_' || p.title) = r.product_id OR r.product_id ILIKE '%' || p.title || '%'
+      WHERE (r.user_id = ? OR r.user_id = ? OR ( ? != '' AND r.user_id = ? ))
+        AND (
+          r.product_id = ? OR 
+          p.id = ? OR
+          ? ILIKE '%' || COALESCE(p.title, '') || '%' OR
+          (COALESCE(p.title, '') != '' AND COALESCE(p.title, '') ILIKE '%' || ? || '%')
+        )
+      ORDER BY r.created_at DESC
+      LIMIT 1
     `, [customerId, customer.email || "", customer.email || "", customer.email || "", product_id, realProductId, product_id, product_id]);
-
-    if (existingReviewCheck.rows[0]?.already_reviewed) {
-      return res.status(400).json({ 
-        message: "Bạn đã gửi đánh giá cho sản phẩm này rồi. Mỗi tài khoản chỉ được đánh giá 1 lần cho từng sản phẩm." 
-      });
-    }
 
     // Kiểm tra bỏ qua điều kiện mua hàng (developer bypass)
     const bypassHeader = req.headers['x-bypass-purchase'];
@@ -254,14 +248,26 @@ export async function POST(
       }
     }
 
-    // Insert review mới
-    const insertRes = await db.raw(`
-      INSERT INTO reviews (user_id, product_id, rating, comment, user_name, images, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, NOW())
-      RETURNING id, user_id, product_id, rating, comment, created_at, user_name, images
-    `, [customerId, realProductId, numRating, comment || "", fullName, imagesArray]);
-
-    const newReview = insertRes.rows[0];
+    let newReview;
+    if (existingReviewRes.rows.length > 0 && !order_id) {
+      // Nếu đã có đánh giá cũ & không chỉ định order_id khác: Tự động cập nhật (Upsert)
+      const existingId = existingReviewRes.rows[0].id;
+      const updateRes = await db.raw(`
+        UPDATE reviews 
+        SET rating = ?, comment = ?, user_name = ?, images = ?, created_at = NOW()
+        WHERE id = ?
+        RETURNING id, user_id, product_id, rating, comment, created_at, user_name, images
+      `, [numRating, comment || "", fullName, imagesArray, existingId]);
+      newReview = updateRes.rows[0];
+    } else {
+      // Insert review mới
+      const insertRes = await db.raw(`
+        INSERT INTO reviews (user_id, product_id, rating, comment, user_name, images, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, NOW())
+        RETURNING id, user_id, product_id, rating, comment, created_at, user_name, images
+      `, [customerId, realProductId, numRating, comment || "", fullName, imagesArray]);
+      newReview = insertRes.rows[0];
+    }
 
     // Tính toán lại rating trung bình và tổng số đánh giá của product
     const statsRes = await db.raw(`
