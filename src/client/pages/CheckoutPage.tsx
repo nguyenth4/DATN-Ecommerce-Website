@@ -1041,6 +1041,9 @@ const CheckoutPage = () => {
             district_name: districtName,
             ward_name: wardName,
             weight: totalWeight || 200,
+            height: totalHeight || 10,
+            length: maxLength || 10,
+            width: maxWidth || 10,
             insurance_value:
               insuranceValue > 5000000 ? 5000000 : insuranceValue,
           }),
