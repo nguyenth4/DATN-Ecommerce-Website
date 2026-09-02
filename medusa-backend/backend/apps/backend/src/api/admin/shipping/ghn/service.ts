@@ -4,6 +4,19 @@
  * Uses a real token and shop ID from environment variables.
  */
 export async function createGhnShipping(order: any) {
+  if (process.env.GHN_MOCK_MODE === "true") {
+    const trackingNumber = `GHN_MOCK_${Date.now()}`;
+    const fee = order.metadata?.shipping_fee
+      ? parseInt(order.metadata.shipping_fee)
+      : 30000;
+
+    return {
+      orderId: `ghn_mock_${order.id}`,
+      trackingNumber,
+      fee,
+    };
+  }
+
   const token =
     process.env.GHN_API_TOKEN || process.env.GHN_TOKEN || "FAKE_GHN_TOKEN";
   const shopId = process.env.GHN_SHOP_ID;

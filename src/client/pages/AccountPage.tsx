@@ -945,11 +945,11 @@ const AccountPage = () => {
     return 0;
   };
 
-  // Cancel is only allowed before shipping starts (pending/confirmed/preparing)
+  // Customers may cancel only while the order is awaiting admin confirmation.
   const canCancelOrder = (order: any) => {
     if (order.canceled || order.status === "canceled") return false;
     const step = getDynamicStatusStep(order);
-    return step >= 0 && step < 3;
+    return step === 0;
   };
 
   // Return is allowed when order is delivered and no return is currently requested
@@ -1018,6 +1018,8 @@ const AccountPage = () => {
   const getCancelBlockedReason = (order: any) => {
     if (order.canceled || order.status === "canceled") return null;
     const step = getDynamicStatusStep(order);
+    if (step >= 1 && step < 3)
+      return "Đơn hàng đã được xác nhận, không thể hủy";
     if (step === 3) return "Đơn hàng đang giao, không thể hủy";
     if (step >= 4) return "Đơn hàng đã hoàn thành";
     return null;
@@ -2702,6 +2704,203 @@ const AccountPage = () => {
                     )
                   )}
               </div>
+            )}
+
+        {/* Return Modal */}
+        {returnModalOrderId && (
+          <div className="address-modal-overlay">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="address-modal-container"
+              style={{ maxWidth: "500px" }}
+            >
+              <div className="address-modal-header" style={{ borderBottom: "1px solid var(--rule)" }}>
+                <h3 style={{ display: "flex", alignItems: "center", gap: "8px", color: "#d97706" }}>
+                  <i className="bi bi-arrow-return-left"></i> Lý do trả hàng
+                </h3>
+                <button className="close-btn" onClick={() => setReturnModalOrderId(null)}>
+                  <i className="bi bi-x-lg"></i>
+                </button>
+              </div>
+              <div className="address-modal-body" style={{ padding: "1.5rem" }}>
+                <p style={{ fontSize: "0.875rem", color: "var(--fg-soft)", marginBottom: "1.2rem", lineHeight: 1.5 }}>
+                  Vui lòng chọn lý do trả hàng cho đơn <strong>#{formatOrderId(returnModalOrderId)}</strong>. Yêu cầu của bạn sẽ được gửi tới Admin để phê duyệt.
+                </p>
+                
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.8rem" }}>
+                  {[
+                    "Hàng lỗi / Không hoạt động",
+                    "Giao sai sản phẩm / Thiếu phụ kiện",
+                    "Sản phẩm khác với mô tả",
+                    "Hàng hỏng hóc do vận chuyển",
+                    "Lý do khác"
+                  ].map((reason) => (
+                    <label 
+                      key={reason} 
+                      style={{ 
+                        display: "flex", 
+                        alignItems: "flex-start", 
+                        gap: "10px", 
+                        fontSize: "0.9rem", 
+                        cursor: "pointer", 
+                        fontWeight: 500, 
+                        color: "var(--ink)",
+                        padding: "0.8rem 1rem",
+                        border: returnReason === reason ? "1.5px solid var(--amber-600)" : "1.5px solid var(--rule)",
+                        borderRadius: "10px",
+                        background: returnReason === reason ? "#fffbeb" : "white",
+                        transition: "all 0.15s ease"
+                      }}
+                    >
+                      <input 
+                        type="radio" 
+                        name="returnReason" 
+                        value={reason}
+                        checked={returnReason === reason}
+                        onChange={() => setReturnReason(reason)}
+                        style={{ accentColor: "#d97706", marginTop: "3px" }}
+                      />
+                      <span>{reason}</span>
+                    </label>
+                  ))}
+                </div>
+
+                {returnReason === "Lý do khác" && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    style={{ marginTop: "1rem" }}
+                  >
+                    <label className="form-label" style={{ marginBottom: "0.4rem", fontSize: "0.78rem" }}>Chi tiết lý do khác *</label>
+                    <textarea 
+                      className="form-control" 
+                      rows={3} 
+                      placeholder="Vui lòng nhập lý do cụ thể..." 
+                      value={customReturnReason}
+                      onChange={(e) => setCustomReturnReason(e.target.value)}
+                      style={{ borderRadius: "8px", resize: "none" }}
+                    />
+                  </motion.div>
+                )}
+
+                <div style={{ marginTop: "1.2rem", paddingTop: "1rem", borderTop: "1px solid var(--rule)" }}>
+                  <label className="form-label" style={{ fontSize: "0.85rem", fontWeight: 600, marginBottom: "0.6rem", display: "block" }}>
+                    Nhận tiền hoàn trả qua *
+                  </label>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.8rem", marginBottom: "1rem" }}>
+                    <div 
+                      onClick={() => setRefundDestination("wallet")}
+                      style={{
+                        padding: "0.8rem",
+                        borderRadius: "8px",
+                        border: refundDestination === "wallet" ? "2px solid #7c3aed" : "1px solid var(--rule)",
+                        background: refundDestination === "wallet" ? "#f5f3ff" : "white",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        fontWeight: 600,
+                        fontSize: "0.85rem",
+                        color: refundDestination === "wallet" ? "#6d28d9" : "var(--ink)"
+                      }}
+                    >
+                      <i className="bi bi-wallet2" style={{ fontSize: "1.1rem", color: "#7c3aed" }}></i>
+                      Ví Sprylo
+                    </div>
+                    <div 
+                      onClick={() => setRefundDestination("bank_transfer")}
+                      style={{
+                        padding: "0.8rem",
+                        borderRadius: "8px",
+                        border: refundDestination === "bank_transfer" ? "2px solid #d97706" : "1px solid var(--rule)",
+                        background: refundDestination === "bank_transfer" ? "#fffbeb" : "white",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        fontWeight: 600,
+                        fontSize: "0.85rem",
+                        color: refundDestination === "bank_transfer" ? "#b45309" : "var(--ink)"
+                      }}
+                    >
+                      <i className="bi bi-bank" style={{ fontSize: "1.1rem", color: "#d97706" }}></i>
+                      Tài khoản Ngân hàng
+                    </div>
+                  </div>
+
+                  {refundDestination === "wallet" && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <div style={{ width: "40px", height: "40px", borderRadius: "50%", background: "linear-gradient(135deg, #7c3aed, #a78bfa)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: "1.1rem" }}>
+                          <i className="bi bi-wallet-fill"></i>
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, color: "#5b21b6", fontSize: "0.95rem" }}>Hoàn tiền về Ví Sprylo</div>
+                          <div style={{ fontSize: "0.8rem", color: "#7c3aed" }}>
+                            Số dư ví sẽ được cộng ngay sau khi admin duyệt hoàn tiền. Bạn có thể sử dụng số dư ví để thanh toán các đơn hàng tiếp theo.
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+
+                  {refundDestination === "bank_transfer" && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                        <div>
+                          <label className="form-label" style={{ fontSize: "0.78rem" }}>Ngân Hàng *</label>
+                          <Select
+                            options={banks.map(bank => ({ value: bank.bin, label: `${bank.shortName} - ${bank.name}` }))}
+                            value={refundBankName ? { value: refundBankName, label: banks.find(b => b.bin === refundBankName) ? `${banks.find(b => b.bin === refundBankName).shortName} - ${banks.find(b => b.bin === refundBankName).name}` : refundBankName } : null}
+                            onChange={(selectedOption: any) => setRefundBankName(selectedOption ? selectedOption.value : "")}
+                            placeholder="Chọn hoặc tìm ngân hàng..."
+                            isClearable
+                            isSearchable
+                            styles={{
+                              control: (base: Record<string, unknown>) => ({
+                                ...base,
+                                borderRadius: "6px",
+                                borderColor: "#e5e7eb",
+                                boxShadow: "none",
+                                "&:hover": { borderColor: "#d97706" }
+                              })
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <label className="form-label" style={{ fontSize: "0.78rem" }}>Số Tài Khoản *</label>
+                          <input 
+                            type="text" 
+                            className="form-control" 
+                            placeholder="Nhập số tài khoản" 
+                            value={refundAccountNumber} 
+                            onChange={e => setRefundAccountNumber(e.target.value)} 
+                            style={{ borderRadius: "6px" }} 
+                          />
+                        </div>
+                        <div>
+                          <label className="form-label" style={{ fontSize: "0.78rem", display: "flex", justifyContent: "space-between" }}>
+                            <span>Tên Chủ Tài Khoản *</span>
+                            {isLookingUp && <span style={{ color: "#d97706", fontSize: "0.7rem" }}><i className="bi bi-arrow-repeat spin"></i> Đang tra cứu...</span>}
+                          </label>
+                          <input 
+                            type="text" 
+                            className="form-control" 
+                            placeholder={isLookingUp ? "Đang lấy tên..." : "NGUYEN VAN A"} 
+                            value={refundAccountName} 
+                            onChange={e => setRefundAccountName(e.target.value.toUpperCase())} 
+                            style={{ borderRadius: "6px", background: isLookingUp ? "#f3f4f6" : "white" }} 
+                            readOnly={isLookingUp}
+                          />
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+              </div>
               <div className="address-modal-footer">
                 <button className="btn btn--ghost" onClick={() => setReturnModalOrderId(null)}>Quay lại</button>
                 <button 
@@ -2726,13 +2925,13 @@ const AccountPage = () => {
                   }}
                   disabled={returningOrderId === returnModalOrderId}
                 >
-                  {returningOrderId === returnModalOrderId ? 'Đang gửi...' : 'Gửi yêu cầu trả hàng'}
+                  {returningOrderId === returnModalOrderId ? "Đang gửi..." : "Gửi yêu cầu trả hàng"}
                 </button>
               </div>
             </motion.div>
           </div>
         )}
-      {/* TOPUP MODAL */}
+
         {showTopupModal && (
           <div className="address-modal-overlay" onClick={() => setShowTopupModal(false)}>
             <motion.div 
@@ -2778,7 +2977,10 @@ const AccountPage = () => {
             </motion.div>
           </div>
         )}
-      </AnimatePresence>
+          </div>
+        </div>
+      </div>
+      </section>
     </>
   );
 };
