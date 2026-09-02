@@ -86,6 +86,40 @@ async function handleCallback(req: MedusaRequest, res: MedusaResponse) {
       return res.redirect(302, `${FRONTEND_URL}/checkout/zalopay_return?${params}`);
     } else {
       console.log(`[ZaloPay Callback] ❌ Payment failed/cancelled: ${appTransId}, status: ${statusParam}`);
+      
+      const zalopayMap = (global as any).__zalopayOrders as Map<string, any> | undefined;
+      const mapEntry = zalopayMap?.get(appTransId);
+      const medusaOrderId: string = mapEntry?.medusaOrderId || appTransId;
+
+      if (mapEntry && !mapEntry.restored) {
+        try {
+          const productModuleService = req.scope.resolve(Modules.PRODUCT);
+          for (const item of mapEntry.items || []) {
+            if (item.id && item.qty) {
+              const variant = (await productModuleService.retrieveProductVariant(item.id)) as any;
+              if (variant && typeof variant.inventory_quantity === "number") {
+                const newQuantity = variant.inventory_quantity + item.qty;
+                await productModuleService.updateProductVariants(item.id, {
+                  inventory_quantity: newQuantity,
+                } as any);
+              }
+            }
+          }
+          mapEntry.restored = true;
+          console.log(`[ZaloPay Callback] Restored inventory for failed/canceled order ${appTransId}`);
+
+          const db = (req.scope as any).resolve("__pg_connection__");
+          await db.raw(
+            `UPDATE "order"
+             SET status = 'canceled', metadata = COALESCE(metadata, '{}'::jsonb) || '{"payment_status":"failed"}'::jsonb, updated_at = NOW()
+             WHERE id = ?`,
+            [medusaOrderId]
+          );
+        } catch (err) {
+          console.error(`[ZaloPay Callback] Failed to restore inventory/update DB for ${appTransId}:`, err);
+        }
+      }
+
       const params = new URLSearchParams(query).toString();
       return res.redirect(302, `${FRONTEND_URL}/checkout/zalopay_return?${params}`);
     }

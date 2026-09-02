@@ -128,6 +128,38 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
         `[VNPay Callback] ❌ Payment FAILED/CANCELED for order: ${orderId}, code: ${responseCode}`
       );
 
+      // Restore inventory
+      const pendingData = (global as any).__pendingOrders?.get(orderId);
+      if (pendingData && !pendingData.restored) {
+        try {
+          const productModuleService = req.scope.resolve(Modules.PRODUCT);
+          for (const item of pendingData.items || []) {
+            if (item.id && item.qty) {
+              const variant = (await productModuleService.retrieveProductVariant(item.id)) as any;
+              if (variant && typeof variant.inventory_quantity === "number") {
+                const newQuantity = variant.inventory_quantity + item.qty;
+                await productModuleService.updateProductVariants(item.id, {
+                  inventory_quantity: newQuantity,
+                } as any);
+              }
+            }
+          }
+          pendingData.restored = true;
+          console.log(`[VNPay Callback] Restored inventory for failed/canceled order ${orderId}`);
+          
+          const db = (req.scope as any).resolve("__pg_connection__");
+          await db.raw(
+            `UPDATE sprylo_order
+               SET payment_status = 'failed',
+                   updated_at = NOW()
+             WHERE id = ? OR vnpay_txn_ref = ?`,
+            [orderId, orderId]
+          );
+        } catch (err) {
+          console.error(`[VNPay Callback] Failed to restore inventory/update DB for ${orderId}:`, err);
+        }
+      }
+
       const params = new URLSearchParams(query).toString();
       return res.redirect(302, `${FRONTEND_URL}/checkout/vnpay_return?${params}`);
     }
