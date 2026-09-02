@@ -461,26 +461,18 @@ const AccountPage = () => {
     }
   };
 
-  // Fetch profile on mount
-  // Address states
+  // Fetch profile on mount & address states
   const [addresses, setAddresses] = useState<any[]>([]);
   const [provinces, setProvinces] = useState<any[]>([]);
   const [districts, setDistricts] = useState<any[]>([]);
   const [wards, setWards] = useState<any[]>([]);
 
-<<<<<<< HEAD
   const [selectedProvince, setSelectedProvince] = useState<string>("");
   const [selectedDistrict, setSelectedDistrict] = useState<string>("");
   const [selectedWard, setSelectedWard] = useState<string>("");
-
-=======
-  const [selectedProvince, setSelectedProvince] = useState<string>('');
-  const [selectedDistrict, setSelectedDistrict] = useState<string>('');
-  const [selectedWard, setSelectedWard] = useState<string>('');
   const [showTopupModal, setShowTopupModal] = useState(false);
-  const [topupAmount, setTopupAmount] = useState<string>('');
+  const [topupAmount, setTopupAmount] = useState<string>("");
   const [topupLoading, setTopupLoading] = useState(false);
->>>>>>> 8be84ef (hoàn tiền +ví +nạp tiền vào ví)
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [editingAddress, setEditingAddress] = useState<any | null>(null);
   const [addrFullName, setAddrFullName] = useState("");
