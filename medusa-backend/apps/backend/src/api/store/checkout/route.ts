@@ -95,26 +95,27 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         }
       }
 
-      // 2. Trừ tồn kho nếu tất cả đều hợp lệ
+      // 2. Trừ tồn kho trong bảng inventory_level của Medusa 2
       console.log(`[Checkout API] Đang trừ kho cho ${items.length} mặt hàng...`);
+      const db = req.scope.resolve("__pg_connection__");
       for (const item of items) {
         if (item.id && item.qty) {
           try {
-            const variant = (await productModuleService.retrieveProductVariant(item.id)) as any;
-            if (variant && typeof variant.inventory_quantity === "number") {
-              const newQuantity = Math.max(0, variant.inventory_quantity - item.qty);
-              await productModuleService.updateProductVariants(item.id, {
-                inventory_quantity: newQuantity,
-              } as any);
-              console.log(
-                `[Checkout API] Đã trừ ${item.qty} cho variant ${item.id}. Tồn kho mới: ${newQuantity}`
-              );
-            }
-          } catch (invErr) {
-            console.error(
-              `[Checkout API] Lỗi trừ kho variant ${item.id}:`,
-              invErr
-            );
+            await db.raw(`
+              UPDATE inventory_level il
+              SET stocked_quantity = GREATEST(0, il.stocked_quantity - ?),
+                  raw_stocked_quantity = jsonb_build_object(
+                    'value', GREATEST(0, COALESCE((il.raw_stocked_quantity->>'value')::numeric, il.stocked_quantity) - ?)::text,
+                    'precision', 20
+                  ),
+                  updated_at = NOW()
+              FROM product_variant_inventory_item pvii
+              WHERE pvii.inventory_item_id = il.inventory_item_id
+                AND pvii.variant_id = ?
+            `, [item.qty, item.qty, item.id]);
+            console.log(`[Checkout API] Đã trừ ${item.qty} khỏi inventory_level cho variant ${item.id}`);
+          } catch (invErr: any) {
+            console.error(`[Checkout API] Lỗi trừ kho variant ${item.id}:`, invErr.message);
           }
         }
       }

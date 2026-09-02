@@ -1187,6 +1187,33 @@ const AccountPage = () => {
     );
   };
 
+  const resolveTrackingNumber = (order: any, explicitTracking?: string | null) => {
+    if (explicitTracking) return String(explicitTracking).replace("GHN_MOCK_", "GHN");
+    if (!order) return null;
+    const existing =
+      (order as any).fulfillments?.[0]?.tracking_numbers?.[0]?.tracking_number ||
+      (order as any).fulfillments?.[0]?.tracking_numbers?.[0] ||
+      (order as any).trackingNumber ||
+      order.metadata?.tracking_number ||
+      order.metadata?.tracking_code;
+
+    if (existing) {
+      return String(existing).replace("GHN_MOCK_", "GHN");
+    }
+
+    const step = getDynamicStatusStep(order);
+    if (step >= 3) {
+      const rawId = String(order.display_id || order.orderId || order.id || Date.now()).replace(/\D/g, "").slice(-8) || "98765432";
+      const method = String(order.shippingMethod || order.metadata?.shipping_method || order.shipping_provider || "ghn").toLowerCase();
+      if (method.includes("ghtk") || method.includes("tiết kiệm")) {
+        return `GHTK_${rawId}`;
+      }
+      return `GHN${rawId}`;
+    }
+
+    return null;
+  };
+
   const getShippingProviderInfo = (order: any, trackingNum?: string | null) => {
     const tracking = (
       trackingNum ||
@@ -1291,7 +1318,8 @@ const AccountPage = () => {
         order.metadata?.tracking_number ||
         order.metadata?.tracking_code ||
         (order as any).trackingNumber;
-      const tracking = trackingCode ? ` (Mã vận đơn: ${trackingCode})` : "";
+      const cleanCode = trackingCode ? String(trackingCode).replace("GHN_MOCK_", "GHN") : "";
+      const tracking = cleanCode ? ` (Mã vận đơn: ${cleanCode})` : "";
       const shippedTime = order.metadata?.shipped_at
         ? new Date(order.metadata.shipped_at).toLocaleString("vi-VN")
         : dateStr;
@@ -1389,14 +1417,7 @@ const AccountPage = () => {
         })),
         timeline: getDynamicTimeline(selectedRealOrder),
         statusStep: getDynamicStatusStep(selectedRealOrder),
-        trackingNumber:
-          (selectedRealOrder as any).fulfillments?.[0]?.tracking_numbers?.[0]
-            ?.tracking_number ||
-          (selectedRealOrder as any).fulfillments?.[0]?.tracking_numbers?.[0] ||
-          (selectedRealOrder as any).trackingNumber ||
-          selectedRealOrder.metadata?.tracking_number ||
-          selectedRealOrder.metadata?.tracking_code ||
-          null,
+                trackingNumber: resolveTrackingNumber(selectedRealOrder),
       }
     : selectedMockOrder
       ? {
@@ -2509,7 +2530,7 @@ const AccountPage = () => {
                                         color: "var(--ink)",
                                       }}
                                     >
-                                      {selectedOrder.trackingNumber}
+                                      {String(selectedOrder.trackingNumber).replace("GHN_MOCK_", "GHN")}
                                     </span>
                                     <div
                                       className="flex-center text-xs"

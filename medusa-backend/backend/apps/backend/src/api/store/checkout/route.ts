@@ -103,7 +103,7 @@ export const POST = async (
             p.title AS product_title,
             COALESCE(v.manage_inventory, true) AS manage_inventory,
             COALESCE(v.allow_backorder, false) AS allow_backorder,
-            COALESCE(SUM(il.stocked_quantity - COALESCE(il.reserved_quantity, 0)), 0) AS available_quantity,
+            COALESCE(SUM(COALESCE((il.raw_stocked_quantity->>'value')::numeric, il.stocked_quantity, 0) - COALESCE((il.raw_reserved_quantity->>'value')::numeric, il.reserved_quantity, 0)), 0) AS available_quantity,
             COUNT(il.id) AS has_inventory_level
           FROM product_variant v
           JOIN product p ON v.product_id = p.id
@@ -123,13 +123,12 @@ export const POST = async (
             if (isManaged && !allowBackorder && hasLevels) {
               const available = Number(stockInfo.available_quantity)
               if (item.qty > available) {
-                const productName = stockInfo.product_title || item.name || "Sản phẩm"
-                const variantTitle = stockInfo.variant_title ? ` (${stockInfo.variant_title})` : ""
+                const prodName = `${stockInfo.product_title} (${stockInfo.variant_title})`
                 return res.status(400).json({
-                  success: false,
-                  message: available > 0 
-                    ? `Sản phẩm "${productName}${variantTitle}" chỉ còn ${available} sản phẩm trong kho. Bạn đang chọn ${item.qty} sản phẩm.`
-                    : `Sản phẩm "${productName}${variantTitle}" hiện tại đã hết hàng.`
+                  type: "invalid_data",
+                  message: available <= 0 
+                    ? `Sản phẩm "${prodName}" hiện tại đã hết hàng.`
+                    : `Sản phẩm "${prodName}" chỉ còn ${available} sản phẩm trong kho (bạn đặt ${item.qty}).`
                 })
               }
             }
@@ -396,6 +395,29 @@ export const POST = async (
 
     const createdOrder = await orderService.createOrders(orderInput)
     const orderId = Array.isArray(createdOrder) ? createdOrder[0]?.id : (createdOrder as any)?.id
+
+    // Deduct stock from inventory_level table immediately upon order creation
+    try {
+      for (const item of items) {
+        if (item.id && item.qty) {
+          await db.raw(`
+            UPDATE inventory_level il
+            SET stocked_quantity = GREATEST(0, il.stocked_quantity - ?),
+                raw_stocked_quantity = jsonb_build_object(
+                  'value', GREATEST(0, COALESCE((il.raw_stocked_quantity->>'value')::numeric, il.stocked_quantity) - ?)::text,
+                  'precision', 20
+                ),
+                updated_at = NOW()
+            FROM product_variant_inventory_item pvii
+            WHERE pvii.inventory_item_id = il.inventory_item_id
+              AND pvii.variant_id = ?
+          `, [item.qty, item.qty, item.id])
+          console.log(`[Checkout Route] Deducted ${item.qty} from inventory_level for variant ${item.id}`)
+        }
+      }
+    } catch (deductErr: any) {
+      console.error("[Checkout Route] Failed to deduct inventory_level:", deductErr.message)
+    }
 
     // Create payment collection and order link to prevent Medusa Admin dashboard from crashing
     try {

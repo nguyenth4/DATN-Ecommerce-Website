@@ -668,6 +668,29 @@ export async function updateOrderStatus(
         );
       }
 
+      // Restore inventory_level for canceled order
+      for (const item of (order as any).items || []) {
+        if (item.variant_id) {
+          try {
+            await db.raw(`
+              UPDATE inventory_level il
+              SET stocked_quantity = il.stocked_quantity + ?,
+                  raw_stocked_quantity = jsonb_build_object(
+                    'value', (COALESCE((il.raw_stocked_quantity->>'value')::numeric, il.stocked_quantity) + ?)::text,
+                    'precision', 20
+                  ),
+                  updated_at = NOW()
+              FROM product_variant_inventory_item pvii
+              WHERE pvii.inventory_item_id = il.inventory_item_id
+                AND pvii.variant_id = ?
+            `, [Number(item.quantity || 1), Number(item.quantity || 1), item.variant_id]);
+            console.log(`[updateOrderStatus] Restored ${item.quantity} to inventory_level for canceled variant ${item.variant_id}`);
+          } catch (invErr: any) {
+            console.error(`[updateOrderStatus] Error restoring inventory for variant ${item.variant_id}:`, invErr.message);
+          }
+        }
+      }
+
       // Reset order_item quantities
       await db.raw(
         `
