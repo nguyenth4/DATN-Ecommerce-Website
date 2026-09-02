@@ -20,6 +20,8 @@ interface ProductReviewsTabProps {
   newReviewName: string;
   newReviewRating: number;
   newReviewComment: string;
+  setNewReviewName: (val: string) => void;
+  setNewReviewRating: (val: number) => void;
   setNewReviewComment: (val: string) => void;
   onAddReview: (e: React.FormEvent) => void;
   errorMessage?: string;

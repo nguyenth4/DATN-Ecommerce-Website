@@ -381,3 +381,14 @@ Yêu cầu hoàn tiền có `refund_id` để tránh duyệt/hoàn tiền trùng
 | Resend & SendGrid    | Cần cấu hình API key tương ứng             |
 
 _Ghi chú: Tài liệu này cần được cập nhật liên tục trong quá trình fix bug và hoàn thiện tính năng._
+
+## 14. Cấu hình SendGrid Email
+```env
+# ── SendGrid Email Config ────────────────────────────────────────────────────
+# Tạo API key có quyền Mail Send tại https://app.sendgrid.com/settings/api_keys
+SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxxxxxxx.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# Địa chỉ này phải được Single Sender Verification hoặc domain authentication trên SendGrid xác thực.
+SENDGRID_FROM_EMAIL=nguyenhoang280004@gmail.com
+# ID Dynamic Template gửi khi admin duyệt trả hàng và hoàn tiền.
+SENDGRID_RETURN_APPROVED_TEMPLATE_ID=d-ba082709fd74440882570f1d41bd3130
+```

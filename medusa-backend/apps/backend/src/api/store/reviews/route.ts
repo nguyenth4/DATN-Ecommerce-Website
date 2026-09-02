@@ -1,5 +1,5 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
-import { checkImageSafety } from "./gemini";
+import { checkImageSafety, checkTextSafety } from "./gemini";
 
 export async function GET(
   req: MedusaRequest,
@@ -254,6 +254,21 @@ export async function POST(
       }
     }
 
+    // Kiểm duyệt văn bản (bình luận) với Gemini
+    if (comment && comment.trim().length > 0) {
+      try {
+        const textSafety = await checkTextSafety(comment);
+        if (!textSafety.safe) {
+          return res.status(400).json({ message: `Nội dung đánh giá vi phạm chính sách cộng đồng: ${textSafety.reason}` });
+        }
+        if (!textSafety.relevant) {
+          return res.status(400).json({ message: `Nội dung không hợp lệ: ${textSafety.reason}` });
+        }
+      } catch (err: any) {
+        console.error("Text safety check failed", err);
+      }
+    }
+
     // Insert review mới
     const insertRes = await db.raw(`
       INSERT INTO reviews (user_id, product_id, rating, comment, user_name, images, created_at)
@@ -363,6 +378,21 @@ export async function PUT(
     } else if (image_base64 === '') {
       // Clear image if explicitly empty string passed
       imagesArray = [];
+    }
+
+    // Kiểm duyệt văn bản (bình luận) với Gemini
+    if (comment && comment.trim().length > 0) {
+      try {
+        const textSafety = await checkTextSafety(comment);
+        if (!textSafety.safe) {
+          return res.status(400).json({ message: `Nội dung đánh giá vi phạm chính sách cộng đồng: ${textSafety.reason}` });
+        }
+        if (!textSafety.relevant) {
+          return res.status(400).json({ message: `Nội dung không hợp lệ: ${textSafety.reason}` });
+        }
+      } catch (err: any) {
+        console.error("Text safety check failed", err);
+      }
     }
 
     // Cập nhật rating và comment

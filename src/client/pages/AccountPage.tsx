@@ -245,6 +245,11 @@ const AccountPage = () => {
     if (order.canceled || order.status === "canceled") return "Đã hủy";
 
     const customStatus = order.metadata?.custom_status;
+    
+    // Ưu tiên hiển thị trạng thái Trả hàng / Hoàn tiền
+    if (customStatus === "refunded") return "Đã trả hàng/Hoàn tiền";
+    if (order.metadata?.return_requested && customStatus !== "refunded") return "Đang duyệt trả hàng";
+
     if (customStatus) {
       if (customStatus === "pending") return "Chờ xác nhận";
       if (customStatus === "confirmed") return "Đã xác nhận";
@@ -253,7 +258,6 @@ const AccountPage = () => {
       if (customStatus === "delivered" || customStatus === "completed")
         return "Đã nhận";
       if (customStatus === "canceled") return "Đã hủy";
-      if (customStatus === "refunded") return "Đã hoàn tiền";
     }
 
     if (order.status === "completed") return "Đã nhận";
@@ -279,12 +283,12 @@ const AccountPage = () => {
       if (!token) return;
 
       const response = await authService.authFetch(
-        `${MEDUSA_BACKEND_URL}/store/orders?limit=50&fields=id,display_id,status,fulfillment_status,payment_status,metadata,created_at,items.title,items.thumbnail,items.variant_title,items.unit_price,items.quantity,shipping_address.*`,
+        `${MEDUSA_BACKEND_URL}/store/orders?limit=50&fields=*items,*shipping_address`,
       );
       if (response.ok) {
         const { orders } = await response.json();
         if (orders && Array.isArray(orders)) {
-          const localOrders = getRealOrders();
+          // const localOrders = getRealOrders();
 
           const remoteMapped = orders.map((o: any) => {
             const items = (o.items || []).map((item: any) => ({
@@ -1251,18 +1255,17 @@ const AccountPage = () => {
         shippingFee: selectedRealOrder.shippingFee || 35000,
         paymentStatus:
           selectedRealOrder.payment_status === "captured" ||
-          selectedRealOrder.payment_status === "paid"
+          selectedRealOrder.payment_status === "paid" ||
+          selectedRealOrder.metadata?.payment_status === "paid" ||
+          selectedRealOrder.metadata?.payment_status === "captured" ||
+          selectedRealOrder.paymentMethod === "wallet"
             ? "Đã thanh toán"
             : "Chưa thanh toán",
         shippingStatus: getOrderFulfillmentBadgeText(selectedRealOrder),
         shippingAddress: {
-          name: selectedRealOrder.shipping_address?.first_name 
-            ? `${selectedRealOrder.shipping_address.last_name || ''} ${selectedRealOrder.shipping_address.first_name}`.trim() 
-            : "Khách Hàng",
-          phone: selectedRealOrder.shipping_address?.phone || "Chưa cập nhật số ĐT",
-          address: selectedRealOrder.shipping_address?.address_1 
-            ? `${selectedRealOrder.shipping_address.address_1}${selectedRealOrder.shipping_address.city ? `, ${selectedRealOrder.shipping_address.city}` : ''}${selectedRealOrder.shipping_address.province ? `, ${selectedRealOrder.shipping_address.province}` : ''}` 
-            : "Chưa cập nhật địa chỉ",
+          name: selectedRealOrder.customer?.fullName || "Khách Hàng",
+          phone: selectedRealOrder.customer?.phoneNumber || "Chưa cập nhật số ĐT",
+          address: selectedRealOrder.address || "Chưa cập nhật địa chỉ",
         },
         paymentMethod:
           selectedRealOrder.paymentMethod === "cod"
@@ -1389,7 +1392,12 @@ const AccountPage = () => {
     }
   };
 
-  const handleCancelOrder = async (orderId: string, reason: string, refundDest?: string, refundInfo?: string) => {
+  const handleCancelOrder = async (
+    orderId: string,
+    reason: string,
+    _refundDest?: string,
+    _refundInfo?: string,
+  ) => {
     setCancelingOrderId(orderId);
     try {
       const order = realOrders.find((o) => o.orderId === orderId);
@@ -1917,7 +1925,10 @@ const AccountPage = () => {
                                 </td>
                                 <td>
                                   {order.payment_status === "captured" ||
-                                  order.payment_status === "paid" ? (
+                                  order.payment_status === "paid" ||
+                                  order.metadata?.payment_status === "paid" ||
+                                  order.metadata?.payment_status === "captured" ||
+                                  order.paymentMethod === "wallet" ? (
                                     <span className="status-badge badge-completed">
                                       <i className="bi bi-check-circle-fill"></i>{" "}
                                       Đã thanh toán

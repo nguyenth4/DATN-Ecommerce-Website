@@ -209,18 +209,9 @@ export const OrdersWidget = () => {
                     {order.status}
                   </StatusBadge>
                 </div>
-                <select 
-                  value={order.metadata?.custom_status || "pending"}
-                  onChange={(e) => handleUpdateCustomStatus(order.id, e.target.value)}
-                  style={{ padding: "4px", fontSize: "0.8rem", borderRadius: "4px", border: "1px solid #ccc" }}
-                >
-                  <option value="pending">Chờ xác nhận</option>
-                  <option value="confirmed">Đã xác nhận</option>
-                  <option value="preparing">Đóng gói hàng</option>
-                  <option value="shipping">Đang giao</option>
-                  <option value="completed">Đã giao / Đã nhận</option>
-                  <option value="canceled">Đã hủy</option>
-                </select>
+                <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>
+                  Luồng: <strong>{order.metadata?.custom_status || "pending"}</strong>
+                </div>
               </td>
               <td style={{ padding: "8px" }}>
                 {Number(order.total || 0).toLocaleString()} ₫
