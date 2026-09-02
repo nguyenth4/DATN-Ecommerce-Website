@@ -235,7 +235,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
             if (pcRes.rows.length > 0) {
               const pcId = pcRes.rows[0].payment_collection_id;
               await db.raw(`UPDATE payment_collection SET status = 'authorized', captured_amount = amount, raw_captured_amount = raw_amount WHERE id = ?`, [pcId]);
-              await db.raw(`UPDATE payment SET captured_at = NOW() WHERE payment_collection_id = ?`, [pcId]);
+              await db.raw(`UPDATE payment SET captured_at = NOW(), provider_id = ? WHERE payment_collection_id = ?`, [paymentMethod, pcId]);
+              await db.raw(`UPDATE payment_session SET provider_id = ? WHERE payment_collection_id = ?`, [paymentMethod, pcId]);
             }
             console.log(`[Checkout API] Forced update payment_collection to 'authorized' for Wallet order ${medusaOrderId}`);
           } catch (e: any) {
