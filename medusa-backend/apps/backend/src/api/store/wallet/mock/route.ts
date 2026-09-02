@@ -44,16 +44,16 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     // Cộng tiền vào ví
     await db.raw(`
       UPDATE wallet
-      SET balance = balance + ?, updated_at = NOW()
+      SET balance = balance + ?, raw_balance = jsonb_build_object('value', (balance + ?)::text, 'precision', 20), updated_at = NOW()
       WHERE id = ?
-    `, [numAmount, wallet.id]);
+    `, [numAmount, numAmount, wallet.id]);
 
     // Tạo giao dịch topup
     const txId = `tx_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     await db.raw(`
-      INSERT INTO wallet_transaction (id, wallet_id, amount, type, description)
-      VALUES (?, ?, ?, 'topup', ?)
-    `, [txId, wallet.id, numAmount, `Nạp ${numAmount.toLocaleString('vi-VN')}đ vào ví`]);
+      INSERT INTO wallet_transaction (id, wallet_id, amount, raw_amount, type, description)
+      VALUES (?, ?, ?, jsonb_build_object('value', ?::text, 'precision', 20), 'topup', ?)
+    `, [txId, wallet.id, numAmount, numAmount.toString(), `Nạp ${numAmount.toLocaleString('vi-VN')}đ vào ví`]);
 
     // Lấy lại ví mới nhất kèm giao dịch
     const updatedWalletRes = await db.raw(`

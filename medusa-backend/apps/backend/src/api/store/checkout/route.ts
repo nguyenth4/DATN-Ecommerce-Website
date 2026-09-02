@@ -157,12 +157,12 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
           const wallet = walletRes.rows[0];
           
           if (wallet && wallet.balance >= amount) {
-            await db.raw(`UPDATE wallet SET balance = balance - ?, updated_at = NOW() WHERE id = ?`, [amount, wallet.id]);
+            await db.raw(`UPDATE wallet SET balance = balance - ?, raw_balance = jsonb_build_object('value', (balance - ?)::text, 'precision', 20), updated_at = NOW() WHERE id = ?`, [amount, amount, wallet.id]);
             const txId = `tx_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
             await db.raw(`
-              INSERT INTO wallet_transaction (id, wallet_id, amount, type, description)
-              VALUES (?, ?, ?, 'deduction', ?)
-            `, [txId, wallet.id, amount, `Thanh toán đơn hàng ${mockOrderId}`]);
+              INSERT INTO wallet_transaction (id, wallet_id, amount, raw_amount, type, description)
+              VALUES (?, ?, ?, jsonb_build_object('value', ?::text, 'precision', 20), 'deduction', ?)
+            `, [txId, wallet.id, amount, amount.toString(), `Thanh toán đơn hàng ${mockOrderId}`]);
             console.log(`[Checkout API] Wallet deducted successfully.`);
           } else {
             return res.status(400).json({ error: "Số dư ví không đủ để thanh toán." });
@@ -218,6 +218,10 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
                   payment_collection_id: paymentCollections[0].id,
                 }
               });
+              
+              // In Medusa 2.0, marking the payment collection as paid is enough
+              // The order's payment_status is computed dynamically or updated by events
+              
               console.log(`[Checkout API] Marked Medusa order ${medusaOrderId} as Paid for Wallet!`);
             }
           } catch (updateErr: any) {

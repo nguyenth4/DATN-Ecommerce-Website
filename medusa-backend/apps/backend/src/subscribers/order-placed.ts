@@ -33,6 +33,11 @@ const buildOrderHtml = (order: any) => {
 
   const address = order.shipping_address?.address_1 || '';
 
+  const firstItemTitle = order.items?.[0]?.title || order.items?.[0]?.product_title || 'Đơn hàng';
+  const orderName = order.items?.length > 1 
+    ? `${firstItemTitle} và ${order.items.length - 1} sản phẩm khác` 
+    : firstItemTitle;
+
   return `
     <!DOCTYPE html>
     <html lang="vi">
@@ -55,7 +60,7 @@ const buildOrderHtml = (order: any) => {
                 <td style="padding:40px;">
                   <h1 style="font-size:1.5rem;font-weight:700;color:#0f172a;margin:0 0 16px;">Xin chào ${customerName},</h1>
                   <p style="color:#475569;font-size:1rem;line-height:1.6;margin:0 0 24px;">
-                    Đơn hàng <strong>#${order.display_id || order.id.slice(0, 8)}</strong> của bạn đã được tiếp nhận và đang trong quá trình xử lý. Dưới đây là chi tiết đơn hàng:
+                    Đơn hàng <strong>${orderName}</strong> của bạn đã được tiếp nhận và đang trong quá trình xử lý. Dưới đây là chi tiết đơn hàng:
                   </p>
                   
                   <div style="background:#f1f5f9;border-radius:12px;padding:24px;margin-bottom:32px;">
@@ -126,11 +131,16 @@ export default async function orderPlacedHandler({
 
   if (resend && customerEmail) {
     try {
+      const firstItemTitle = order.items?.[0]?.title || order.items?.[0]?.product_title || 'Đơn hàng';
+      const orderName = order.items?.length > 1 
+        ? `${firstItemTitle} và ${order.items.length - 1} sản phẩm khác` 
+        : firstItemTitle;
+
       const fromEmail = process.env.RESEND_FROM_EMAIL || 'Sprylo <onboarding@resend.dev>';
       const { data: result, error } = await resend.emails.send({
         from: fromEmail,
         to: customerEmail,
-        subject: `[Sprylo] Xác nhận đơn hàng #${order.display_id || order.id.slice(0, 8)}`,
+        subject: `[Sprylo] Xác nhận: ${orderName}`,
         html: buildOrderHtml(order),
       });
 

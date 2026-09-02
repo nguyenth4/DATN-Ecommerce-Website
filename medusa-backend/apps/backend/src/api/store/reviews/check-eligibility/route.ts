@@ -25,11 +25,12 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
         FROM "order" o
         JOIN order_item oi ON oi.order_id = o.id
         JOIN order_line_item oli ON oli.id = oi.item_id
+        LEFT JOIN product_variant pv ON pv.id = oli.variant_id
         WHERE o.customer_id = ? 
-          AND oli.product_id = ?
+          AND (oli.product_id = ? OR pv.product_id = ?)
           AND o.status = 'completed'
       ) AS is_eligible
-    `, [customerId, product_id]);
+    `, [customerId, product_id, product_id]);
 
     const isEligible = purchaseRes.rows[0]?.is_eligible || false;
     
