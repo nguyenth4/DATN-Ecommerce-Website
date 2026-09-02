@@ -111,6 +111,7 @@ export const OrdersWidget = () => {
   }
 
   const [filter, setFilter] = useState<"all" | "need_refund" | "return_request">("all")
+  const [refundingId, setRefundingId] = useState<string | null>(null)
 
   const displayedOrders = filter === "need_refund"
     ? orders.filter(o => o.payment_status !== "refunded" && o.metadata?.cancel_requested)
@@ -211,9 +212,11 @@ export const OrdersWidget = () => {
                     </Button>
                   </>
                 )}
-                {(order.metadata?.cancel_requested || order.metadata?.return_requested) && order.payment_status !== "refunded" && (
-                  <Button size="small" variant="danger" onClick={async () => {
+                {(order.metadata?.cancel_requested || order.metadata?.return_requested) && order.payment_status !== "refunded" && !order.metadata?.refund_id && (
+                  <Button size="small" variant="danger" disabled={refundingId === order.id} onClick={async () => {
+                    if (refundingId) return;
                     if (!confirm("Bạn có chắc chắn muốn hoàn tiền cho đơn hàng này?")) return;
+                    setRefundingId(order.id);
                     try {
                       // Note: We need to know the payment method, but for now we try zalopay or vnpay based on metadata
                       const method = order.metadata?.payment_method || (order.payments && order.payments.length > 0 ? order.payments[0].provider_id : 'zalopay');
@@ -231,9 +234,11 @@ export const OrdersWidget = () => {
                       }
                     } catch (e: any) {
                       alert("Lỗi kết nối: " + e.message);
+                    } finally {
+                      setRefundingId(null);
                     }
                   }}>
-                    Hoàn tiền
+                    {refundingId === order.id ? 'Đang hoàn tiền...' : 'Hoàn tiền'}
                   </Button>
                 )}
               </td>

@@ -295,7 +295,6 @@ const CartPage = () => {
           <div className="container">
             <div className="crumbs"><Link to="/">Trang chủ</Link> <span className="sep">/</span> <span>Giỏ hàng</span></div>
             <h1>Giỏ hàng của bạn</h1>
-            <p>{itemCount} {itemCount === 1 ? 'sản phẩm' : 'sản phẩm'} · sẵn sàng giao. Miễn phí vận chuyển cho đơn hàng này. Dự kiến giao hàng 21 – 23 Tháng 5.</p>
           </div>
         </section>
 
@@ -629,10 +628,6 @@ const CartPage = () => {
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#444' }}>
                     <span>Tổng tiền hàng</span>
                     <span style={{ fontWeight: 600, color: '#111' }}>{subtotal.toLocaleString('vi-VN')}đ</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#444' }}>
-                    <span>Phí vận chuyển</span>
-                    <span style={{ fontWeight: 600, color: '#111' }}>{shippingFee > 0 ? `${shippingFee.toLocaleString('vi-VN')}đ` : 'Miễn phí'}</span>
                   </div>
                   {appliedPromoCode && discount > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', color: '#444' }}>
