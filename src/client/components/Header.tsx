@@ -4,7 +4,8 @@ import { Menu, X, ShoppingCart, User, Heart, Search, ChevronRight, Plus, Minus, 
 
 import { getCompareList } from '../utils/compare';
 import { getWishlist } from '../utils/wishlist';
-import { useCart, useUpdateLineItem, useRemoveLineItem } from '../services/cart.service';
+import { getCart, getCartCount, updateCartQty, removeFromCart } from '../utils/cart';
+import type { CartItem } from '../utils/cart';
 import toast from 'react-hot-toast';
 
 const headerStyles = `
@@ -275,14 +276,11 @@ const Header = () => {
   }, [promotions]);
 
 
-  const { data: cart } = useCart();
-  const updateLineItem = useUpdateLineItem();
-  const removeLineItem = useRemoveLineItem();
+  const [cartCount, setCartCount] = useState<number>(getCartCount());
+  const [cartItems, setCartItems] = useState<CartItem[]>(getCart());
   const navigate = useNavigate();
 
-  const cartItems = cart?.items || [];
-  const cartCount = cartItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
-  const cartSubtotal = cartItems.reduce((sum: number, item: any) => sum + item.unit_price * item.quantity, 0);
+  const cartSubtotal = cartItems.reduce((sum, item) => sum + item.price * item.qty, 0);
 
   useEffect(() => {
     document.body.style.overflow = (drawerOpen || cartDrawerOpen) ? 'hidden' : '';
@@ -300,6 +298,10 @@ const Header = () => {
       const info = localStorage.getItem('customer_info');
       setCustomerInfo(info ? JSON.parse(info) : null);
     };
+    const handleCartUpdate = () => {
+      setCartCount(getCartCount());
+      setCartItems(getCart());
+    };
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'customer_info' || e.key === 'customer_token') {
         handleAuthChange();
@@ -307,16 +309,19 @@ const Header = () => {
     };
 
     handleAuthChange();
+    handleCartUpdate();
 
     window.addEventListener('compare-updated', handleCompareUpdate);
     window.addEventListener('wishlist-updated', handleWishlistUpdate);
     window.addEventListener('customer-auth-change', handleAuthChange);
+    window.addEventListener('cart-updated', handleCartUpdate);
     window.addEventListener('storage', handleStorageChange);
 
     return () => {
       window.removeEventListener('compare-updated', handleCompareUpdate);
       window.removeEventListener('wishlist-updated', handleWishlistUpdate);
       window.removeEventListener('customer-auth-change', handleAuthChange);
+      window.removeEventListener('cart-updated', handleCartUpdate);
       window.removeEventListener('storage', handleStorageChange);
     };
   }, []);
@@ -329,20 +334,13 @@ const Header = () => {
     }
   };
 
-  const handleUpdateQty = (lineId: string, currentQty: number, delta: number) => {
+  const handleUpdateQty = (id: string, currentQty: number, delta: number) => {
     const newQty = Math.max(1, currentQty + delta);
-    if (newQty === currentQty) return;
-
-    updateLineItem.mutate({ lineId, quantity: newQty }, {
-      onError: () => toast.error("Không thể cập nhật số lượng")
-    });
+    updateCartQty(id, newQty);
   };
 
-  const handleRemoveItem = (lineId: string) => {
-    removeLineItem.mutate(lineId, {
-      onSuccess: () => toast.success("Đã xóa sản phẩm khỏi giỏ hàng"),
-      onError: () => toast.error("Không thể xóa sản phẩm")
-    });
+  const handleRemoveItem = (id: string) => {
+    removeFromCart(id);
   };
 
   const activePromos = promotions.length > 0 ? promotions : [
@@ -540,22 +538,22 @@ const Header = () => {
               </button>
             </div>
           ) : (
-            cartItems.map((item: any) => (
+            cartItems.map((item: CartItem) => (
               <div className="cart-drawer-item" key={item.id}>
-                <img src={item.thumbnail || 'https://via.placeholder.com/64'} alt={item.title} className="cart-drawer-img" />
+                <img src={item.img.startsWith('http') ? item.img : `https://images.unsplash.com/${item.img}?w=200&q=80&auto=format&fit=crop`} alt={item.name} className="cart-drawer-img" />
                 <div className="cart-drawer-info">
-                  <div className="cart-drawer-name" title={item.title}>
-                    {item.title}
+                  <div className="cart-drawer-name" title={item.name}>
+                    {item.name}
                   </div>
-                  {item.variant.title !== 'Default Variant' && (
-                    <div className="cart-drawer-variant">{item.variant.title}</div>
+                  {item.variant && (
+                    <div className="cart-drawer-variant">{item.variant}</div>
                   )}
-                  <div className="cart-drawer-price">{item.unit_price.toLocaleString('vi-VN')}đ</div>
+                  <div className="cart-drawer-price">{item.price.toLocaleString('vi-VN')}đ</div>
                   <div className="cart-drawer-item-actions">
                     <div className="cart-drawer-qty">
-                      <button className="cart-drawer-qty-btn" onClick={() => handleUpdateQty(item.id, item.quantity, -1)}><Minus size={10} /></button>
-                      <span className="cart-drawer-qty-val">{item.quantity}</span>
-                      <button className="cart-drawer-qty-btn" onClick={() => handleUpdateQty(item.id, item.quantity, 1)}><Plus size={10} /></button>
+                      <button className="cart-drawer-qty-btn" onClick={() => handleUpdateQty(item.id, item.qty, -1)}><Minus size={10} /></button>
+                      <span className="cart-drawer-qty-val">{item.qty}</span>
+                      <button className="cart-drawer-qty-btn" onClick={() => handleUpdateQty(item.id, item.qty, 1)}><Plus size={10} /></button>
                     </div>
                     <button className="cart-drawer-item-delete" onClick={() => handleRemoveItem(item.id)}>
                       <Trash2 size={14} />
