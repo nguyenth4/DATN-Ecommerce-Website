@@ -1,12 +1,30 @@
-import { useState, useEffect } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { Menu, X, ShoppingCart, User, Heart, Search, ChevronRight, Plus, Minus, Trash2, ShoppingBag, ShieldCheck } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import {
+  Menu,
+  X,
+  ShoppingCart,
+  User,
+  Heart,
+  Search,
+  ChevronRight,
+  Plus,
+  Minus,
+  Trash2,
+  ShoppingBag,
+  ShieldCheck,
+} from "lucide-react";
 
-import { getCompareList } from '../utils/compare';
-import { getWishlist } from '../utils/wishlist';
-import { getCart, getCartCount, updateCartQty, removeFromCart } from '../utils/cart';
-import type { CartItem } from '../utils/cart';
-import toast from 'react-hot-toast';
+import { getCompareList } from "../utils/compare";
+import { getWishlist } from "../utils/wishlist";
+import {
+  getCart,
+  getCartCount,
+  updateCartQty,
+  removeFromCart,
+} from "../utils/cart";
+import type { CartItem } from "../utils/cart";
+import toast from "react-hot-toast";
 
 const headerStyles = `
   .cart-drawer {
@@ -232,22 +250,23 @@ const headerStyles = `
 const Header = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
-  const [searchQ, setSearchQ] = useState('');
+  const [searchQ, setSearchQ] = useState("");
   const [compareCount, setCompareCount] = useState(getCompareList().length);
   const [wishlistCount, setWishlistCount] = useState(getWishlist().length);
   const [customerInfo, setCustomerInfo] = useState<any>(null);
 
   const [promotions, setPromotions] = useState<any[]>([]);
   const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
-  const [fadeState, setFadeState] = useState('in'); // 'in' | 'out'
+  const [fadeState, setFadeState] = useState("in"); // 'in' | 'out'
 
   useEffect(() => {
     const fetchPromotions = async () => {
       try {
-        const res = await fetch('http://localhost:9000/store/promotions', {
+        const res = await fetch("http://localhost:9000/store/promotions", {
           headers: {
-            'x-publishable-api-key': 'pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d'
-          }
+            "x-publishable-api-key":
+              "pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d",
+          },
         });
         if (res.ok) {
           const data = await res.json();
@@ -265,26 +284,32 @@ const Header = () => {
     if (activePromosCount <= 1) return;
 
     const interval = setInterval(() => {
-      setFadeState('out');
+      setFadeState("out");
       setTimeout(() => {
-        setCurrentPromoIndex((prevIndex) => (prevIndex + 1) % activePromosCount);
-        setFadeState('in');
+        setCurrentPromoIndex(
+          (prevIndex) => (prevIndex + 1) % activePromosCount,
+        );
+        setFadeState("in");
       }, 500);
     }, 4500);
 
     return () => clearInterval(interval);
   }, [promotions]);
 
-
   const [cartCount, setCartCount] = useState<number>(getCartCount());
   const [cartItems, setCartItems] = useState<CartItem[]>(getCart());
   const navigate = useNavigate();
 
-  const cartSubtotal = cartItems.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const cartSubtotal = cartItems.reduce(
+    (sum, item) => sum + item.price * item.qty,
+    0,
+  );
 
   useEffect(() => {
-    document.body.style.overflow = (drawerOpen || cartDrawerOpen) ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
+    document.body.style.overflow = drawerOpen || cartDrawerOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [drawerOpen, cartDrawerOpen]);
 
   useEffect(() => {
@@ -295,7 +320,7 @@ const Header = () => {
       setWishlistCount(getWishlist().length);
     };
     const handleAuthChange = () => {
-      const info = localStorage.getItem('customer_info');
+      const info = localStorage.getItem("customer_info");
       setCustomerInfo(info ? JSON.parse(info) : null);
     };
     const handleCartUpdate = () => {
@@ -303,7 +328,7 @@ const Header = () => {
       setCartItems(getCart());
     };
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'customer_info' || e.key === 'customer_token') {
+      if (e.key === "customer_info" || e.key === "customer_token") {
         handleAuthChange();
       }
     };
@@ -311,18 +336,18 @@ const Header = () => {
     handleAuthChange();
     handleCartUpdate();
 
-    window.addEventListener('compare-updated', handleCompareUpdate);
-    window.addEventListener('wishlist-updated', handleWishlistUpdate);
-    window.addEventListener('customer-auth-change', handleAuthChange);
-    window.addEventListener('cart-updated', handleCartUpdate);
-    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener("compare-updated", handleCompareUpdate);
+    window.addEventListener("wishlist-updated", handleWishlistUpdate);
+    window.addEventListener("customer-auth-change", handleAuthChange);
+    window.addEventListener("cart-updated", handleCartUpdate);
+    window.addEventListener("storage", handleStorageChange);
 
     return () => {
-      window.removeEventListener('compare-updated', handleCompareUpdate);
-      window.removeEventListener('wishlist-updated', handleWishlistUpdate);
-      window.removeEventListener('customer-auth-change', handleAuthChange);
-      window.removeEventListener('cart-updated', handleCartUpdate);
-      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener("compare-updated", handleCompareUpdate);
+      window.removeEventListener("wishlist-updated", handleWishlistUpdate);
+      window.removeEventListener("customer-auth-change", handleAuthChange);
+      window.removeEventListener("cart-updated", handleCartUpdate);
+      window.removeEventListener("storage", handleStorageChange);
     };
   }, []);
 
@@ -330,7 +355,7 @@ const Header = () => {
     e.preventDefault();
     if (searchQ.trim()) {
       navigate(`/products?q=${encodeURIComponent(searchQ.trim())}`);
-      setSearchQ('');
+      setSearchQ("");
     }
   };
 
@@ -343,32 +368,34 @@ const Header = () => {
     removeFromCart(id);
   };
 
-  const activePromos = promotions.length > 0 ? promotions : [
-    {
-      id: 'fallback-1',
-      code: 'GIAM100K',
-      app_method_type: 'fixed',
-      app_method_value: 100000,
-      is_automatic: false
-    },
-    {
-      id: 'fallback-2',
-      code: 'GIAM50K',
-      app_method_type: 'fixed',
-      app_method_value: 50000,
-      is_automatic: true
-    }
-  ];
+  const activePromos =
+    promotions.length > 0
+      ? promotions
+      : [
+          {
+            id: "fallback-1",
+            code: "GIAM100K",
+            app_method_type: "fixed",
+            app_method_value: 100000,
+            is_automatic: false,
+          },
+          {
+            id: "fallback-2",
+            code: "GIAM50K",
+            app_method_type: "fixed",
+            app_method_value: 50000,
+            is_automatic: true,
+          },
+        ];
 
   const currentPromo = activePromos[currentPromoIndex];
 
   const formatPromoValue = (promo: any) => {
-    if (promo.app_method_type === 'percentage') {
+    if (promo.app_method_type === "percentage") {
       return `${promo.app_method_value}%`;
     }
-    return `${Number(promo.app_method_value).toLocaleString('vi-VN')}đ`;
+    return `${Number(promo.app_method_value).toLocaleString("vi-VN")}đ`;
   };
-
 
   return (
     <>
@@ -376,35 +403,74 @@ const Header = () => {
 
       {/* Announcement Bar */}
       {currentPromo && (
-        <div style={{
-          background: 'linear-gradient(90deg, #1e3a8a 0%, #2563eb 50%, #1d4ed8 100%)',
-          color: '#fff',
-          padding: '8px 16px',
-          textAlign: 'center',
-          fontSize: '12.5px',
-          fontWeight: 600,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: '8px',
-          position: 'relative',
-          zIndex: 51,
-          boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
-          transition: 'opacity 0.5s ease-in-out',
-          opacity: fadeState === 'in' ? 1 : 0
-        }}>
+        <div
+          style={{
+            background:
+              "linear-gradient(90deg, #1e3a8a 0%, #2563eb 50%, #1d4ed8 100%)",
+            color: "#fff",
+            padding: "8px 16px",
+            textAlign: "center",
+            fontSize: "12.5px",
+            fontWeight: 600,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: "8px",
+            position: "relative",
+            zIndex: 51,
+            boxShadow: "0 2px 4px rgba(0,0,0,0.08)",
+            transition: "opacity 0.5s ease-in-out",
+            opacity: fadeState === "in" ? 1 : 0,
+          }}
+        >
           {currentPromo.is_automatic ? (
-            <span>🎉 Chương trình: Tự động giảm ngay <strong style={{ color: '#fde047' }}>{formatPromoValue(currentPromo)}</strong> cho tất cả đơn hàng!</span>
+            <span>
+              🎉 Chương trình: Tự động giảm ngay{" "}
+              <strong style={{ color: "#fde047" }}>
+                {formatPromoValue(currentPromo)}
+              </strong>{" "}
+              cho tất cả đơn hàng!
+            </span>
           ) : (
-            <span>🔥 Siêu khuyến mãi: Nhập mã <strong style={{ textDecoration: 'underline', color: '#fde047', cursor: 'pointer', letterSpacing: '0.5px' }} onClick={() => { navigator.clipboard.writeText(currentPromo.code); toast.success(`Đã sao chép mã ${currentPromo.code}!`); }}>{currentPromo.code}</strong> để giảm ngay <strong style={{ color: '#fde047' }}>{formatPromoValue(currentPromo)}</strong> cho đơn hàng!</span>
+            <span>
+              🔥 Siêu khuyến mãi: Nhập mã{" "}
+              <strong
+                style={{
+                  textDecoration: "underline",
+                  color: "#fde047",
+                  cursor: "pointer",
+                  letterSpacing: "0.5px",
+                }}
+                onClick={() => {
+                  navigator.clipboard.writeText(currentPromo.code);
+                  toast.success(`Đã sao chép mã ${currentPromo.code}!`);
+                }}
+              >
+                {currentPromo.code}
+              </strong>{" "}
+              để giảm ngay{" "}
+              <strong style={{ color: "#fde047" }}>
+                {formatPromoValue(currentPromo)}
+              </strong>{" "}
+              cho đơn hàng!
+            </span>
           )}
         </div>
       )}
 
       {/* Header Wrapper to keep both rows sticky together */}
-      <div className="header-wrapper" style={{ position: 'sticky', top: 0, zIndex: 50, background: 'var(--paper)', borderBottom: '1px solid var(--rule)' }}>
+      <div
+        className="header-wrapper"
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 50,
+          background: "var(--paper)",
+          borderBottom: "1px solid var(--rule)",
+        }}
+      >
         {/* Header Row */}
-        <header className="site-header" style={{ borderBottom: 'none' }}>
+        <header className="site-header" style={{ borderBottom: "none" }}>
           <div className="container header-content">
             <Link to="/" className="brand" style={{ flexShrink: 0 }}>
               <span className="brand-mark">S</span>
@@ -412,13 +478,39 @@ const Header = () => {
             </Link>
 
             <nav className="main-nav header-main-nav" aria-label="Primary">
-              <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>Trang chủ</NavLink>
-              <NavLink to="/products" end className={({ isActive }) => isActive ? 'active' : ''}>Điện thoại</NavLink>
-              <NavLink to="/cart" className={({ isActive }) => isActive ? 'active' : ''}>Giỏ hàng</NavLink>
-              <NavLink to="/contact" className={({ isActive }) => isActive ? 'active' : ''}>Liên hệ</NavLink>
+              <NavLink
+                to="/"
+                end
+                className={({ isActive }) => (isActive ? "active" : "")}
+              >
+                Trang chủ
+              </NavLink>
+              <NavLink
+                to="/products"
+                end
+                className={({ isActive }) => (isActive ? "active" : "")}
+              >
+                Điện thoại
+              </NavLink>
+              <NavLink
+                to="/cart"
+                className={({ isActive }) => (isActive ? "active" : "")}
+              >
+                Giỏ hàng
+              </NavLink>
+              <NavLink
+                to="/contact"
+                className={({ isActive }) => (isActive ? "active" : "")}
+              >
+                Liên hệ
+              </NavLink>
             </nav>
 
-            <form className="search header-search" role="search" onSubmit={handleSearch}>
+            <form
+              className="search header-search"
+              role="search"
+              onSubmit={handleSearch}
+            >
               <input
                 type="text"
                 placeholder="Tìm kiếm sản phẩm, thương hiệu, danh mục..."
@@ -433,62 +525,123 @@ const Header = () => {
 
             <div className="icon-row">
               {customerInfo ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {customerInfo.email === 'sprylo123@gmail.com' && (
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                >
+                  {customerInfo.email === "sprylo123@gmail.com" && (
                     <a
                       href="http://localhost:9000/app"
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        padding: '4px 10px',
-                        background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
-                        color: '#ffffff',
-                        borderRadius: '6px',
-                        fontSize: '11.5px',
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        padding: "4px 10px",
+                        background:
+                          "linear-gradient(135deg, #1e293b 0%, #334155 100%)",
+                        color: "#ffffff",
+                        borderRadius: "6px",
+                        fontSize: "11.5px",
                         fontWeight: 600,
-                        textDecoration: 'none',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                        transition: 'all 0.2s ease',
+                        textDecoration: "none",
+                        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                        transition: "all 0.2s ease",
                       }}
                       title="Truy cập Trang Quản Trị Medusa Admin"
                     >
-                      <ShieldCheck size={14} style={{ color: '#38bdf8' }} />
+                      <ShieldCheck size={14} style={{ color: "#38bdf8" }} />
                       <span>Admin</span>
                     </a>
                   )}
-                  <Link to="/account" className="icon-btn" aria-label="Tài khoản" title={`Chào, ${customerInfo.first_name || 'bạn'}`} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    {(customerInfo.avatar_url || customerInfo.metadata?.avatar_url) ? (
+                  <Link
+                    to="/account"
+                    className="icon-btn"
+                    aria-label="Tài khoản"
+                    title={`Chào, ${customerInfo.first_name || "bạn"}`}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    {customerInfo.avatar_url ||
+                    customerInfo.metadata?.avatar_url ? (
                       <img
-                        src={customerInfo.avatar_url || customerInfo.metadata?.avatar_url}
+                        src={
+                          customerInfo.avatar_url ||
+                          customerInfo.metadata?.avatar_url
+                        }
                         alt="Avatar"
                         referrerPolicy="no-referrer"
-                        style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--rule)' }}
+                        style={{
+                          width: "20px",
+                          height: "20px",
+                          borderRadius: "50%",
+                          objectFit: "cover",
+                          border: "1px solid var(--rule)",
+                        }}
                       />
                     ) : (
                       <User size={20} />
                     )}
-                    <span className="text-xs font-semibold" style={{ fontSize: '0.8rem', fontWeight: 600, maxWidth: '70px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span
+                      className="text-xs font-semibold"
+                      style={{
+                        fontSize: "0.8rem",
+                        fontWeight: 600,
+                        maxWidth: "70px",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
                       {customerInfo.first_name}
                     </span>
                   </Link>
                 </div>
               ) : (
-                <Link to="/login" className="icon-btn" aria-label="Đăng nhập" title="Đăng nhập">
+                <Link
+                  to="/login"
+                  className="icon-btn"
+                  aria-label="Đăng nhập"
+                  title="Đăng nhập"
+                >
                   <User size={20} />
                 </Link>
               )}
-              <Link to="/compare" className="icon-btn" aria-label="Compare" title="So sánh sản phẩm">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <Link
+                to="/compare"
+                className="icon-btn"
+                aria-label="Compare"
+                title="So sánh sản phẩm"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <path d="M16 3h5v5M21 3L14 10M8 21H3v-5M3 21l7-7" />
                 </svg>
-                {compareCount > 0 && <span className="count">{compareCount}</span>}
+                {compareCount > 0 && (
+                  <span className="count">{compareCount}</span>
+                )}
               </Link>
-              <Link to="/wishlist" className="icon-btn" aria-label="Yêu thích" title="Sản phẩm yêu thích">
+              <Link
+                to="/wishlist"
+                className="icon-btn"
+                aria-label="Yêu thích"
+                title="Sản phẩm yêu thích"
+              >
                 <Heart size={20} />
-                {wishlistCount > 0 && <span className="count">{wishlistCount}</span>}
+                {wishlistCount > 0 && (
+                  <span className="count">{wishlistCount}</span>
+                )}
               </Link>
               <Link
                 to="/cart"
@@ -513,25 +666,39 @@ const Header = () => {
       </div>
 
       {/* Cart Drawer */}
-      <div className={`cart-drawer ${cartDrawerOpen ? 'is-open' : ''}`}>
+      <div className={`cart-drawer ${cartDrawerOpen ? "is-open" : ""}`}>
         <div className="cart-drawer-header">
           <div className="cart-drawer-title">
             <ShoppingBag size={20} /> Giỏ hàng ({cartCount})
           </div>
-          <button className="cart-drawer-close" onClick={() => setCartDrawerOpen(false)}><X size={20} /></button>
+          <button
+            className="cart-drawer-close"
+            onClick={() => setCartDrawerOpen(false)}
+          >
+            <X size={20} />
+          </button>
         </div>
 
         <div className="cart-drawer-body">
           {cartItems.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '40px 0', color: '#9ca3af' }}>
-              <ShoppingCart size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
-              <p style={{ fontSize: '14px' }}>Giỏ hàng của bạn đang trống</p>
+            <div
+              style={{
+                textAlign: "center",
+                padding: "40px 0",
+                color: "#9ca3af",
+              }}
+            >
+              <ShoppingCart
+                size={48}
+                style={{ margin: "0 auto 16px", opacity: 0.3 }}
+              />
+              <p style={{ fontSize: "14px" }}>Giỏ hàng của bạn đang trống</p>
               <button
                 className="cart-drawer-btn cart-drawer-btn--primary"
-                style={{ margin: '16px auto 0', width: '140px' }}
+                style={{ margin: "16px auto 0", width: "140px" }}
                 onClick={() => {
                   setCartDrawerOpen(false);
-                  navigate('/products');
+                  navigate("/products");
                 }}
               >
                 Mua sắm ngay
@@ -540,7 +707,15 @@ const Header = () => {
           ) : (
             cartItems.map((item: CartItem) => (
               <div className="cart-drawer-item" key={item.id}>
-                <img src={item.img.startsWith('http') ? item.img : `https://images.unsplash.com/${item.img}?w=200&q=80&auto=format&fit=crop`} alt={item.name} className="cart-drawer-img" />
+                <img
+                  src={
+                    item.img.startsWith("http")
+                      ? item.img
+                      : `https://images.unsplash.com/${item.img}?w=200&q=80&auto=format&fit=crop`
+                  }
+                  alt={item.name}
+                  className="cart-drawer-img"
+                />
                 <div className="cart-drawer-info">
                   <div className="cart-drawer-name" title={item.name}>
                     {item.name}
@@ -548,14 +723,29 @@ const Header = () => {
                   {item.variant && (
                     <div className="cart-drawer-variant">{item.variant}</div>
                   )}
-                  <div className="cart-drawer-price">{item.price.toLocaleString('vi-VN')}đ</div>
+                  <div className="cart-drawer-price">
+                    {item.price.toLocaleString("vi-VN")}đ
+                  </div>
                   <div className="cart-drawer-item-actions">
                     <div className="cart-drawer-qty">
-                      <button className="cart-drawer-qty-btn" onClick={() => handleUpdateQty(item.id, item.qty, -1)}><Minus size={10} /></button>
+                      <button
+                        className="cart-drawer-qty-btn"
+                        onClick={() => handleUpdateQty(item.id, item.qty, -1)}
+                      >
+                        <Minus size={10} />
+                      </button>
                       <span className="cart-drawer-qty-val">{item.qty}</span>
-                      <button className="cart-drawer-qty-btn" onClick={() => handleUpdateQty(item.id, item.qty, 1)}><Plus size={10} /></button>
+                      <button
+                        className="cart-drawer-qty-btn"
+                        onClick={() => handleUpdateQty(item.id, item.qty, 1)}
+                      >
+                        <Plus size={10} />
+                      </button>
                     </div>
-                    <button className="cart-drawer-item-delete" onClick={() => handleRemoveItem(item.id)}>
+                    <button
+                      className="cart-drawer-item-delete"
+                      onClick={() => handleRemoveItem(item.id)}
+                    >
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -569,7 +759,9 @@ const Header = () => {
           <div className="cart-drawer-footer">
             <div className="cart-drawer-subtotal">
               <span>Tổng phụ:</span>
-              <span className="cart-drawer-subtotal-price">{cartSubtotal.toLocaleString('vi-VN')}đ</span>
+              <span className="cart-drawer-subtotal-price">
+                {cartSubtotal.toLocaleString("vi-VN")}đ
+              </span>
             </div>
             <div className="cart-drawer-buttons">
               <Link
@@ -592,24 +784,38 @@ const Header = () => {
       </div>
 
       {/* Mobile menu drawer */}
-      <div className={`drawer${drawerOpen ? ' is-open' : ''}`} id="drawer" aria-hidden={!drawerOpen}>
+      <div
+        className={`drawer${drawerOpen ? " is-open" : ""}`}
+        id="drawer"
+        aria-hidden={!drawerOpen}
+      >
         <div className="drawer-head">
           <Link to="/" className="brand" onClick={() => setDrawerOpen(false)}>
             <span className="brand-mark">S</span> Sprylo
           </Link>
-          <button className="drawer-close" onClick={() => setDrawerOpen(false)}><X size={24} /></button>
+          <button className="drawer-close" onClick={() => setDrawerOpen(false)}>
+            <X size={24} />
+          </button>
         </div>
-        <Link to="/" onClick={() => setDrawerOpen(false)}>Trang chủ</Link>
-        <Link to="/products" onClick={() => setDrawerOpen(false)}>Điện thoại</Link>
-        <Link to="/cart" onClick={() => setDrawerOpen(false)}>Giỏ hàng</Link>
-        <Link to="/contact" onClick={() => setDrawerOpen(false)}>Liên hệ</Link>
+        <Link to="/" onClick={() => setDrawerOpen(false)}>
+          Trang chủ
+        </Link>
+        <Link to="/products" onClick={() => setDrawerOpen(false)}>
+          Điện thoại
+        </Link>
+        <Link to="/cart" onClick={() => setDrawerOpen(false)}>
+          Giỏ hàng
+        </Link>
+        <Link to="/contact" onClick={() => setDrawerOpen(false)}>
+          Liên hệ
+        </Link>
         <Link
           to="/cart"
           className="btn btn--indigo"
-          style={{ marginTop: 'var(--s5)', justifyContent: 'center' }}
+          style={{ marginTop: "var(--s5)", justifyContent: "center" }}
           onClick={() => setDrawerOpen(false)}
         >
-          Xem giỏ hàng <ChevronRight size={18} style={{ marginLeft: '8px' }} />
+          Xem giỏ hàng <ChevronRight size={18} style={{ marginLeft: "8px" }} />
         </Link>
       </div>
 
@@ -620,7 +826,12 @@ const Header = () => {
             setDrawerOpen(false);
             setCartDrawerOpen(false);
           }}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 99 }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.35)",
+            zIndex: 99,
+          }}
         />
       )}
     </>
