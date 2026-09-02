@@ -14,13 +14,102 @@ import toast from 'react-hot-toast';
 import './HomePage.css';
 
 
+const heroSlides = [
+  // 1. Top-left main hero
+  {
+    bg: 'linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 60%, #0f172a 100%)',
+    eyebrow: 'Siêu phẩm · Nổi bật',
+    eyebrowColor: 'rgba(255,255,255,0.75)',
+    title: 'iPhone 16 Pro Max\nTitan Sa Mạc',
+    titleColor: '#ffffff',
+    descColor: 'rgba(255,255,255,0.82)',
+    desc: 'Khám phá đỉnh cao công nghệ với chip A18 Pro vượt trội, nút điều khiển Camera Control thông minh và thiết kế khung viền Titan sang trọng bậc nhất.',
+    img: 'https://images.unsplash.com/photo-1727079547627-836b0e391f21?w=900&q=80&auto=format&fit=crop',
+    alt: 'iPhone 16 Pro Max',
+    link: '/products'
+  },
+  // 2. Top-right first (purple)
+  {
+    bg: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 55%, #1e1b4b 100%)',
+    eyebrow: 'Đỉnh cao Apple',
+    eyebrowColor: 'rgba(221,214,254,0.85)',
+    title: 'iPhone 16 Pro\nTitan Tự Nhiên',
+    titleColor: '#f5f3ff',
+    descColor: 'rgba(237,233,254,0.82)',
+    desc: 'Thiết kế khung titan thanh lịch, màn hình Super Retina XDR 6.3" sắc nét cùng hệ thống camera chuyên nghiệp đột phá.',
+    img: 'https://images.unsplash.com/photo-1726732970014-f2df88c87dd3?w=900&q=80&auto=format&fit=crop',
+    alt: 'iPhone 16 Pro',
+    link: '/products'
+  },
+  // 3. Top-right second (teal)
+  {
+    bg: 'linear-gradient(135deg, #065f46 0%, #047857 55%, #0f172a 100%)',
+    eyebrow: 'Flagship Galaxy AI',
+    eyebrowColor: 'rgba(167,243,208,0.85)',
+    title: 'Samsung Galaxy\nS24 Ultra · 5G',
+    titleColor: '#ecfdf5',
+    descColor: 'rgba(209,250,229,0.85)',
+    desc: 'Trải nghiệm AI thông minh tích hợp, bút S Pen sắc bén và camera 200MP đỉnh cao dành cho những khoảnh khắc hoàn hảo.',
+    img: 'https://images.unsplash.com/photo-1705585175110-d25f92c183aa?w=900&q=80&auto=format&fit=crop',
+    alt: 'Samsung Galaxy S24 Ultra',
+    link: '/products'
+  },
+  // 4. Bottom-right (black)
+  {
+    bg: 'linear-gradient(135deg, #18181b 0%, #27272a 55%, #3f3f46 100%)',
+    eyebrow: 'Hiệu năng tối đa',
+    eyebrowColor: 'rgba(212,212,216,0.75)',
+    title: 'Xiaomi 14 Ultra\nMàn hình Leica',
+    titleColor: '#f4f4f5',
+    descColor: 'rgba(228,228,231,0.82)',
+    desc: 'Hệ thống camera Leica đỉnh cao, chip Snapdragon 8 Gen 3 cùng sạc nhanh HyperCharge 90W siêu tốc.',
+    img: 'https://images.unsplash.com/photo-1770274813875-346bfaf0ee11?w=900&q=80&auto=format&fit=crop',
+    alt: 'Xiaomi 14 Ultra',
+    link: '/products'
+  },
+  // 5. Bottom-center (red sale)
+  {
+    bg: 'linear-gradient(135deg, #b91c1c 0%, #dc2626 50%, #7f1d1d 100%)',
+    eyebrow: '⭐ Đại Lễ Quốc Khánh 2/9',
+    eyebrowColor: '#fef08a',
+    title: 'SIÊU SALE 2/9\nGIẢM TỚI 50%',
+    titleColor: '#fef08a',
+    descColor: '#fef2f2',
+    desc: 'FreeShip toàn quốc · Ưu đãi cực hot dành cho tất cả sản phẩm. Nhanh tay kẻo hết!',
+    img: '',
+    alt: 'Siêu Sale 2/9',
+    link: '/products?sale=2-9'
+  },
+  // 6. Bottom-left (orange)
+  {
+    bg: 'linear-gradient(135deg, #b45309 0%, #92400e 55%, #1c1917 100%)',
+    eyebrow: 'Nhiếp ảnh chuyên nghiệp',
+    eyebrowColor: 'rgba(254,215,170,0.85)',
+    title: 'OPPO Find X8\nCamera Hasselblad',
+    titleColor: '#fff7ed',
+    descColor: 'rgba(254,243,199,0.82)',
+    desc: 'Hệ thống camera đồng thương hiệu Hasselblad cùng chip Dimensity 9400 mạnh mẽ, thiết kế premium tinh tế.',
+    img: 'https://images.unsplash.com/photo-1779171443655-da6287ba0d2e?w=900&q=80&auto=format&fit=crop',
+    alt: 'OPPO Find X8',
+    link: '/products'
+  }
+];
+
 const HomePage = () => {
+  const [heroIdx, setHeroIdx] = useState(0);
   const [selectedCatId, setSelectedCatId] = useState<string | null>(null);
   const [compareList, setCompareList] = useState(getCompareList());
   const [wishlist, setWishlist] = useState(getWishlist());
   
   const [promotions, setPromotions] = useState<any[]>([]);
   const [copiedCodes, setCopiedCodes] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setHeroIdx(prev => (prev + 1) % heroSlides.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const fetchPromotions = async () => {
@@ -140,20 +229,63 @@ const HomePage = () => {
         <div className="container">
           <div className="bento">
 
-            <article className="bento-card bento-card--lg">
+            <article className="bento-card bento-card--lg" style={{
+              background: heroSlides[heroIdx].bg,
+              transition: 'background 0.8s ease'
+            }}>
               <div className="sparkle"></div>
-              <div>
-                <span className="eyebrow" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Zap size={14} fill="currentColor" /> Siêu phẩm · Nổi bật
+              <div style={{ position: 'relative', zIndex: 2 }}>
+                <span className="eyebrow" style={{ display: 'flex', alignItems: 'center', gap: '4px', transition: 'opacity 0.5s', color: heroSlides[heroIdx].eyebrowColor }}>
+                  <Zap size={14} fill="currentColor" /> {heroSlides[heroIdx].eyebrow}
                 </span>
-                <h2>iPhone 16 Pro Max<br />Titan Sa Mạc</h2>
-                <p>Khám phá đỉnh cao công nghệ với chip A18 Pro vượt trội, nút điều khiển Camera Control thông minh và thiết kế khung viền Titan sang trọng bậc nhất.</p>
-                <Link to="/products" className="btn btn--paper">Mua ngay
-                  <ChevronRight size={16} />
-                </Link>
-                <div className="dots"><span className="active"></span><span></span><span></span></div>
+                <h2 key={`title-${heroIdx}`} style={{ animation: 'heroFadeIn 0.6s ease', color: heroSlides[heroIdx].titleColor }}>
+                  {heroSlides[heroIdx].title.split('\n').map((line, i) => (
+                    <span key={i}>{line}{i < heroSlides[heroIdx].title.split('\n').length - 1 && <br />}</span>
+                  ))}
+                </h2>
+                <p key={`desc-${heroIdx}`} style={{ animation: 'heroFadeIn 0.7s ease', color: heroSlides[heroIdx].descColor }}>
+                  {heroSlides[heroIdx].desc}
+                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '50px', marginTop: '1.5rem' }}>
+                  <Link to={heroSlides[heroIdx].link} className="btn btn--paper">
+                    Mua ngay
+                    <ChevronRight size={16} />
+                  </Link>
+                  <div className="dots" style={{ margin: 0 }}>
+                    {heroSlides.map((_, i) => (
+                      <span
+                        key={i}
+                        className={i === heroIdx ? 'active' : ''}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => setHeroIdx(i)}
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
-              <img className="product" src="https://images.unsplash.com/photo-1727079547627-836b0e391f21?w=900&q=80&auto=format&fit=crop" alt="iPhone 16 Pro Max" />
+              {heroSlides[heroIdx].img ? (
+                <img
+                  key={`img-${heroIdx}`}
+                  className="product"
+                  src={heroSlides[heroIdx].img}
+                  alt={heroSlides[heroIdx].alt}
+                  style={{ animation: 'heroSlideIn 0.7s ease' }}
+                />
+              ) : (
+                /* Ngôi sao trang trí lớn cho slide SIÊU SALE 2/9 */
+                <span style={{
+                  position: 'absolute',
+                  right: '-20px',
+                  bottom: '-40px',
+                  fontSize: '320px',
+                  color: 'rgba(254, 240, 138, 0.10)',
+                  lineHeight: 1,
+                  pointerEvents: 'none',
+                  userSelect: 'none',
+                  animation: 'heroFadeIn 0.8s ease',
+                  fontWeight: 900
+                }}>★</span>
+              )}
             </article>
 
             <article className="bento-card bento-card--purple">
