@@ -134,12 +134,21 @@ VNPAY_IPN_URL=http://localhost:9000/store/payment/vnpay/ipn
 GOOGLE_CLIENT_ID=xxxxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxxxxxxxxxxxxxx
 GOOGLE_CALLBACK_URL=http://localhost:9000/auth/customer/google/callback
-FACEBOOK_APP_ID=xxxxxxxxxxxxxxxx
-FACEBOOK_APP_SECRET=xxxxxxxxxxxxxxxx
+# Facebook OAuth credentials (giá trị thật chỉ lưu trong backend/.env, không commit)
+FACEBOOK_APP_ID=<Meta App ID>
+FACEBOOK_APP_SECRET=<Meta App Secret>
 FACEBOOK_CALLBACK_URL=http://localhost:9000/auth/customer/facebook/callback
 ```
 
-> Facebook Login redirect về `/auth/callback?_type=facebook&token=...`. Backend phải được khởi động lại sau khi thay đổi route để nạp callback và endpoint `/store/custom/auth-identity`.
+Facebook Login redirect về `/auth/callback?_type=facebook&token=...`. Ba biến `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET` và `FACEBOOK_CALLBACK_URL` phải nằm trong `medusa-backend/backend/apps/backend/.env`.
+
+**Lưu ý vận hành (đã xử lý):** Khi backend chưa được khởi động lại sau khi cập nhật `.env`, `POST /auth/customer/facebook` sẽ dùng fallback `your_facebook_app_id_here`, làm Meta báo _ID ứng dụng không hợp lệ_. Dừng tiến trình cũ trên cổng `9000` và chạy lại tại thư mục `medusa-backend/backend/apps/backend`:
+
+```powershell
+npm run dev
+```
+
+Kiểm tra cấu hình đang được nạp bằng request `POST http://localhost:9000/auth/customer/facebook`. Trường `location` trả về phải có `client_id=<Meta App ID>`, không phải `your_facebook_app_id_here`. Trên Meta Developers, thêm Redirect URI hợp lệ: `http://localhost:9000/auth/customer/facebook/callback`; khi app còn ở Development mode, tài khoản kiểm thử phải có vai trò Admin, Developer hoặc Tester.
 
 ### Email (Resend)
 
@@ -196,25 +205,25 @@ Hệ thống báo giá vận chuyển tại trang Checkout được đồng bộ
 
 Tất cả routes trong `src/api/store/`:
 
-| Method     | Endpoint                        | Chức năng                                                          |
-| ---------- | ------------------------------- | ------------------------------------------------------------------ |
-| `POST`     | `/store/checkout`               | Tạo đơn hàng, trừ tồn kho, tạo payment collection, build VNPAY URL |
-| `GET`      | `/store/payment/vnpay/ipn`      | IPN callback từ VNPAY (xác nhận giao dịch server-to-server)        |
-| `POST`     | `/store/payment/vnpay/ipn`      | IPN callback từ VNPAY                                              |
-| `GET/POST` | `/store/ghn/fee`                | Tính phí vận chuyển GHN                                            |
-| `POST`     | `/store/ghtk/fee`               | Tính phí vận chuyển GHTK                                           |
-| `GET/POST` | `/store/ghn/soc`                | Tạo đơn vận chuyển GHN                                             |
-| `GET/POST` | `/store/orders/:id/cancel`      | Hủy đơn hàng, hoàn trả tồn kho                                     |
-| `GET/POST` | `/store/wallet`                 | Quản lý ví điện tử                                                 |
-| `GET/POST` | `/store/reviews`                | Đánh giá sản phẩm                                                  |
-| `GET/POST` | `/store/recommendations`        | Gợi ý sản phẩm (AI Gemini)                                         |
-| `GET/POST` | `/store/interactions`           | Lịch sử xem/tương tác sản phẩm                                     |
-| `POST`     | `/store/custom/profile`         | Cập nhật hồ sơ khách hàng                                          |
-| `POST`     | `/store/custom/upload-avatar`   | Upload ảnh đại diện                                                |
-| `POST`     | `/store/custom/change-password` | Đổi mật khẩu                                                       |
-| `GET`      | `/store/custom/auth-identity`   | Lấy metadata OAuth, liên kết customer và cấp token customer       |
-| `POST`     | `/store/orders/:id/request-return` | Khách gửi lý do trả hàng và phương thức hoàn tiền               |
-| `POST`     | `/admin/orders/:id/approve-return` | Admin duyệt trả hàng, xử lý hoàn tiền và gửi email SendGrid      |
+| Method     | Endpoint                           | Chức năng                                                          |
+| ---------- | ---------------------------------- | ------------------------------------------------------------------ |
+| `POST`     | `/store/checkout`                  | Tạo đơn hàng, trừ tồn kho, tạo payment collection, build VNPAY URL |
+| `GET`      | `/store/payment/vnpay/ipn`         | IPN callback từ VNPAY (xác nhận giao dịch server-to-server)        |
+| `POST`     | `/store/payment/vnpay/ipn`         | IPN callback từ VNPAY                                              |
+| `GET/POST` | `/store/ghn/fee`                   | Tính phí vận chuyển GHN                                            |
+| `POST`     | `/store/ghtk/fee`                  | Tính phí vận chuyển GHTK                                           |
+| `GET/POST` | `/store/ghn/soc`                   | Tạo đơn vận chuyển GHN                                             |
+| `GET/POST` | `/store/orders/:id/cancel`         | Hủy đơn hàng, hoàn trả tồn kho                                     |
+| `GET/POST` | `/store/wallet`                    | Quản lý ví điện tử                                                 |
+| `GET/POST` | `/store/reviews`                   | Đánh giá sản phẩm                                                  |
+| `GET/POST` | `/store/recommendations`           | Gợi ý sản phẩm (AI Gemini)                                         |
+| `GET/POST` | `/store/interactions`              | Lịch sử xem/tương tác sản phẩm                                     |
+| `POST`     | `/store/custom/profile`            | Cập nhật hồ sơ khách hàng                                          |
+| `POST`     | `/store/custom/upload-avatar`      | Upload ảnh đại diện                                                |
+| `POST`     | `/store/custom/change-password`    | Đổi mật khẩu                                                       |
+| `GET`      | `/store/custom/auth-identity`      | Lấy metadata OAuth, liên kết customer và cấp token customer        |
+| `POST`     | `/store/orders/:id/request-return` | Khách gửi lý do trả hàng và phương thức hoàn tiền                  |
+| `POST`     | `/admin/orders/:id/approve-return` | Admin duyệt trả hàng, xử lý hoàn tiền và gửi email SendGrid        |
 
 ---
 
@@ -296,6 +305,7 @@ Yêu cầu hoàn tiền có `refund_id` để tránh duyệt/hoàn tiền trùng
 
 - [x] Xác thực người dùng: Đăng ký, Đăng nhập, Quên/Đặt lại mật khẩu
 - [x] OAuth: Google Login
+- [x] OAuth: Facebook Login (đã nạp biến môi trường và xác nhận endpoint tạo OAuth URL dùng Meta App ID)
 - [x] Danh sách & lọc sản phẩm (theo danh mục, giá, rating)
 - [x] Chi tiết sản phẩm + gallery ảnh
 - [x] Giỏ hàng (LocalStorage)
@@ -321,7 +331,6 @@ Yêu cầu hoàn tiền có `refund_id` để tránh duyệt/hoàn tiền trùng
 ### Ưu tiên cao
 
 - [ ] **Email thật:** Thay `RESEND_API_KEY` bằng key thật để gửi email xác nhận đơn hàng, quên mật khẩu
-- [ ] **Facebook OAuth:** Điền `FACEBOOK_APP_ID` và `FACEBOOK_APP_SECRET` thật
 - [ ] **VNPAY Production:** Khi go-live, thay `VNPAY_HOST`, `VNPAY_TMN_CODE`, `VNPAY_SECURE_SECRET` bằng credentials production và bỏ `testMode: true`
 - [ ] **Cấu hình kho vận chuyển thực:** Điền `GHTK_PICK_PROVINCE`, `GHTK_PICK_DISTRICT` và thay district/ward GHN hard-code bằng địa chỉ kho thực tế.
 
