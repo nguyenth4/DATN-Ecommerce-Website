@@ -292,9 +292,9 @@ const ProductsPage = () => {
           <div className="container">
             <div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+                <div className="product-sort-header">
                   <h2 style={{ fontSize: '24px', fontWeight: 'bold', fontFamily: 'var(--ff-display)', color: 'var(--ink)', margin: 0 }}>Sắp xếp theo</h2>
-                  <div style={{ display: 'flex', gap: '12px' }}>
+                  <div className="product-sort-options">
                   <button
                     onClick={() => handleSortChange('createdAt')}
                     style={{

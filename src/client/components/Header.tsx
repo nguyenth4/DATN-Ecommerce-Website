@@ -405,20 +405,20 @@ const Header = () => {
       <div className="header-wrapper" style={{ position: 'sticky', top: 0, zIndex: 50, background: 'var(--paper)', borderBottom: '1px solid var(--rule)' }}>
         {/* Header Row */}
         <header className="site-header" style={{ borderBottom: 'none' }}>
-          <div className="container" style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+          <div className="container header-content">
             <Link to="/" className="brand" style={{ flexShrink: 0 }}>
               <span className="brand-mark">S</span>
               Sprylo
             </Link>
 
-            <nav className="main-nav" aria-label="Primary" style={{ display: 'flex', gap: '1.5rem', flex: 1 }}>
+            <nav className="main-nav header-main-nav" aria-label="Primary">
               <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>Trang chủ</NavLink>
               <NavLink to="/products" end className={({ isActive }) => isActive ? 'active' : ''}>Điện thoại</NavLink>
               <NavLink to="/cart" className={({ isActive }) => isActive ? 'active' : ''}>Giỏ hàng</NavLink>
               <NavLink to="/contact" className={({ isActive }) => isActive ? 'active' : ''}>Liên hệ</NavLink>
             </nav>
 
-            <form className="search" role="search" onSubmit={handleSearch} style={{ flex: 1, maxWidth: '300px' }}>
+            <form className="search header-search" role="search" onSubmit={handleSearch}>
               <input
                 type="text"
                 placeholder="Tìm kiếm sản phẩm, thương hiệu, danh mục..."

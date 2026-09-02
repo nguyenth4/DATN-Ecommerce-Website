@@ -137,6 +137,28 @@
   .form-grid {
     grid-template-columns: 1fr;
   }
+
+  .checkout-page { padding-bottom: 2rem; }
+  .checkout-container { padding: 0 1rem; }
+  .checkout-header { padding: 0.75rem 0; }
+  .checkout-logo { font-size: 1.25rem; }
+  .checkout-steps { gap: 0.35rem; }
+  .step-item { gap: 0.25rem; font-size: 0.75rem; }
+  .step-item svg, .step-item:not(.active) > span:not(.step-number) { display: none; }
+  .checkout-grid { margin-top: 1.25rem; gap: 1.25rem; }
+  .checkout-section, .auth-gate-card { padding: 1.25rem; margin-bottom: 1rem; }
+  .section-title { font-size: 1.1rem; margin-bottom: 1.25rem; }
+  .form-input, .form-select { min-height: 46px; padding: 0.7rem 0.875rem; }
+  .option-grid { grid-template-columns: 1fr; gap: 0.75rem; }
+  .option-card { min-height: 96px; padding: 1rem; }
+  .summary-card { padding: 1.25rem; }
+  .summary-title { font-size: 1.25rem; margin-bottom: 1.25rem; }
+  .item-list { max-height: 240px; margin-bottom: 1.25rem; }
+  .btn-checkout { min-height: 52px; margin-top: 1.25rem; padding: 1rem; }
+  .trust-badges { gap: 0.5rem; }
+  .auth-gate-tabs { margin-bottom: 1.25rem; }
+  .auth-gate-tab { min-height: 44px; padding: 0.65rem 0.4rem; font-size: 0.75rem; gap: 4px; }
+  .auth-gate-tab svg { width: 14px; height: 14px; }
 }
 
 .form-group {
