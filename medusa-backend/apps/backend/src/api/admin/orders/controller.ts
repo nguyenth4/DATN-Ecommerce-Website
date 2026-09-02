@@ -158,7 +158,7 @@ export async function updateOrderStatus(
             INSERT INTO payment_session (
               id, currency_code, amount, raw_amount, provider_id, 
               data, context, status, authorized_at, payment_collection_id, metadata, created_at, updated_at
-            ) VALUES (?, 'vnd', ?, ?, 'pp_system_default', '{}', '{}', 'authorized', NOW(), ?, '{}', NOW(), NOW())
+            ) VALUES (?, 'vnd', ?, ?, 'cod', '{}', '{}', 'authorized', NOW(), ?, '{}', NOW(), NOW())
           `, [paymentSessionId, paycol.amount, rawAmountStr, paycol.id]);
 
           // 2. Insert into payment
@@ -166,7 +166,7 @@ export async function updateOrderStatus(
             INSERT INTO payment (
               id, amount, raw_amount, currency_code, provider_id, 
               created_at, updated_at, captured_at, payment_collection_id, payment_session_id, data, metadata
-            ) VALUES (?, ?, ?, 'vnd', 'pp_system_default', NOW(), NOW(), NOW(), ?, ?, '{}', '{}')
+            ) VALUES (?, ?, ?, 'vnd', 'cod', NOW(), NOW(), NOW(), ?, ?, '{}', '{}')
           `, [paymentId, paycol.amount, rawAmountStr, paycol.id, paymentSessionId]);
 
           // 3. Insert into order_transaction

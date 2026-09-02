@@ -226,12 +226,12 @@ async function markOrderPaid(req: MedusaRequest, medusaOrderId: string, amount: 
 
       await db.raw(
         `INSERT INTO payment_session (id, currency_code, amount, raw_amount, provider_id, data, context, status, authorized_at, payment_collection_id, metadata, created_at, updated_at)
-         VALUES (?, 'vnd', ?, ?, 'pp_system_default', '{}', '{}', 'authorized', NOW(), ?, '{"provider":"zalopay"}', NOW(), NOW())`,
+         VALUES (?, 'vnd', ?, ?, 'zalopay', '{}', '{}', 'authorized', NOW(), ?, '{"provider":"zalopay"}', NOW(), NOW())`,
         [paySessionId, paycolAmount, rawAmt, paycolId]
       );
       await db.raw(
         `INSERT INTO payment (id, amount, raw_amount, currency_code, provider_id, created_at, updated_at, captured_at, payment_collection_id, payment_session_id, data, metadata)
-         VALUES (?, ?, ?, 'vnd', 'pp_system_default', NOW(), NOW(), NOW(), ?, ?, '{}', '{"provider":"zalopay"}')`,
+         VALUES (?, ?, ?, 'vnd', 'zalopay', NOW(), NOW(), NOW(), ?, ?, '{}', '{"provider":"zalopay"}')`,
         [paymentId, paycolAmount, rawAmt, paycolId, paySessionId]
       );
       await db.raw(
