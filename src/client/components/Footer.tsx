@@ -8,7 +8,7 @@ const Footer = () => {
 
           <div className="footer-brand">
             <div className="mark"><span className="brand-mark">S</span> Sprylo</div>
-            <p>Công nghệ & Thiết bị hiện đại — Trực tiếp từ nhà sản xuất, giao hàng nhanh chóng, hỗ trợ tận tình. Từ năm 2018, chúng tôi đã phục vụ hơn 400.000 khách hàng.</p>
+            <p>Chuyên kinh doanh Điện thoại thông minh chính hãng — Trực tiếp từ nhà sản xuất, giao hàng nhanh chóng, hỗ trợ tận tình. Từ năm 2018, chúng tôi đã phục vụ hơn 400.000 khách hàng.</p>
             <div className="socials" style={{ marginTop: 'var(--s4)' }}>
               <a href="#" aria-label="Twitter">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M22 5.8a8.5 8.5 0 0 1-2.4.7 4.2 4.2 0 0 0 1.8-2.3 8.4 8.4 0 0 1-2.6 1 4.2 4.2 0 0 0-7.2 3.8A11.9 11.9 0 0 1 3 4.8a4.2 4.2 0 0 0 1.3 5.6 4.2 4.2 0 0 1-1.9-.5v.1a4.2 4.2 0 0 0 3.4 4.1 4.2 4.2 0 0 1-1.9.1 4.2 4.2 0 0 0 3.9 2.9A8.4 8.4 0 0 1 2 18.7 11.9 11.9 0 0 0 8.5 21c7.7 0 11.9-6.4 11.9-11.9v-.5A8.5 8.5 0 0 0 22 5.8z"/></svg>
@@ -30,14 +30,14 @@ const Footer = () => {
           </div>
 
           <div className="footer-col">
-            <h4>Danh mục phổ biến</h4>
+            <h4>Thương hiệu nổi bật</h4>
             <ul>
-              <li><Link to="/products">Máy tính xách tay</Link></li>
-              <li><Link to="/products">Điện tử gia dụng</Link></li>
-              <li><Link to="/products">Đồng hồ thông minh</Link></li>
-              <li><Link to="/products">Tai nghe</Link></li>
-              <li><Link to="/products">Linh kiện máy tính</Link></li>
-              <li><Link to="/products">Thiết bị VR</Link></li>
+              <li><Link to="/products">iPhone (Apple)</Link></li>
+              <li><Link to="/products">Samsung Galaxy</Link></li>
+              <li><Link to="/products">Xiaomi / Redmi</Link></li>
+              <li><Link to="/products">OPPO</Link></li>
+              <li><Link to="/products">vivo</Link></li>
+              <li><Link to="/products">Realme</Link></li>
             </ul>
           </div>
 

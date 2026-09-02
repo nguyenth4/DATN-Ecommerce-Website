@@ -139,12 +139,19 @@ const ProductsPage = () => {
       );
     } else if (sortBy === "popular") {
       list.sort((a, b) => {
-        const scoreA =
-          Number(a.metadata?.rating || 5) * 10 +
-          Number(a.metadata?.view_count || 10);
-        const scoreB =
-          Number(b.metadata?.rating || 5) * 10 +
-          Number(b.metadata?.view_count || 10);
+        const reviewCountA = Number(a.metadata?.review_count || 0);
+        const reviewCountB = Number(b.metadata?.review_count || 0);
+        
+        const ratingA = reviewCountA > 0 ? Number(a.metadata?.rating || 0) : 0;
+        const ratingB = reviewCountB > 0 ? Number(b.metadata?.rating || 0) : 0;
+
+        const viewA = Number(a.metadata?.view_count || a.metadata?.views || 0);
+        const viewB = Number(b.metadata?.view_count || b.metadata?.views || 0);
+
+        // Score formula: Real ratings & review count get heavy weight, plus view count
+        const scoreA = (ratingA * 20) + (reviewCountA * 10) + viewA;
+        const scoreB = (ratingB * 20) + (reviewCountB * 10) + viewB;
+
         return scoreB - scoreA;
       });
     } else if (sortBy === "price_asc") {
@@ -258,7 +265,7 @@ const ProductsPage = () => {
                 <p>
                   {isSaleFilter
                     ? "Danh sách các sản phẩm đang được áp dụng chương trình giảm giá đặc biệt mừng đại lễ Quốc Khánh 2/9."
-                    : "Khám phá bộ sưu tập công nghệ mới nhất từ điện thoại, máy tính đến phụ kiện âm thanh."}
+                    : "Khám phá bộ sưu tập điện thoại thông minh chính hãng mới nhất từ các thương hiệu hàng đầu."}
                 </p>
               </div>
 

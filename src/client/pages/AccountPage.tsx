@@ -26,6 +26,7 @@ import {
   AlertCircle,
   Loader2,
   Shield,
+  Star,
 } from "lucide-react";
 import { useProducts } from "../services/product.service";
 import { walletService } from "../services/wallet.service";
@@ -2888,7 +2889,7 @@ const AccountPage = () => {
                                     textAlign: "left",
                                   }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "1rem" }}>
-                                      <span style={{ fontSize: "1.3rem" }}>⭐</span>
+                                      <Star size={20} fill="#f59e0b" color="#f59e0b" />
                                       <span style={{ fontWeight: 700, fontSize: "1rem", color: "#5b21b6" }}>
                                         Đánh giá sản phẩm trong đơn hàng
                                       </span>
@@ -2949,7 +2950,7 @@ const AccountPage = () => {
                                                     <i className="bi bi-check-circle-fill" /> Đã gửi đánh giá
                                                   </span>
                                                   <span style={{ color: "#f59e0b", fontWeight: 700, fontSize: "0.95rem" }}>
-                                                    {"★".repeat(rs.rating)}{"☆".repeat(5 - rs.rating)} ({rs.rating}/5)
+                                                    <span style={{ display: "inline-flex", gap: "3px", alignItems: "center" }}>{[1, 2, 3, 4, 5].map(s => (<Star key={s} size={16} fill={s <= rs.rating ? "#ffb800" : "transparent"} color="#ffb800" />))}</span> ({rs.rating}/5)
                                                   </span>
                                                 </div>
                                                 <button
@@ -2996,26 +2997,32 @@ const AccountPage = () => {
                                             /* FORM INPUT / EDIT MODE */
                                             <>
                                               {/* Star Rating */}
-                                              <div style={{ display: "flex", gap: "4px", marginBottom: "0.6rem" }}>
-                                                {[1, 2, 3, 4, 5].map(star => (
-                                                  <button
-                                                    key={star}
-                                                    type="button"
-                                                    onClick={() => setReviewState(prev => ({
-                                                      ...prev,
-                                                      [key]: { ...rs, rating: star },
-                                                      [pid]: { ...rs, rating: star }
-                                                    }))}
-                                                    style={{
-                                                      background: "none", border: "none", cursor: "pointer",
-                                                      fontSize: "1.5rem", padding: "0 2px",
-                                                      color: star <= rs.rating ? "#f59e0b" : "#d1d5db",
-                                                      transition: "color 0.15s",
-                                                    }}
-                                                  >★</button>
-                                                ))}
-                                                <span style={{ fontSize: "0.82rem", color: "#6b7280", alignSelf: "center", marginLeft: "6px", fontWeight: 600 }}>
-                                                  {["Rất tệ", "Tệ", "Bình thường", "Tốt", "Xuất sắc"][rs.rating - 1]}
+                                              <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "0.6rem" }}>
+                                                <div style={{ display: "flex", gap: "2px" }}>
+                                                  {[1, 2, 3, 4, 5].map(star => (
+                                                    <button
+                                                      key={star}
+                                                      type="button"
+                                                      onClick={() => setReviewState(prev => ({
+                                                        ...prev,
+                                                        [key]: { ...rs, rating: star },
+                                                        [pid]: { ...rs, rating: star }
+                                                      }))}
+                                                      style={{
+                                                        background: "none", border: "none", cursor: "pointer",
+                                                        padding: "1px", display: "flex", alignItems: "center",
+                                                      }}
+                                                    >
+                                                      <Star 
+                                                        size={18} 
+                                                        fill={star <= rs.rating ? "#ffb800" : "transparent"} 
+                                                        color="#ffb800" 
+                                                      />
+                                                    </button>
+                                                  ))}
+                                                </div>
+                                                <span style={{ fontSize: "0.85rem", color: "#64748b", fontWeight: 600, marginLeft: "4px" }}>
+                                                  ({rs.rating}/5) {["Rất tệ", "Tệ", "Bình thường", "Tốt", "Xuất sắc"][rs.rating - 1]}
                                                 </span>
                                               </div>
 
