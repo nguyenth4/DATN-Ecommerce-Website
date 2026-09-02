@@ -2076,20 +2076,6 @@ const CheckoutPage = () => {
                         </div>
                       )}
                     </div>
-                    <div 
-                      className={`option-card ${paymentMethod === 'wallet' ? 'selected' : ''}`}
-                      onClick={() => setPaymentMethod('wallet')}
-                    >
-                      <div className="option-card-header">
-                        <span className="option-name" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Wallet size={16} /> Ví Sprylo
-                        </span>
-                      </div>
-                      <span className="option-desc">
-                        {isLoggedIn ? `Số dư: ${walletBalance.toLocaleString('vi-VN')}đ` : 'Cần đăng nhập'}
-                      </span>
-                      {paymentMethod === 'wallet' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
-                    </div>
                   </div>
                 </motion.div>
               </>
