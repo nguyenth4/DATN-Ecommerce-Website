@@ -37,7 +37,7 @@ export async function zalopayRefund(order: any, amount?: number): Promise<string
     body: JSON.stringify(payload),
   });
 
-  const result = await response.json();
+  const result = (await response.json()) as any;
   if (result.return_code !== 1) {
     throw new Error(`ZaloPay refund failed: ${result.return_message}`);
   }

@@ -108,6 +108,7 @@ const AccountPage = () => {
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [realOrders, setRealOrders] = useState(getRealOrders);
   const [cancelingOrderId, setCancelingOrderId] = useState<string | null>(null);
+  const [retryingPaymentId, setRetryingPaymentId] = useState<string | null>(null);
   const [confirmingOrderId, setConfirmingOrderId] = useState<string | null>(
     null,
   );
@@ -422,7 +423,7 @@ const AccountPage = () => {
               canceled: o.status === "canceled",
               cancelReason: o.metadata?.cancel_reason || "",
             };
-          });
+          }).sort((a: any, b: any) => b.created_at - a.created_at);
 
           setRealOrders(remoteMapped);
           // Optional: Only update sprylo_orders if we want to cache it, but safer to just rely on state
@@ -1026,7 +1027,16 @@ const AccountPage = () => {
 
     if (order.status === "completed") return 4;
 
-    return 0;
+    switch (order.fulfillment_status) {
+      case "shipped":
+      case "partially_shipped":
+        return 3;
+      case "fulfilled":
+      case "partially_fulfilled":
+        return 2;
+      default:
+        return 0;
+    }
   };
 
   // Cancel is only allowed before shipping starts (pending/confirmed/preparing)
@@ -1339,9 +1349,13 @@ const AccountPage = () => {
             : "Chưa thanh toán",
         shippingStatus: getOrderFulfillmentBadgeText(selectedRealOrder),
         shippingAddress: {
-          name: selectedRealOrder.customer?.fullName || "Khách Hàng",
-          phone: selectedRealOrder.customer?.phoneNumber || "0000000000",
-          address: selectedRealOrder.address || "Địa chỉ mặc định",
+          name: selectedRealOrder.shipping_address?.first_name 
+            ? `${selectedRealOrder.shipping_address.last_name || ''} ${selectedRealOrder.shipping_address.first_name}`.trim() 
+            : "Khách Hàng",
+          phone: selectedRealOrder.shipping_address?.phone || "Chưa cập nhật số ĐT",
+          address: selectedRealOrder.shipping_address?.address_1 
+            ? `${selectedRealOrder.shipping_address.address_1}${selectedRealOrder.shipping_address.city ? `, ${selectedRealOrder.shipping_address.city}` : ''}${selectedRealOrder.shipping_address.province ? `, ${selectedRealOrder.shipping_address.province}` : ''}` 
+            : "Chưa cập nhật địa chỉ",
         },
         paymentMethod:
           selectedRealOrder.paymentMethod === "cod"
@@ -1444,6 +1458,27 @@ const AccountPage = () => {
   };
 
   // Cancel a real order and restore inventory
+  const handleRetryPayment = async (orderId: string) => {
+    setRetryingPaymentId(orderId);
+    try {
+      const response = await fetch(`${MEDUSA_BACKEND_URL}/store/orders/${orderId}/payment-link`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await response.json();
+      if (response.ok && data.paymentUrl) {
+        window.location.href = data.paymentUrl;
+      } else {
+        alert(data.error || "Không thể tạo liên kết thanh toán. Vui lòng thử lại sau.");
+      }
+    } catch (error) {
+      console.error("Retry payment error:", error);
+      alert("Đã xảy ra lỗi khi tạo liên kết thanh toán.");
+    } finally {
+      setRetryingPaymentId(null);
+    }
+  };
+
   const handleCancelOrder = async (orderId: string, reason: string, refundDest?: string, refundInfo?: string) => {
     setCancelingOrderId(orderId);
     try {
@@ -2024,6 +2059,20 @@ const AccountPage = () => {
                                             <i className="bi bi-check-circle-fill"></i>{" "}
                                             Đã nhận đơn
                                           </>
+                                        )}
+                                      </button>
+                                    )}
+                                    {order.payment_status === "awaiting" && (order.paymentMethod === "zalopay" || order.paymentMethod === "vnpay") && order.status !== "canceled" && (
+                                      <button
+                                        className="btn-order-action btn-order-cancel"
+                                        style={{ borderColor: "#2563eb", color: "#2563eb" }}
+                                        onClick={() => handleRetryPayment(order.orderId)}
+                                        disabled={retryingPaymentId === order.orderId}
+                                      >
+                                        {retryingPaymentId === order.orderId ? (
+                                          <><Loader2 className="animate-spin" size={13} /> Xử lý...</>
+                                        ) : (
+                                          <><i className="bi bi-wallet2"></i> Thanh toán lại</>
                                         )}
                                       </button>
                                     )}
@@ -2677,6 +2726,27 @@ const AccountPage = () => {
                                   )}
                                 </button>
                               )}
+                            {selectedRealOrder && selectedRealOrder.payment_status === "awaiting" && (selectedRealOrder.paymentMethod === "zalopay" || selectedRealOrder.paymentMethod === "vnpay") && selectedRealOrder.status !== "canceled" && (
+                              <button
+                                className="btn-order-action btn-order-cancel"
+                                style={{
+                                  padding: "0.6rem 1.5rem",
+                                  borderRadius: "8px",
+                                  fontSize: "0.85rem",
+                                  borderColor: "#2563eb",
+                                  color: "#2563eb",
+                                  marginRight: "10px"
+                                }}
+                                onClick={() => handleRetryPayment(selectedRealOrder.orderId)}
+                                disabled={retryingPaymentId === selectedRealOrder.orderId}
+                              >
+                                {retryingPaymentId === selectedRealOrder.orderId ? (
+                                  <><Loader2 className="animate-spin" size={13} /> Xử lý...</>
+                                ) : (
+                                  <><i className="bi bi-wallet2"></i> Thanh toán lại</>
+                                )}
+                              </button>
+                            )}
                             {selectedRealOrder &&
                               canCancelOrder(selectedRealOrder) && (
                                 <button
