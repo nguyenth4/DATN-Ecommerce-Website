@@ -2536,32 +2536,192 @@ const AccountPage = () => {
                               <span>{formatPrice(selectedOrder.total)}</span>
                             </div>
                           </div>
-</motion.div>
-                    );
-                })()}
+                        </div>
+
+                        <div
+                          style={{
+                            marginTop: "1.5rem",
+                            paddingTop: "1.2rem",
+                            borderTop: "1px solid var(--rule)",
+                            display: "flex",
+                            justifyContent: "flex-end",
+                            gap: "1rem",
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                            width: "100%",
+                          }}
+                        >
+                          {selectedRealOrder &&
+                            canConfirmReceipt(selectedRealOrder) && (
+                              <button
+                                className="btn btn--success"
+                                onClick={() =>
+                                  handleConfirmReceipt(selectedOrder.id)
+                                }
+                                disabled={
+                                  confirmingOrderId === selectedOrder.id
+                                }
+                                style={{
+                                  background:
+                                    "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                                  color: "#fff",
+                                  border: "none",
+                                  padding: "0.65rem 1.4rem",
+                                  borderRadius: "8px",
+                                  fontWeight: 600,
+                                  fontSize: "0.9rem",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "0.5rem",
+                                  boxShadow:
+                                    "0 4px 12px rgba(16, 185, 129, 0.25)",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                {confirmingOrderId === selectedOrder.id ? (
+                                  <>
+                                    <Loader2
+                                      className="animate-spin"
+                                      size={16}
+                                    />{" "}
+                                    Đang xử lý...
+                                  </>
+                                ) : (
+                                  <>
+                                    <i
+                                      className="bi bi-box-seam-fill"
+                                      style={{ fontSize: "1.1rem" }}
+                                    ></i>{" "}
+                                    Xác nhận đã nhận được hàng
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          {selectedRealOrder &&
+                            canCancelOrder(selectedRealOrder) && (
+                              <button
+                                className="btn-order-action btn-order-cancel"
+                                style={{
+                                  padding: "0.6rem 1.5rem",
+                                  borderRadius: "8px",
+                                  fontSize: "0.85rem",
+                                }}
+                                onClick={() => {
+                                  setCancelModalOrderId(selectedOrderId!);
+                                  setCancelReason(
+                                    "Thay đổi ý định mua sắm / Không còn nhu cầu",
+                                  );
+                                  setCustomCancelReason("");
+                                }}
+                                disabled={
+                                  cancelingOrderId === selectedOrderId
+                                }
+                              >
+                                <i
+                                  className="bi bi-x-circle"
+                                  style={{ fontSize: "1rem" }}
+                                ></i>{" "}
+                                Hủy đơn hàng này
+                              </button>
+                            )}
+                          {selectedRealOrder &&
+                            canReturnOrder(selectedRealOrder) && (
+                              <button
+                                className="btn-order-action btn-order-cancel"
+                                style={{
+                                  padding: "0.6rem 1.5rem",
+                                  borderRadius: "8px",
+                                  fontSize: "0.85rem",
+                                  borderColor: "#f59e0b",
+                                  color: "#b45309",
+                                }}
+                                onClick={() => {
+                                  setReturnModalOrderId(selectedOrderId!);
+                                  const pm2 = realOrders.find(
+                                    (o) => o.orderId === selectedOrderId,
+                                  )?.metadata?.payment_method;
+                                  setRefundDestination(
+                                    pm2 === "zalopay" || pm2 === "vnpay"
+                                      ? "wallet"
+                                      : "bank_transfer",
+                                  );
+                                  setRefundBankName("");
+                                  setRefundAccountNumber("");
+                                  setRefundAccountName("");
+                                  setReturnReason("Hàng lỗi / Không hoạt động");
+                                  setCustomReturnReason("");
+                                }}
+                                disabled={
+                                  returningOrderId === selectedOrderId
+                                }
+                              >
+                                <i
+                                  className="bi bi-arrow-return-left"
+                                  style={{ fontSize: "1rem" }}
+                                ></i>{" "}
+                                Yêu cầu trả hàng
+                              </button>
+                            )}
+                          {selectedRealOrder &&
+                            selectedRealOrder.metadata?.return_requested && (
+                              <span
+                                style={{
+                                  fontSize: "0.85rem",
+                                  color: "#b45309",
+                                  fontStyle: "italic",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "0.4rem",
+                                }}
+                              >
+                                <i className="bi bi-hourglass-split"></i> Đang
+                                chờ duyệt yêu cầu trả hàng
+                              </span>
+                            )}
+                          {selectedRealOrder &&
+                            !canCancelOrder(selectedRealOrder) &&
+                            !canReturnOrder(selectedRealOrder) &&
+                            !selectedRealOrder.metadata?.return_requested &&
+                            getCancelBlockedReason(selectedRealOrder) && (
+                              <span
+                                style={{
+                                  fontSize: "0.85rem",
+                                  color: "var(--text-muted, #888)",
+                                  fontStyle: "italic",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "0.4rem",
+                                }}
+                              >
+                                <i className="bi bi-info-circle"></i>{" "}
+                                {getCancelBlockedReason(selectedRealOrder)}
+                              </span>
+                            )}
+                        </div>
+                      </div>
+                    )
+                  )}
               </div>
               <div className="address-modal-footer">
                 <button className="btn btn--ghost" onClick={() => setReturnModalOrderId(null)}>Quay lại</button>
                 <button 
                   className="btn" 
-                  style={{ background: '#d97706', color: 'white', border: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  style={{ background: "#d97706", color: "white", border: "none", display: "flex", alignItems: "center", gap: "6px" }}
                   onClick={() => {
-                    const finalReason = returnReason === 'Lý do khác' ? customReturnReason : returnReason;
+                    const finalReason = returnReason === "Lý do khác" ? customReturnReason : returnReason;
                     if (!finalReason || !finalReason.trim()) {
                       alert("Vui lòng chọn hoặc nhập lý do trả hàng.");
                       return;
                     }
                     
-                    let compiledRefundInfo = '';
-if (refundDestination === 'bank_transfer') {
+                    let compiledRefundInfo = "";
+                    if (refundDestination === "bank_transfer") {
                       if (!refundBankName.trim() || !refundAccountNumber.trim() || !refundAccountName.trim()) {
                         alert("Vui lòng điền đầy đủ thông tin ngân hàng.");
                         return;
                       }
-                      }
                       compiledRefundInfo = `Ngân hàng: ${refundBankName.trim()} - STK: ${refundAccountNumber.trim()} - Chủ thẻ: ${refundAccountName.trim()}`;
                     }
-
                     handleReturnOrder(returnModalOrderId, finalReason, compiledRefundInfo, refundDestination);
                   }}
                   disabled={returningOrderId === returnModalOrderId}
