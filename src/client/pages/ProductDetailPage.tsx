@@ -41,9 +41,11 @@ const ProductDetailPage = () => {
   const fetchReviews = async () => {
     if (!id) return;
     try {
-      const res = await fetch(`http://localhost:9000/store/reviews?product_id=${id}`, {
+      const MEDUSA_BACKEND_URL = (import.meta as any).env?.VITE_MEDUSA_BACKEND_URL || 'http://localhost:9000';
+      const PUBLISHABLE_KEY = (import.meta as any).env?.VITE_MEDUSA_PUBLISHABLE_KEY || 'pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d';
+      const res = await fetch(`${MEDUSA_BACKEND_URL}/store/reviews?product_id=${id}`, {
         headers: {
-          'x-publishable-api-key': 'pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d'
+          'x-publishable-api-key': PUBLISHABLE_KEY
         }
       });
       if (res.ok) {
@@ -91,9 +93,15 @@ const ProductDetailPage = () => {
       setSuccessMessage("");
     };
 
+    const handleReviewUpdated = () => {
+      fetchReviews();
+    };
+
     window.addEventListener('test-customer-changed', handleCustomerChanged);
+    window.addEventListener('review-updated', handleReviewUpdated);
     return () => {
       window.removeEventListener('test-customer-changed', handleCustomerChanged);
+      window.removeEventListener('review-updated', handleReviewUpdated);
     };
   }, [id]);
 

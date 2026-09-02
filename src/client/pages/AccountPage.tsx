@@ -96,6 +96,76 @@ const AccountPage = () => {
   const [customCancelReason, setCustomCancelReason] = useState<string>("");
   const [copiedOrderId, setCopiedOrderId] = useState<string | null>(null);
 
+  // ─── Review States ──────────────────────────────────────────────────────────
+  // reviewState: map productId -> { rating, comment, loading, done, error }
+  const [reviewState, setReviewState] = useState<Record<string, {
+    rating: number;
+    comment: string;
+    loading: boolean;
+    done: boolean;
+    error: string;
+  }>>({});
+
+  // Lấy danh sách product đã được review từ localStorage
+  const getReviewedProducts = (): string[] => {
+    try { return JSON.parse(localStorage.getItem("sprylo_reviewed_products") || "[]"); }
+    catch { return []; }
+  };
+
+  const markProductReviewed = (productId: string) => {
+    const list = getReviewedProducts();
+    if (!list.includes(productId)) {
+      localStorage.setItem("sprylo_reviewed_products", JSON.stringify([...list, productId]));
+    }
+  };
+
+  const handleSubmitReview = async (
+    productId: string,
+    productName: string,
+    orderId?: string
+  ) => {
+    const state = reviewState[productId] || { rating: 5, comment: "", loading: false, done: false, error: "" };
+    if (!state.comment.trim() || state.comment.trim().replace(/\s+/g, "").length < 10) {
+      setReviewState(prev => ({ ...prev, [productId]: { ...state, error: "Vui lòng nhập ít nhất 10 ký tự cho bình luận." } }));
+      return;
+    }
+    setReviewState(prev => ({ ...prev, [productId]: { ...state, loading: true, error: "" } }));
+
+    const info = localStorage.getItem("customer_info");
+    let custId = "";
+    try { if (info) custId = JSON.parse(info).id; } catch {}
+    const token = localStorage.getItem("customer_token");
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      "x-publishable-api-key": (import.meta as any).env?.VITE_MEDUSA_PUBLISHABLE_KEY || "pk_test",
+      "x-customer-id": custId,
+    };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    try {
+      const res = await fetch(`${MEDUSA_BACKEND_URL}/store/reviews`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          product_id: productId,
+          order_id: orderId || selectedOrderId || undefined,
+          rating: state.rating,
+          comment: state.comment.trim(),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setReviewState(prev => ({ ...prev, [productId]: { ...state, loading: false, done: true, error: "" } }));
+        markProductReviewed(productId);
+      } else {
+        setReviewState(prev => ({ ...prev, [productId]: { ...state, loading: false, error: data.message || "Gửi đánh giá thất bại." } }));
+      }
+    } catch {
+      setReviewState(prev => ({ ...prev, [productId]: { ...state, loading: false, error: "Lỗi kết nối máy chủ." } }));
+    }
+  };
+
   // Dynamic badge helpers for orders
   const getOrderFulfillmentBadgeClass = (order: any) => {
     if (order.canceled || order.status === "canceled")
@@ -1158,9 +1228,12 @@ const AccountPage = () => {
 
         items: selectedRealOrder.items.map((item: any) => ({
           name: item.title || item.name || "Sản phẩm",
+          title: item.title || item.name || "Sản phẩm",
           variant: item.variant?.title || item.variant || "",
           quantity: item.qty || item.quantity,
           price: item.unit_price || item.price || 0,
+          product_id: item.product_id || item.productId || item.variant?.product_id || item.id || (item.title ? `prod_${item.title}` : `prod_${item.name}`),
+          thumbnail: item.thumbnail || item.img || null,
           image:
             item.thumbnail ||
             item.img ||
@@ -2577,7 +2650,10 @@ const AccountPage = () => {
                               )}
 
                             {selectedRealOrder &&
-                              selectedRealOrder.status === "completed" && (
+                              (selectedRealOrder.status === "completed" ||
+                               selectedRealOrder.metadata?.custom_status === "completed" ||
+                               selectedRealOrder.metadata?.custom_status === "delivered" ||
+                               getDynamicStatusStep(selectedRealOrder) === 4) && (
                                 <span
                                   style={{
                                     fontSize: "0.85rem",
@@ -2592,6 +2668,136 @@ const AccountPage = () => {
                                   Đơn hàng đã hoàn thành
                                 </span>
                               )}
+
+                            {/* ─── REVIEW BLOCK (hiện khi đơn hàng hoàn thành / đã nhận) ─── */}
+                            {selectedRealOrder &&
+                              (selectedRealOrder.status === "completed" ||
+                               selectedRealOrder.metadata?.custom_status === "completed" ||
+                               selectedRealOrder.metadata?.custom_status === "delivered" ||
+                               getDynamicStatusStep(selectedRealOrder) === 4) &&
+                              (() => {
+                                const rawItems = selectedOrder?.items?.length ? selectedOrder.items : (selectedRealOrder.items || []);
+                                const reviewedList = getReviewedProducts();
+                                const items = rawItems.map((it: any) => ({
+                                  ...it,
+                                  product_id: it.product_id || it.productId || it.variant?.product_id || it.id || (it.title ? `prod_${it.title}` : `prod_${it.name}`),
+                                }));
+
+                                if (items.length === 0) return null;
+                                return (
+                                  <div style={{
+                                    marginTop: "1.5rem",
+                                    width: "100%",
+                                    background: "linear-gradient(135deg, #faf5ff 0%, #eff6ff 100%)",
+                                    border: "1.5px solid #c4b5fd",
+                                    borderRadius: "14px",
+                                    padding: "1.25rem 1.5rem",
+                                    textAlign: "left",
+                                  }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "1rem" }}>
+                                      <span style={{ fontSize: "1.3rem" }}>⭐</span>
+                                      <span style={{ fontWeight: 700, fontSize: "1rem", color: "#5b21b6" }}>
+                                        Đánh giá sản phẩm trong đơn hàng
+                                      </span>
+                                    </div>
+                                    {items.map((it: any, index: number) => {
+                                      const pid = it.product_id || `prod_${index}`;
+                                      const isAlreadyReviewed = reviewedList.includes(pid);
+                                      const rs = reviewState[pid] || { rating: 5, comment: "", loading: false, done: isAlreadyReviewed, error: "" };
+                                      return (
+                                        <div key={pid || index} style={{
+                                          background: "white",
+                                          borderRadius: "10px",
+                                          border: "1px solid #e9d5ff",
+                                          padding: "1rem",
+                                          marginBottom: "0.75rem",
+                                        }}>
+                                          {/* Product info */}
+                                          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "0.75rem" }}>
+                                            <img
+                                              src={it.thumbnail || it.image || it.img || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=80&q=80"}
+                                              alt={it.title || it.name}
+                                              style={{ width: 48, height: 48, borderRadius: 8, objectFit: "cover", border: "1px solid #f3f4f6" }}
+                                            />
+                                            <div>
+                                              <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "#1e1b4b" }}>{it.title || it.name}</div>
+                                              {it.variant?.title && <div style={{ fontSize: "0.78rem", color: "#6b7280" }}>{it.variant.title}</div>}
+                                            </div>
+                                          </div>
+
+                                          {rs.done || isAlreadyReviewed ? (
+                                            <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#059669", fontWeight: 600, fontSize: "0.88rem" }}>
+                                              <i className="bi bi-check-circle-fill" />{" "}Đã gửi đánh giá — cảm ơn bạn!
+                                            </div>
+                                          ) : (
+                                            <>
+                                              {/* Star Rating */}
+                                              <div style={{ display: "flex", gap: "4px", marginBottom: "0.6rem" }}>
+                                                {[1,2,3,4,5].map(star => (
+                                                  <button
+                                                    key={star}
+                                                    onClick={() => setReviewState(prev => ({ ...prev, [pid]: { ...rs, rating: star } }))}
+                                                    style={{
+                                                      background: "none", border: "none", cursor: "pointer",
+                                                      fontSize: "1.4rem", padding: "0 2px",
+                                                      color: star <= rs.rating ? "#f59e0b" : "#d1d5db",
+                                                      transition: "color 0.15s",
+                                                    }}
+                                                  >★</button>
+                                                ))}
+                                                <span style={{ fontSize: "0.8rem", color: "#6b7280", alignSelf: "center", marginLeft: "4px" }}>
+                                                  {["Rất tệ","Tệ","Bình thường","Tốt","Xuất sắc"][rs.rating - 1]}
+                                                </span>
+                                              </div>
+
+                                              {/* Comment textarea */}
+                                              <textarea
+                                                rows={3}
+                                                placeholder="Chia sẻ cảm nhận của bạn về sản phẩm..."
+                                                value={rs.comment}
+                                                onChange={e => setReviewState(prev => ({ ...prev, [pid]: { ...rs, comment: e.target.value } }))}
+                                                style={{
+                                                  width: "100%", borderRadius: "8px",
+                                                  border: "1px solid #d1d5db", padding: "0.6rem 0.8rem",
+                                                  fontSize: "0.88rem", resize: "vertical",
+                                                  outline: "none", fontFamily: "inherit",
+                                                  boxSizing: "border-box",
+                                                }}
+                                              />
+
+                                              {rs.error && (
+                                                <div style={{ color: "#dc2626", fontSize: "0.8rem", marginTop: "0.3rem" }}>
+                                                  <i className="bi bi-exclamation-circle" /> {rs.error}
+                                                </div>
+                                              )}
+
+                                              <button
+                                                onClick={() => handleSubmitReview(pid, it.title || it.name || "Sản phẩm", selectedOrder?.id || selectedRealOrder?.id)}
+                                                disabled={rs.loading}
+                                                style={{
+                                                  marginTop: "0.6rem",
+                                                  background: rs.loading ? "#a78bfa" : "#7c3aed",
+                                                  color: "white", border: "none",
+                                                  borderRadius: "8px", padding: "0.5rem 1.2rem",
+                                                  fontSize: "0.85rem", fontWeight: 600,
+                                                  cursor: rs.loading ? "not-allowed" : "pointer",
+                                                  display: "inline-flex", alignItems: "center", gap: "6px",
+                                                }}
+                                              >
+                                                {rs.loading ? (
+                                                  <><i className="bi bi-hourglass-split" /> Đang gửi...</>
+                                                ) : (
+                                                  <><i className="bi bi-send" /> Gửi đánh giá</>
+                                                )}
+                                              </button>
+                                            </>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                );
+                              })()}
                           </div>
                         </div>
                       </div>
