@@ -1,17 +1,10 @@
 import { Request, Response } from 'express';
 import { MedusaError, Modules } from '@medusajs/framework/utils';
-import { Resend } from 'resend';
 import { refundOrder } from '../../../../../services/refund.service';
 
 type RefundRequest = {
   payment_method: 'zalopay' | 'vnpay' | 'cod' | 'COD' | string;
   amount?: number;
-};
-
-const getResend = () => {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) return null;
-  return new Resend(apiKey);
 };
 
 /**
@@ -146,6 +139,41 @@ export const POST = async (req: Request, res: Response) => {
       refundDestination
     },
   });
+
+  // Send email using SendGrid if API key is provided
+  const sendgridApiKey = process.env.SENDGRID_API_KEY;
+  const from = process.env.SENDGRID_FROM_EMAIL;
+  const templateId = process.env.SENDGRID_RETURN_APPROVED_TEMPLATE_ID;
+
+  if (order.email && sendgridApiKey && from && templateId) {
+    try {
+      const sgMail = require("@sendgrid/mail");
+      sgMail.setApiKey(sendgridApiKey);
+      
+      const customerName = order.customer?.first_name 
+        ? `${order.customer.last_name || ''} ${order.customer.first_name}`.trim() 
+        : (order.metadata?.customer_name || "Quý khách");
+
+      await sgMail.send({
+        to: order.email,
+        from,
+        templateId,
+        dynamicTemplateData: {
+          customer_name: customerName,
+          order_display_id: order.display_id || order.id,
+          refund_amount_formatted: `${refundAmount.toLocaleString("vi-VN")} đ`,
+          refund_info: order.metadata?.refund_info || refundMethodLabel,
+          return_reason: order.metadata?.return_reason || "Hoàn tiền chủ động từ cửa hàng",
+          support_email: from,
+          is_wallet: refundDestination === "wallet",
+          is_bank_transfer: refundDestination !== "wallet",
+        },
+      });
+      console.log(`[Refund API] SendGrid notification sent for order ${id}`);
+    } catch (emailErr: any) {
+      console.error("[Refund API] SendGrid notification failed:", emailErr.response?.body || emailErr);
+    }
+  }
 
   res.status(200).json({ success: true, refundId, refundedAmount: refundAmount, refundDestination: refundDestination });
 };

@@ -19,7 +19,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     if (orderService) {
       try {
         const order = await orderService.retrieveOrder(id);
-        if (order && order.status !== "pending") {
+        const customStatus = order?.metadata?.custom_status;
+        if (order && (order.status !== "pending" || (customStatus && customStatus !== "pending"))) {
           return res.status(400).json({ error: "Chỉ có thể hủy đơn hàng đang ở trạng thái chờ duyệt (pending)." });
         }
         
