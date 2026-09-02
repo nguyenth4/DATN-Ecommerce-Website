@@ -155,7 +155,7 @@ const CheckoutPage = () => {
   );
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [customer, setCustomer] = useState<MedusaCustomer | null>(null);
-  const [useWallet, setUseWallet] = useState(false);
+
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [authTab, setAuthTab] = useState<"login" | "register" | "guest">(
@@ -775,6 +775,12 @@ const CheckoutPage = () => {
 
     const calculatedTotal = Math.max(0, subtotal + shippingFee - promoDiscount);
 
+    if (paymentMethod === 'wallet' && walletBalance < calculatedTotal) {
+      showToast('Số dư ví không đủ để thanh toán đơn hàng này.', 'error');
+      setIsProcessing(false);
+      return;
+    }
+
     const orderData = {
       customer: {
         fullName: finalOrderFullName,
@@ -853,7 +859,7 @@ const CheckoutPage = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        showToast(data.message || "Thanh toán thất bại", "error");
+        showToast(data.error || data.message || "Thanh toán thất bại", "error");
         setIsProcessing(false);
         return;
       }
@@ -1111,7 +1117,7 @@ const CheckoutPage = () => {
   ]);
 
   const total = Math.max(0, subtotal + shippingFee - promoDiscount);
-  const walletDeduction = useWallet ? Math.min(walletBalance, total) : 0;
+  const walletDeduction = paymentMethod === 'wallet' ? Math.min(walletBalance, total) : 0;
   const remainingTotal = total - walletDeduction;
 
   if (cartItems.length === 0) {
@@ -2066,6 +2072,20 @@ const CheckoutPage = () => {
                           <CheckCircle2 size={12} />
                         </div>
                       )}
+                    </div>
+                    <div 
+                      className={`option-card ${paymentMethod === 'wallet' ? 'selected' : ''}`}
+                      onClick={() => setPaymentMethod('wallet')}
+                    >
+                      <div className="option-card-header">
+                        <span className="option-name" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Wallet size={16} /> Ví Sprylo
+                        </span>
+                      </div>
+                      <span className="option-desc">
+                        {isLoggedIn ? `Số dư: ${walletBalance.toLocaleString('vi-VN')}đ` : 'Cần đăng nhập'}
+                      </span>
+                      {paymentMethod === 'wallet' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
                     </div>
                   </div>
                 </motion.div>
