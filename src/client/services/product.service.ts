@@ -161,6 +161,26 @@ export const useProduct = (id: string) => {
     queryFn: () => productService.getProduct(id),
     enabled: !!id,
     staleTime: 1000 * 60 * 5,
+    initialData: () => {
+      if (!id) return undefined;
+      // 1. Try finding in products query list ({ limit: 100 })
+      const cachedList = queryClient.getQueryData<any>(['store_products', { limit: 100 }]);
+      if (cachedList?.products) {
+        const found = cachedList.products.find((p: any) => p.id === id);
+        if (found) return found;
+      }
+      // 2. Try finding across any store_products queries in cache
+      const queryCache = queryClient.getQueryCache();
+      const productQueries = queryCache.findAll({ queryKey: ['store_products'] });
+      for (const query of productQueries) {
+        const data = query.state.data as any;
+        if (data?.products) {
+          const found = data.products.find((p: any) => p.id === id);
+          if (found) return found;
+        }
+      }
+      return undefined;
+    },
   });
 };
 

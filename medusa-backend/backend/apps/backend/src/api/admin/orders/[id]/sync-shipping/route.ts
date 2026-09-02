@@ -214,27 +214,28 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         }
       }
 
-      // --- NEW LOGIC: Deduct Inventory on Confirmation ---
-      const productModuleService = req.scope.resolve(Modules.PRODUCT);
-      if (productModuleService) {
-        console.log(`[Admin] Deducting inventory for order ${id}...`);
+      // --- Deduct Inventory on Confirmation ---
+      const db = req.scope.resolve("__pg_connection__");
+      if (db) {
+        console.log(`[Admin] Deducting inventory_level for order ${id}...`);
         for (const item of order.items || []) {
           if (item.variant_id) {
             try {
-              // Retrieve the current variant to get its inventory_quantity
-              const variant = (await productModuleService.retrieveProductVariant(item.variant_id)) as any;
-              if (variant && typeof variant.inventory_quantity === 'number') {
-                const newQuantity = Math.max(0, variant.inventory_quantity - item.quantity);
-                await productModuleService.updateProductVariants(
-                  item.variant_id,
-                  {
-                    inventory_quantity: newQuantity
-                  } as any
-                );
-                console.log(`[Admin] Deducted ${item.quantity} from variant ${item.variant_id}. New stock: ${newQuantity}`);
-              }
-            } catch (invErr) {
-              console.error(`[Admin] Failed to deduct inventory for variant ${item.variant_id}:`, invErr);
+              await db.raw(`
+                UPDATE inventory_level il
+                SET stocked_quantity = GREATEST(0, il.stocked_quantity - ?),
+                    raw_stocked_quantity = jsonb_build_object(
+                      'value', GREATEST(0, COALESCE((il.raw_stocked_quantity->>'value')::numeric, il.stocked_quantity) - ?)::text,
+                      'precision', 20
+                    ),
+                    updated_at = NOW()
+                FROM product_variant_inventory_item pvii
+                WHERE pvii.inventory_item_id = il.inventory_item_id
+                  AND pvii.variant_id = ?
+              `, [item.quantity, item.quantity, item.variant_id]);
+              console.log(`[Admin] Deducted ${item.quantity} from inventory_level for variant ${item.variant_id}`);
+            } catch (invErr: any) {
+              console.error(`[Admin] Failed to deduct inventory_level for variant ${item.variant_id}:`, invErr.message);
             }
           }
         }
