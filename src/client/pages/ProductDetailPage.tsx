@@ -253,13 +253,34 @@ const ProductDetailPage = () => {
     return matchColor && matchStorage;
   }) || productData.variants?.[0] || { id: "", price: 0, oldPrice: 0, stock: 10, inventory_quantity: 10, sku: "SPRYLO-PROD" };
 
-  const price = activeVariant.prices?.find((p: any) => p.currency_code === 'vnd')?.amount 
-    || activeVariant.prices?.[0]?.amount 
-    || activeVariant.price 
-    || productData.basePrice 
-    || 0;
+  const getVariantPricesInfo = (v: any) => {
+    if (v?.calculated_price) {
+      const calcAmt = Number(v.calculated_price.calculated_amount ?? 0);
+      const origAmt = Number(v.calculated_price.original_amount ?? calcAmt);
+      return {
+        price: calcAmt,
+        oldPrice: origAmt > calcAmt ? origAmt : 0
+      };
+    }
+    if (!v?.prices || v.prices.length === 0) {
+      return { price: v?.price || productData.basePrice || 0, oldPrice: v?.oldPrice || 0 };
+    }
+    const saleP = v.prices.find((p: any) => p.currency_code === 'vnd' && p.price_list_id)
+      || v.prices.find((p: any) => p.price_list_id);
+    const baseP = v.prices.find((p: any) => p.currency_code === 'vnd' && !p.price_list_id)
+      || v.prices.find((p: any) => !p.price_list_id)
+      || v.prices[0];
 
-  const oldPrice = activeVariant.oldPrice;
+    const currentP = saleP ? Number(saleP.amount) : (baseP ? Number(baseP.amount) : (v?.price || productData.basePrice || 0));
+    const originalP = (saleP && baseP) ? Number(baseP.amount) : 0;
+
+    return {
+      price: currentP,
+      oldPrice: originalP > currentP ? originalP : (v?.oldPrice || 0)
+    };
+  };
+
+  const { price, oldPrice } = getVariantPricesInfo(activeVariant);
 
   // Specifications
   const specifications = productData.metadata?.specifications || {};

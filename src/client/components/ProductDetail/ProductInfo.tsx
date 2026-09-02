@@ -161,7 +161,7 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
       {/* DYNAMIC PRICE */}
       <div className="product-detail-price" style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--accent)', marginBottom: '1.5rem' }}>
         {activeVariant.price.toLocaleString('vi-VN')}đ{" "}
-        {hasDiscount && activeVariant.oldPrice && (
+        {Boolean(hasDiscount && activeVariant.oldPrice && activeVariant.oldPrice > activeVariant.price) && (
           <>
             <span style={{ fontSize: '1.1rem', textDecoration: 'line-through', color: 'var(--gray)', fontWeight: 500, marginLeft: '0.5rem' }}>
               {activeVariant.oldPrice.toLocaleString('vi-VN')}đ

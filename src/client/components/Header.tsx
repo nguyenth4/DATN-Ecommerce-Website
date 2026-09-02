@@ -415,7 +415,7 @@ const Header = () => {
 
             <nav className="main-nav" aria-label="Primary" style={{ display: 'flex', gap: '1.5rem', flex: 1 }}>
               <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>Trang chủ</NavLink>
-              <NavLink to="/products" className={({ isActive }) => isActive ? 'active' : ''}>Điện thoại</NavLink>
+              <NavLink to="/products" end className={({ isActive }) => isActive ? 'active' : ''}>Điện thoại</NavLink>
               <NavLink to="/cart" className={({ isActive }) => isActive ? 'active' : ''}>Giỏ hàng</NavLink>
               <NavLink to="/contact" className={({ isActive }) => isActive ? 'active' : ''}>Liên hệ</NavLink>
             </nav>

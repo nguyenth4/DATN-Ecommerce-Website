@@ -28,6 +28,7 @@ const ProductsPage = () => {
   const [selectedCats, setSelectedCats] = useState<string[]>(
     searchParams.get('category_id')?.split(',').filter(Boolean) || []
   );
+  const isSaleFilter = searchParams.get('sale') === '2-9' || searchParams.get('on_sale') === 'true';
   const [page, setPage] = useState(1);
   const limit = 15;
 
@@ -101,6 +102,8 @@ const ProductsPage = () => {
     setSearchParams(params => {
       if (next.length > 0) params.set('category_id', next.join(','));
       else params.delete('category_id');
+      params.delete('sale');
+      params.delete('on_sale');
       return params;
     });
     setPage(1);
@@ -129,8 +132,8 @@ const ProductsPage = () => {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 'var(--s4)' }}>
               <div>
-                <h1>Tất cả sản phẩm</h1>
-                <p>Khám phá bộ sưu tập công nghệ mới nhất từ điện thoại, máy tính đến phụ kiện âm thanh.</p>
+                <h1>{isSaleFilter ? 'Chương trình Siêu Sale 2/9' : 'Tất cả sản phẩm'}</h1>
+                <p>{isSaleFilter ? 'Danh sách các sản phẩm đang được áp dụng chương trình giảm giá đặc biệt mừng đại lễ Quốc Khánh 2/9.' : 'Khám phá bộ sưu tập công nghệ mới nhất từ điện thoại, máy tính đến phụ kiện âm thanh.'}</p>
               </div>
 
               {/* Search Implementation */}
@@ -165,17 +168,19 @@ const ProductsPage = () => {
                   setSelectedCats([]);
                   setSearchParams(params => {
                     params.delete('category_id');
+                    params.delete('sale');
+                    params.delete('on_sale');
                     return params;
                   });
                 }}
                 style={{
                   background: 'var(--paper)',
-                  border: selectedCats.length === 0 ? '1px solid var(--indigo)' : '1px solid var(--border)',
+                  border: (selectedCats.length === 0 && !isSaleFilter) ? '1px solid var(--indigo)' : '1px solid var(--border)',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   fontSize: '13px',
-                  fontWeight: selectedCats.length === 0 ? '600' : '500',
-                  color: selectedCats.length === 0 ? 'var(--indigo)' : 'var(--fg)',
+                  fontWeight: (selectedCats.length === 0 && !isSaleFilter) ? '600' : '500',
+                  color: (selectedCats.length === 0 && !isSaleFilter) ? 'var(--indigo)' : 'var(--fg)',
                   padding: '8px 16px',
                   transition: 'all 0.2s',
                   display: 'flex',
@@ -292,6 +297,19 @@ const ProductsPage = () => {
                   <div className="shop-grid">
                     {(() => {
                       let sortedProducts = [...products];
+
+                      if (isSaleFilter) {
+                        sortedProducts = sortedProducts.filter((p: any) => {
+                          const variant = p.variants?.[0];
+                          if (variant?.calculated_price) {
+                            const pPrice = Number(variant.calculated_price.calculated_amount ?? 0);
+                            const origAmt = Number(variant.calculated_price.original_amount ?? pPrice);
+                            return origAmt > pPrice;
+                          }
+                          const saleP = variant?.prices?.find((pr: any) => pr.price_list_id);
+                          return Boolean(saleP);
+                        });
+                      }
 
                       // Client-side sorting for custom options
                       if (sortBy === 'views') {

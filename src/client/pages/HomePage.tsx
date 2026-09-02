@@ -130,6 +130,8 @@ const HomePage = () => {
     ? recommendedProductsList.slice(0, 4)
     : (fallbackProducts.length >= 4 ? fallbackProducts.slice(0, 4) : products.slice(0, 4));
 
+  // Lấy sessionId từ localStorage (giả lập đơn giản cho user vãng lai)
+
   return (
     <main id="main">
 
@@ -185,14 +187,25 @@ const HomePage = () => {
                 <img className="product" src="https://images.unsplash.com/photo-1779171443655-da6287ba0d2e?w=500&q=80&auto=format&fit=crop" alt="OPPO Find X8" />
               </article>
 
-              <article className="bento-card bento-card--green">
+              <article className="bento-card bento-card--sale29">
                 <div className="sparkle"></div>
-                <span className="eyebrow">Trải nghiệm mượt mà</span>
-                <h3 style={{ fontSize: 'var(--text-lg)', lineHeight: 1.2 }}>iPhone 15 Pro<br />Titan Xanh</h3>
-                <Link to="/products" className="shop-now">Mua ngay
-                  <ChevronRight size={14} />
-                </Link>
-                <img className="product" src="https://images.unsplash.com/photo-1710023038502-ba80a70a9f53?w=500&q=80&auto=format&fit=crop" alt="iPhone 15 Pro" />
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', zIndex: 2 }}>
+                  <div>
+                    <span className="eyebrow" style={{ color: '#fef08a', fontWeight: 800, letterSpacing: '0.5px', background: 'rgba(0, 0, 0, 0.2)', padding: '2px 8px', borderRadius: '4px' }}>
+                      ⭐ ĐẠI LỄ QUỐC KHÁNH 2/9
+                    </span>
+                    <h3 style={{ fontSize: '22px', fontWeight: 900, lineHeight: 1.15, color: '#ffffff', textShadow: '0 2px 10px rgba(0,0,0,0.3)', marginTop: '8px', marginBottom: '6px' }}>
+                      SIÊU SALE 2/9<br /><span style={{ color: '#fef08a' }}>GIẢM TỚI 50%</span>
+                    </h3>
+                    <p style={{ fontSize: '12px', color: '#fef2f2', margin: 0, opacity: 0.95, fontWeight: 500 }}>
+                      FreeShip toàn quốc · Ưu đãi cực hot
+                    </p>
+                  </div>
+                  <Link to="/products?sale=2-9" className="shop-now" style={{ color: '#7f1d1d', background: '#fef08a', padding: '6px 14px', borderRadius: '8px', fontWeight: 800, width: 'fit-content', marginTop: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+                    Xem khuyến mãi
+                    <ChevronRight size={14} />
+                  </Link>
+                </div>
               </article>
 
               <article className="bento-card bento-card--black">
