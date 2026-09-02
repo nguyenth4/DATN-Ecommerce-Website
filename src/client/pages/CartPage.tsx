@@ -5,9 +5,9 @@ import {
   Minus, 
   X, 
   ArrowLeft,
-  Zap,
+  Truck,
   RotateCcw,
-  Star,
+  ShieldCheck,
   Ticket
 } from 'lucide-react';
 import { getCart, updateCartQty, removeFromCart } from '../utils/cart';
@@ -403,11 +403,11 @@ const CartPage = () => {
                 <div style={{ marginTop: 'var(--s7)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 'var(--s4)', padding: 'var(--s5)', background: 'var(--bg)', borderRadius: 'var(--r)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s3)' }}>
                     <div style={{ width: '40px', height: '40px', background: 'var(--indigo-soft)', color: 'var(--indigo)', borderRadius: '999px', display: 'grid', placeItems: 'center' }}>
-                      <Zap size={20} />
+                      <Truck size={20} />
                     </div>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>Giao hàng nhanh miễn phí</div>
-                      <div style={{ fontSize: '11px', color: 'var(--fg-mute)' }}>2 — 3 ngày làm việc</div>
+                      <div style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>Giao hàng toàn quốc</div>
+                      <div style={{ fontSize: '11px', color: 'var(--fg-mute)' }}>Nhận hàng trong 2 — 3 ngày</div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s3)' }}>
@@ -415,17 +415,17 @@ const CartPage = () => {
                       <RotateCcw size={20} />
                     </div>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>30 ngày đổi trả miễn phí</div>
-                      <div style={{ fontSize: '11px', color: 'var(--fg-mute)' }}>Không cần lý do</div>
+                      <div style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>7 ngày đổi trả dễ dàng</div>
+                      <div style={{ fontSize: '11px', color: 'var(--fg-mute)' }}>Đổi mới nếu lỗi từ nhà sản xuất</div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s3)' }}>
                     <div style={{ width: '40px', height: '40px', background: 'var(--indigo-soft)', color: 'var(--indigo)', borderRadius: '999px', display: 'grid', placeItems: 'center' }}>
-                      <Star size={20} />
+                      <ShieldCheck size={20} />
                     </div>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>Bảo hành 2 năm</div>
-                      <div style={{ fontSize: '11px', color: 'var(--fg-mute)' }}>Cho mọi đơn hàng Sprylo</div>
+                      <div style={{ fontWeight: 700, fontSize: 'var(--text-sm)' }}>Bảo hành chính hãng 12 tháng</div>
+                      <div style={{ fontSize: '11px', color: 'var(--fg-mute)' }}>Cam kết 100% sản phẩm chính hãng</div>
                     </div>
                   </div>
                 </div>
