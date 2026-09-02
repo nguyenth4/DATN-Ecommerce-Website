@@ -1,6 +1,6 @@
 # Handoff Document — Sprylo E-Commerce (DATN)
 
-> **Cập nhật lần cuối:** 2026-09-01
+> **Cập nhật lần cuối:** 2026-09-02
 > **Dự án:** Website Thương Mại Điện Tử — Đồ Án Tốt Nghiệp FPT Polytechnic  
 > **Tên thương hiệu:** Sprylo
 
@@ -72,7 +72,7 @@ npm run dev
 | `/checkout`              | `CheckoutPage`       | Thanh toán: địa chỉ, phương thức vận chuyển, thanh toán |
 | `/checkout/vnpay_return` | `VNPayReturnPage`    | Kết quả sau thanh toán VNPAY                            |
 | `/account`               | `AccountPage`        | Hồ sơ, đơn hàng, đổi mật khẩu, ví điện tử               |
-| `/login`                 | `LoginPage`          | Đăng nhập (email/pass, Google OAuth)                    |
+| `/login`                 | `LoginPage`          | Đăng nhập (email/pass, Google/Facebook OAuth)           |
 | `/register`              | `RegisterPage`       | Đăng ký tài khoản                                       |
 | `/forgot-password`       | `ForgotPasswordPage` | Quên mật khẩu                                           |
 | `/reset-password`        | `ResetPasswordPage`  | Đặt lại mật khẩu                                        |
@@ -128,13 +128,18 @@ VNPAY_RETURN_URL=http://localhost:5174/checkout/vnpay_return
 VNPAY_IPN_URL=http://localhost:9000/store/payment/vnpay/ipn
 ```
 
-### Google OAuth
+### Google và Facebook OAuth
 
 ```env
 GOOGLE_CLIENT_ID=xxxxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxxxxxxxxxxxxxx
 GOOGLE_CALLBACK_URL=http://localhost:9000/auth/customer/google/callback
+FACEBOOK_APP_ID=xxxxxxxxxxxxxxxx
+FACEBOOK_APP_SECRET=xxxxxxxxxxxxxxxx
+FACEBOOK_CALLBACK_URL=http://localhost:9000/auth/customer/facebook/callback
 ```
+
+> Facebook Login redirect về `/auth/callback?_type=facebook&token=...`. Backend phải được khởi động lại sau khi thay đổi route để nạp callback và endpoint `/store/custom/auth-identity`.
 
 ### Email (Resend)
 
@@ -143,6 +148,18 @@ RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx   # Cần thay bằng key th�
 RESEND_FROM_EMAIL=Sprylo <onboarding@resend.dev>
 STORE_FRONTEND_URL=http://localhost:5174
 ```
+
+### Email hoàn tiền (SendGrid)
+
+```env
+SENDGRID_API_KEY=SG.xxxxxxxxxxxxxxxxx
+SENDGRID_FROM_EMAIL=verified-sender@example.com
+SENDGRID_RETURN_APPROVED_TEMPLATE_ID=d-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+- `SENDGRID_FROM_EMAIL` phải hoàn tất Single Sender Verification hoặc xác thực domain trên SendGrid.
+- Dynamic Template hoàn tiền: `apps/backend/static/sendgrid-return-approved-template.html`.
+- Không lưu API key thật trong tài liệu, source control hoặc trao đổi chat.
 
 ---
 
@@ -195,6 +212,9 @@ Tất cả routes trong `src/api/store/`:
 | `POST`     | `/store/custom/profile`         | Cập nhật hồ sơ khách hàng                                          |
 | `POST`     | `/store/custom/upload-avatar`   | Upload ảnh đại diện                                                |
 | `POST`     | `/store/custom/change-password` | Đổi mật khẩu                                                       |
+| `GET`      | `/store/custom/auth-identity`   | Lấy metadata OAuth, liên kết customer và cấp token customer       |
+| `POST`     | `/store/orders/:id/request-return` | Khách gửi lý do trả hàng và phương thức hoàn tiền               |
+| `POST`     | `/admin/orders/:id/approve-return` | Admin duyệt trả hàng, xử lý hoàn tiền và gửi email SendGrid      |
 
 ---
 
@@ -208,7 +228,7 @@ Trong `src/modules/`:
 | `payment-vnpay`    | VNPAY payment provider tích hợp Medusa v2     |
 | `ghn-fulfillment`  | GHN Fulfillment provider                      |
 | `ghtk-fulfillment` | GHTK fulfillment provider và tính phí chuẩn   |
-| `auth-providers`   | Google OAuth provider                         |
+| `auth-providers`   | Facebook OAuth provider tùy chỉnh             |
 | `recommendation`   | Gợi ý sản phẩm dựa trên hành vi               |
 | `shipping`         | Tính phí ship nội bộ                          |
 
@@ -244,6 +264,19 @@ POST /store/checkout
 - OTP: `123456`
 
 > **Lưu ý IPN:** Trong môi trường `localhost`, VNPAY sandbox **không thể gọi ngược** về `localhost:9000`. IPN sẽ không hoạt động tự động khi dev local. Chỉ `vnp_ReturnUrl` (redirect người dùng) mới hoạt động. Để test IPN đầy đủ, dùng **ngrok** hoặc deploy lên server public.
+
+---
+
+## 9.1. Trả hàng, hoàn tiền và email thông báo
+
+1. Khách mở đơn hàng tại `/account`, gửi `POST /store/orders/:id/request-return` với lý do, thông tin nhận hoàn và lựa chọn `wallet` hoặc `bank_transfer`.
+2. API chỉ cho phép customer sở hữu đơn hàng tạo yêu cầu, sau đó lưu trạng thái trong `order.metadata`.
+3. Admin mở chi tiết đơn tại Medusa Admin và gọi `POST /admin/orders/:id/approve-return`.
+4. Với `wallet`, backend cộng tiền ngay vào Sprylo Wallet bằng `WalletModuleService.addBalance`, ghi transaction loại `refund` và đặt `refund_status=completed`.
+5. Với `bank_transfer`, backend lưu `refund_status=bank_transfer_pending`. Nhân viên vẫn phải chuyển khoản thật theo thông tin khách đã cung cấp; SendGrid không thực hiện giao dịch ngân hàng.
+6. Sau khi xử lý, backend gửi SendGrid Dynamic Template với các biến `customer_name`, `order_display_id`, `refund_amount_formatted`, `refund_info`, `return_reason`, `support_email`, `is_wallet`, `is_bank_transfer`.
+
+Yêu cầu hoàn tiền có `refund_id` để tránh duyệt/hoàn tiền trùng lặp. Nếu SendGrid chưa cấu hình hoặc gửi lỗi, kết quả hoàn tiền đã ghi vẫn không bị đảo ngược; log backend sẽ ghi nguyên nhân không gửi được email.
 
 ---
 
