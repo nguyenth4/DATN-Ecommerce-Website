@@ -10,6 +10,22 @@ export interface ProductQueryParams {
   order?: string;
 }
 
+let cachedRegionId: string | null = null;
+
+export const getActiveRegionId = async (): Promise<string | undefined> => {
+  if (cachedRegionId) return cachedRegionId;
+  try {
+    const { regions } = await medusa.store.region.list();
+    if (regions && regions.length > 0) {
+      cachedRegionId = regions[0].id;
+      return cachedRegionId;
+    }
+  } catch (err) {
+    console.error('Failed to fetch active region:', err);
+  }
+  return undefined;
+};
+
 export const productService = {
   // Fetch all products with optional filters
   // NOTE: list views only ever render `thumbnail`, never the full `images` array,
@@ -17,11 +33,10 @@ export const productService = {
   // page (getProduct below) still fetches `*images` for the product gallery.
   async getProducts(params?: ProductQueryParams) {
     try {
+      const region_id = await getActiveRegionId();
       const { products, count, offset, limit } = await medusa.store.product.list({
-        // List view chỉ cần thumbnail (field mặc định) để hiển thị card,
-        // không cần *images (mảng ảnh đầy đủ) — giảm payload đáng kể.
-        // *images đầy đủ chỉ cần ở trang chi tiết (getProduct).
-        fields: '*variants,*variants.prices,+variants.inventory_quantity,+variants.manage_inventory,*categories,+metadata',
+        fields: '*variants,*variants.prices,*variants.calculated_price,+variants.inventory_quantity,+variants.manage_inventory,*categories,+metadata',
+        ...(region_id ? { region_id } : {}),
         ...params,
       });
       return { products, count, offset, limit };
@@ -52,8 +67,10 @@ export const productService = {
   // Fetch single product
   async getProduct(id: string) {
     try {
+      const region_id = await getActiveRegionId();
       const { product } = await medusa.store.product.retrieve(id, {
-        fields: '*variants,*variants.prices,+variants.inventory_quantity,+variants.manage_inventory,*categories,*options,+metadata,*images',
+        fields: '*variants,*variants.prices,*variants.calculated_price,+variants.inventory_quantity,+variants.manage_inventory,*categories,*options,+metadata,*images',
+        ...(region_id ? { region_id } : {}),
       });
       return product;
     } catch (error) {

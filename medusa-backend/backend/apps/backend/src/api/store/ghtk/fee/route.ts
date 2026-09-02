@@ -34,6 +34,21 @@ function normalizeProvinceForGhtk(province: string) {
   return cleaned;
 }
 
+const VOLUMETRIC_WEIGHT_DIVISOR = 5000;
+
+function calculateChargeableWeight(body: Record<string, unknown>) {
+  const actualWeight = Number(body.weight) || 200;
+  const length = Number(body.length) || 0;
+  const width = Number(body.width) || 0;
+  const height = Number(body.height) || 0;
+  const volumetricWeight =
+    length > 0 && width > 0 && height > 0
+      ? Math.ceil((length * width * height * 1000) / VOLUMETRIC_WEIGHT_DIVISOR)
+      : 0;
+
+  return Math.max(actualWeight, volumetricWeight);
+}
+
 // Resolve correct District Name for GHTK from province and ward names
 async function resolveDistrictName(provinceName: string, wardName: string, ghnToken: string): Promise<string | null> {
   const cacheKey = `${cleanName(provinceName)}:${cleanName(wardName)}`;
@@ -148,6 +163,7 @@ export async function POST(
     }
 
     const ghtkProvince = normalizeProvinceForGhtk(provinceName);
+    const chargeableWeight = calculateChargeableWeight(body);
 
     // GHTK expects parameters in query string for fee calculation, but we receive them in POST body
     const params = new URLSearchParams({
@@ -155,7 +171,7 @@ export async function POST(
       pick_district: process.env.GHTK_PICK_DISTRICT || "Quận 1",
       province: ghtkProvince || "Hồ Chí Minh",
       district: districtName || "Quận 1",
-      weight: (body.weight || 200).toString(),
+      weight: chargeableWeight.toString(),
       deliver_option: "none"
     });
 
@@ -168,7 +184,11 @@ export async function POST(
     }
 
     const apiUrl = `https://services.giaohangtietkiem.vn/services/shipment/fee?${params.toString()}`;
-    console.log(`[GHTK Fee] Request URL: ${apiUrl}`);
+    console.log(
+      `[GHTK Fee] Requesting fee with actual weight ${body.weight || 200}g, ` +
+        `volumetric dimensions ${body.length || 0}x${body.width || 0}x${body.height || 0}cm, ` +
+        `chargeable weight ${chargeableWeight}g, insurance ${body.insurance_value || 0}đ`,
+    );
 
     const ghtkRes = await fetch(apiUrl, {
       method: "GET",

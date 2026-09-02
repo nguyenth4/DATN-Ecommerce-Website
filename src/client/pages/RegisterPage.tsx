@@ -198,6 +198,46 @@ const RegisterPage = () => {
     }
   };
 
+  // ── Social Login (Google) ──────────────────────────────────────
+  const handleSocialLogin = (provider: 'google') => {
+    // Lưu trang mà user muốn đến trước khi rời đi
+    localStorage.setItem('oauth_return_to', '/account');
+
+    // Callback FE — trang trung gian nhận token sau OAuth
+    const callbackUrl = `${window.location.origin}/auth/callback?_type=${provider}`;
+
+    setLoading(true);
+    // Gọi backend để lấy redirect URL đến OAuth provider
+    fetch(`${MEDUSA_BACKEND_URL}/auth/customer/${provider}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-publishable-api-key': PUBLISHABLE_KEY,
+      },
+      body: JSON.stringify({ callback_url: callbackUrl }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.location) {
+          // Redirect sang Google OAuth consent screen
+          window.location.href = data.location;
+        } else {
+          setAlert({
+            type: 'error',
+            msg: `Không thể kết nối đến Google. Vui lòng thử lại.`
+          });
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        setAlert({
+          type: 'error',
+          msg: 'Không thể kết nối đến máy chủ. Vui lòng thử lại.'
+        });
+        setLoading(false);
+      });
+  };
+
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="auth-layout">
@@ -506,7 +546,8 @@ const RegisterPage = () => {
           <button
             className="btn btn-outline btn-block"
             style={{ color: 'var(--dark)', borderColor: 'var(--border)', gap: '0.6rem', padding: '0.65rem' }}
-            onClick={() => setAlert({ type: 'error', msg: 'Đăng ký bằng Google chưa được hỗ trợ. Vui lòng dùng email.' })}
+            onClick={() => handleSocialLogin('google')}
+            disabled={loading}
           >
             <svg width="18" height="18" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />

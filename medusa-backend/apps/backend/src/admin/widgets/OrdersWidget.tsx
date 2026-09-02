@@ -20,14 +20,14 @@ export const OrdersWidget = () => {
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [page] = useState(0)
-  const limit = 20
+  const limit = 50
 
   const fetchOrders = async () => {
     setLoading(true)
     try {
       // Remove status=pending so we can see all recent orders, 
       // but we will filter out legacy ones in the UI.
-      const response = await fetch(`/admin/orders?limit=50&offset=${page * 50}&order=-created_at`);
+      const response = await fetch(`/admin/orders?limit=${limit}&offset=${page * limit}&order=-created_at`);
       if (response.ok) {
         const data = await response.json();
         // Lọc bỏ những đơn hàng cũ (không có shipping_method trong metadata)
@@ -116,13 +116,16 @@ export const OrdersWidget = () => {
   const displayedOrders = filter === "need_refund"
     ? orders.filter(o => o.status === "canceled" && o.payment_status === "captured")
     : filter === "return_request"
-      ? orders.filter(o => o.metadata?.return_requested)
-      : orders;
+    ? orders.filter(o => o.metadata?.return_requested === true && o.payment_status === "captured")
+    : orders;
 
   return (
-    <Container className="p-6">
-      <div className="flex items-center justify-between mb-4">
-        <Heading level="h2">Quản lý Đơn hàng (GHN / GHTK)</Heading>
+    <Container className="p-6 mb-6">
+      <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+        <div>
+          <Heading level="h2">Quản lý Đơn hàng (GHN / GHTK)</Heading>
+          <p className="text-xs text-gray-500 mt-1">Duyệt giao hàng và đồng bộ vận chuyển tự động</p>
+        </div>
         <div style={{ display: "flex", gap: "10px" }}>
           <Button
             size="small"
@@ -176,11 +179,6 @@ export const OrdersWidget = () => {
                 {order.metadata?.return_requested && (
                   <div style={{ color: '#d97706', fontSize: '0.8rem', marginTop: '4px' }}>
                     Yêu cầu trả hàng: <strong>{order.metadata?.return_reason}</strong>
-                    {order.metadata?.refund_destination && (
-                      <div style={{ marginTop: '2px', color: order.metadata.refund_destination === 'wallet' ? '#7c3aed' : '#059669' }}>
-                        Hoàn tiền về: <strong>{order.metadata.refund_destination === 'wallet' ? '💰 Ví Sprylo' : '🏦 Ngân hàng'}</strong>
-                      </div>
-                    )}
                     {order.metadata?.refund_info && (
                       <div style={{ marginTop: '2px', color: '#059669' }}>
                         Thông tin nhận tiền: <strong>{order.metadata.refund_info}</strong>
@@ -209,7 +207,7 @@ export const OrdersWidget = () => {
                       const res = await fetch(`/admin/orders/${order.id}/refund`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ payment_method: method, amount: order.total || 0 })
+                        body: JSON.stringify({ payment_method: method })
                       });
                       if (res.ok) {
                         alert("Hoàn tiền thành công!");
@@ -218,7 +216,7 @@ export const OrdersWidget = () => {
                         const err = await res.json();
                         alert("Lỗi hoàn tiền: " + (err.message || "Unknown error"));
                       }
-                    } catch (e: any) {
+                    } catch(e: any) {
                       alert("Lỗi kết nối: " + e.message);
                     }
                   }}>
@@ -242,7 +240,7 @@ export const OrdersWidget = () => {
 }
 
 export const config = defineWidgetConfig({
-  zone: "order.list.after",
+  zone: "order.list.before",
 })
 
 export default OrdersWidget

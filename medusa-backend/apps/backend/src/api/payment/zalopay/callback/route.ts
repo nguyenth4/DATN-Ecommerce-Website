@@ -229,11 +229,11 @@ async function markOrderPaid(req: MedusaRequest, medusaOrderId: string, amount: 
       }
     }
 
-    // ─── Cập nhật payment_collection.status = authorized ──────────────────
+    // ─── Cập nhật payment_collection.status = completed ──────────────────
     const rawAmt = JSON.stringify({ value: paycolAmount.toString(), precision: 20 });
     await db.raw(
       `UPDATE payment_collection
-       SET status = 'authorized', captured_amount = ?, raw_captured_amount = ?,
+       SET status = 'completed', captured_amount = ?, raw_captured_amount = ?,
            authorized_amount = ?, raw_authorized_amount = ?, updated_at = NOW()
        WHERE id = ?`,
       [paycolAmount, rawAmt, paycolAmount, rawAmt, paycolId]

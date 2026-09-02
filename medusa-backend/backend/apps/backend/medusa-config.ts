@@ -12,11 +12,11 @@ export default defineConfig({
         }
       },
       pool: {
-        min: 0,
-        max: 2,
-        idleTimeoutMillis: 5000,
-        createTimeoutMillis: 8000,
-        acquireConnectionTimeoutMillis: 8000
+        min: 2,
+        max: 15,
+        idleTimeoutMillis: 30000,
+        createTimeoutMillis: 30000,
+        acquireConnectionTimeoutMillis: 30000
       }
     },
     http: {

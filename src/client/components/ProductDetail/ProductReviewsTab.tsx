@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { toast } from 'react-hot-toast';
 
 interface Review {
-  id?: string;
-  name?: string;
+  id?: number;
   user_name?: string;
+  name?: string;
   rating: number;
-  date?: string;
-  created_at?: string;
   comment: string;
+  created_at?: string;
+  date?: string;
+  user_avatar?: string;
+  avatar_url?: string;
 }
 
 interface ProductReviewsTabProps {
@@ -46,6 +49,12 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
 
   const [testUser, setTestUser] = useState(localStorage.getItem('test_customer_id') || 'cus_01KWH0KYDJM5N7GW2G6WMXMXC4');
   const [isEligible, setIsEligible] = useState<boolean>(false);
+  const [alreadyReviewed, setAlreadyReviewed] = useState<boolean>(false);
+  const [existingReview, setExistingReview] = useState<{ id: number; rating: number; comment: string } | null>(null);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [hoverRating, setHoverRating] = useState<number>(0);
+  const [isSubmittingUpdate, setIsSubmittingUpdate] = useState<boolean>(false);
+  const [updateMessage, setUpdateMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isCheckingEligibility, setIsCheckingEligibility] = useState<boolean>(true);
 
   useEffect(() => {
@@ -78,37 +87,48 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
     }
   }, [testUser, isLoggedIn, customerName, setNewReviewName]);
 
-  useEffect(() => {
-    const checkEligibility = async () => {
-      setIsCheckingEligibility(true);
-      try {
-        let currentCustomerId = '';
-        if (isLoggedIn && customerInfo?.id) {
-          currentCustomerId = customerInfo.id;
-        } else {
-          currentCustomerId = testUser;
-        }
-        
-        const MEDUSA_BACKEND_URL = (import.meta as any).env?.VITE_MEDUSA_BACKEND_URL || 'http://localhost:9000';
-        const PUBLISHABLE_KEY = (import.meta as any).env?.VITE_MEDUSA_PUBLISHABLE_KEY || 'pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d';
-
-        const res = await fetch(`${MEDUSA_BACKEND_URL}/store/reviews/check-eligibility?product_id=${productId}&customer_id=${currentCustomerId}`, {
-          headers: {
-            'x-publishable-api-key': PUBLISHABLE_KEY
-          }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setIsEligible(data.isEligible);
-        } else {
-          setIsEligible(false);
-        }
-      } catch (err) {
-        setIsEligible(false);
-      } finally {
-        setIsCheckingEligibility(false);
+  const checkEligibility = async () => {
+    setIsCheckingEligibility(true);
+    try {
+      let currentCustomerId = '';
+      if (isLoggedIn && customerInfo?.id) {
+        currentCustomerId = customerInfo.id;
+      } else {
+        currentCustomerId = testUser;
       }
-    };
+      
+      const MEDUSA_BACKEND_URL = (import.meta as any).env?.VITE_MEDUSA_BACKEND_URL || 'http://localhost:9000';
+      const PUBLISHABLE_KEY = (import.meta as any).env?.VITE_MEDUSA_PUBLISHABLE_KEY || 'pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d';
+
+      const res = await fetch(`${MEDUSA_BACKEND_URL}/store/reviews/check-eligibility?product_id=${productId}&customer_id=${currentCustomerId}`, {
+        headers: {
+          'x-publishable-api-key': PUBLISHABLE_KEY
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setIsEligible(data.isEligible);
+        setAlreadyReviewed(data.alreadyReviewed || false);
+        if (data.alreadyReviewed && data.existingReview) {
+          setExistingReview(data.existingReview);
+        } else {
+          setExistingReview(null);
+        }
+      } else {
+        setIsEligible(false);
+        setAlreadyReviewed(false);
+        setExistingReview(null);
+      }
+    } catch (err) {
+      setIsEligible(false);
+      setAlreadyReviewed(false);
+      setExistingReview(null);
+    } finally {
+      setIsCheckingEligibility(false);
+    }
+  };
+
+  useEffect(() => {
     if (productId) {
       checkEligibility();
     }
@@ -118,6 +138,70 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
     setTestUser(val);
     localStorage.setItem('test_customer_id', val);
     window.dispatchEvent(new Event('test-customer-changed'));
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isEditing && existingReview) {
+      setUpdateMessage(null);
+
+      const commentTrimmed = newReviewComment.trim();
+      if (!commentTrimmed) {
+        setUpdateMessage({ type: 'error', text: 'Vui lòng nhập nội dung bình luận.' });
+        return;
+      }
+      if (commentTrimmed.replace(/\s+/g, '').length < 10) {
+        setUpdateMessage({ type: 'error', text: 'Bình luận quá ngắn, vui lòng viết chi tiết hơn (ít nhất 10 ký tự).' });
+        return;
+      }
+
+      setIsSubmittingUpdate(true);
+      try {
+        let currentCustomerId = isLoggedIn && customerInfo?.id ? customerInfo.id : testUser;
+        const MEDUSA_BACKEND_URL = (import.meta as any).env?.VITE_MEDUSA_BACKEND_URL || 'http://localhost:9000';
+        const PUBLISHABLE_KEY = (import.meta as any).env?.VITE_MEDUSA_PUBLISHABLE_KEY || 'pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d';
+
+        const res = await fetch(`${MEDUSA_BACKEND_URL}/store/reviews`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-publishable-api-key': PUBLISHABLE_KEY,
+            'x-customer-id': currentCustomerId
+          },
+          body: JSON.stringify({
+            review_id: existingReview.id,
+            rating: newReviewRating,
+            comment: newReviewComment,
+            product_id: productId,
+            customer_id: currentCustomerId
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          toast.success("Cập nhật đánh giá thành công!");
+          setUpdateMessage({ type: 'success', text: 'Cập nhật đánh giá thành công!' });
+          setExistingReview({
+            ...existingReview,
+            rating: newReviewRating,
+            comment: newReviewComment
+          });
+          setIsEditing(false);
+          await checkEligibility();
+          window.dispatchEvent(new Event('review-updated'));
+        } else {
+          setUpdateMessage({ type: 'error', text: data.message || 'Cập nhật đánh giá thất bại.' });
+          toast.error(data.message || 'Cập nhật thất bại.');
+        }
+      } catch (err) {
+        setUpdateMessage({ type: 'error', text: 'Không thể kết nối đến server backend.' });
+        toast.error('Lỗi kết nối server.');
+      } finally {
+        setIsSubmittingUpdate(false);
+      }
+    } else {
+      onAddReview(e);
+    }
   };
 
   // Tính toán biểu đồ sao động
@@ -154,28 +238,79 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
         
         {/* Cột phần trăm sao động */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', textAlign: 'left' }}>
-          {[5, 4, 3, 2, 1].map((stars) => {
-            const pct = getPercentage(stars);
-            return (
-              <div key={stars} style={{ display: 'flex', alignItems: 'center', fontSize: '0.75rem', gap: '0.5rem' }}>
-                <span style={{ width: '40px' }}>{stars} sao</span>
-                <div style={{ flex: 1, height: '8px', background: '#e0e0e0', borderRadius: '4px', overflow: 'hidden' }}>
-                  <div style={{ width: `${pct}%`, height: '100%', background: '#ffc107' }}></div>
-                </div>
-                <span style={{ width: '30px', textAlign: 'right' }}>{pct}%</span>
+          {[5, 4, 3, 2, 1].map(stars => (
+            <div key={stars} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem' }}>
+              <span style={{ width: '35px', textAlign: 'right', fontWeight: 600 }}>{stars} sao</span>
+              <div style={{ flex: 1, background: '#e0e0e0', height: '8px', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ width: `${getPercentage(stars)}%`, background: '#ffc107', height: '100%', borderRadius: '4px', transition: 'width 0.3s' }}></div>
               </div>
-            );
-          })}
+              <span style={{ width: '35px', color: '#666' }}>{getPercentage(stars)}%</span>
+            </div>
+          ))}
         </div>
       </div>
 
       {/* Cột phải: Viết đánh giá & Danh sách đánh giá */}
       <div>
-        {/* Form viết đánh giá */}
-        {!isCheckingEligibility && isEligible && (
-        <form onSubmit={onAddReview} style={{ background: '#fff', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '2rem' }}>
+        {alreadyReviewed && !isEditing && (
+          <div style={{ 
+            background: '#f0fdf4', 
+            border: '1px solid #bbf7d0', 
+            color: '#166534', 
+            padding: '1.25rem', 
+            borderRadius: '10px', 
+            fontSize: '0.85rem', 
+            marginBottom: '2rem', 
+            boxShadow: '0 2px 4px rgba(0,0,0,0.03)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <i className="bi bi-check-circle-fill" style={{ color: '#16a34a', fontSize: '1.4rem', flexShrink: 0 }}></i>
+                <div>
+                  <strong style={{ display: 'block', fontSize: '0.95rem', marginBottom: '2px', color: '#14532d' }}>
+                    Bạn đã gửi đánh giá cho sản phẩm này ({existingReview?.rating || 5} ★)
+                  </strong>
+                  <span style={{ color: '#374151', fontStyle: 'italic', display: 'block' }}>"{existingReview?.comment}"</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditing(true);
+                  if (existingReview) {
+                    setNewReviewRating(existingReview.rating);
+                    setNewReviewComment(existingReview.comment);
+                  }
+                }}
+                style={{
+                  background: '#16a34a',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '6px',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  whiteSpace: 'nowrap',
+                  transition: 'background-color 0.2s'
+                }}
+              >
+                <i className="bi bi-pencil-square"></i> Chỉnh sửa đánh giá
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Form viết hoặc chỉnh sửa đánh giá */}
+        {(isEditing || (!isCheckingEligibility && isEligible && !alreadyReviewed)) && (
+        <form onSubmit={handleFormSubmit} style={{ background: '#fff', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border)', marginBottom: '2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}><i className="bi bi-pencil-square"></i> Viết đánh giá của bạn</h4>
+            <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: 0 }}>
+              <i className="bi bi-pencil-square"></i> {isEditing ? "Chỉnh sửa đánh giá của bạn" : "Viết đánh giá của bạn"}
+            </h4>
             
             {/* Swticher tài khoản test hoặc thông tin tài khoản đăng nhập */}
             {isLoggedIn ? (
@@ -198,7 +333,7 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
             )}
           </div>
 
-          {errorMessage && (
+          {(errorMessage || updateMessage?.type === 'error') && (
             <div style={{
               padding: '0.75rem 1rem',
               marginBottom: '1rem',
@@ -212,13 +347,13 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
               color: '#92400e'
             }}>
               <i className="bi bi-shield-exclamation" style={{ fontSize: '1rem', flexShrink: 0, marginTop: '1px' }}></i>
-              <span>{errorMessage}</span>
+              <span>{updateMessage?.text || errorMessage}</span>
             </div>
           )}
 
-          {successMessage && (
+          {(successMessage || updateMessage?.type === 'success') && (
             <div className="alert alert-success" style={{ padding: '0.75rem 1rem', marginBottom: '1rem', borderRadius: '6px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px', background: '#f0fdf4', border: '1px solid #dcfce7', color: '#166534' }}>
-              <i className="bi bi-check-circle-fill"></i> {successMessage}
+              <i className="bi bi-check-circle-fill"></i> {updateMessage?.text || successMessage}
             </div>
           )}
 
@@ -233,18 +368,48 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
               />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.3rem' }}>Số sao đánh giá *</label>
-              <select 
-                value={newReviewRating} 
-                onChange={(e) => setNewReviewRating(Number(e.target.value))} 
-                style={{ width: '100%', padding: '0.5rem', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}
-              >
-                <option value={5}>★★★★★ (5 sao)</option>
-                <option value={4}>★★★★☆ (4 sao)</option>
-                <option value={3}>★★★☆☆ (3 sao)</option>
-                <option value={2}>★★☆☆☆ (2 sao)</option>
-                <option value={1}>★☆☆☆☆ (1 sao)</option>
-              </select>
+              <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.4rem' }}>
+                Số sao đánh giá *
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minHeight: '38px' }}>
+                <div 
+                  style={{ display: 'flex', gap: '0.2rem' }}
+                  onMouseLeave={() => setHoverRating(0)}
+                >
+                  {[1, 2, 3, 4, 5].map((star) => {
+                    const currentRating = hoverRating || newReviewRating;
+                    const isFilled = star <= currentRating;
+                    return (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setNewReviewRating(star)}
+                        onMouseEnter={() => setHoverRating(star)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          padding: '0 1px',
+                          fontSize: '1.75rem',
+                          lineHeight: 1,
+                          cursor: 'pointer',
+                          color: isFilled ? '#f59e0b' : '#d1d5db',
+                          transition: 'all 0.15s ease',
+                          transform: (hoverRating === star || (hoverRating === 0 && newReviewRating === star)) ? 'scale(1.25)' : 'scale(1)',
+                          outline: 'none'
+                        }}
+                        title={`${star} sao`}
+                      >
+                        ★
+                      </button>
+                    );
+                  })}
+                </div>
+                <span style={{ fontSize: '0.8rem', color: '#4b5563', fontWeight: 600 }}>
+                  {hoverRating || newReviewRating} sao ({
+                    { 5: "Cực kỳ hài lòng", 4: "Hài lòng", 3: "Bình thường", 2: "Không hài lòng", 1: "Rất tệ" }[hoverRating || newReviewRating] || ''
+                  })
+                </span>
+              </div>
             </div>
           </div>
           <div style={{ marginBottom: '1rem' }}>
@@ -279,7 +444,26 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
               💡 Vui lòng chia sẻ trải nghiệm thực tế. Không dùng ngôn ngữ thô tục, không đăng link, không spam.
             </p>
           </div>
-          <button type="submit" className="btn btn-primary btn-sm" style={{ padding: '0.5rem 1.5rem' }}>Gửi đánh giá</button>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            <button 
+              type="submit" 
+              className="btn btn-primary btn-sm" 
+              disabled={isSubmittingUpdate}
+              style={{ padding: '0.5rem 1.5rem' }}
+            >
+              {isSubmittingUpdate ? "Đang lưu..." : isEditing ? "Lưu cập nhật" : "Gửi đánh giá"}
+            </button>
+            {isEditing && (
+              <button 
+                type="button" 
+                onClick={() => setIsEditing(false)}
+                className="btn btn-ghost btn-sm"
+                style={{ padding: '0.5rem 1rem', background: '#f3f4f6', border: '1px solid #d1d5db', color: '#374151', borderRadius: '6px', cursor: 'pointer' }}
+              >
+                Hủy bỏ
+              </button>
+            )}
+          </div>
         </form>
         )}
 
@@ -297,16 +481,42 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
                 ? new Date(rev.created_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
                 : rev.date || "Vừa xong";
 
+              const backendUrl = (import.meta as any).env?.VITE_MEDUSA_BACKEND_URL || 'http://localhost:9000';
+              let avatarSrc = (rev as any).user_avatar || (rev as any).avatar_url || "";
+              if (avatarSrc && avatarSrc.startsWith('/')) {
+                avatarSrc = `${backendUrl}${avatarSrc}`;
+              }
+
               return (
                 <div key={idx} style={{ display: 'flex', gap: '1rem', paddingBottom: '1.2rem', borderBottom: '1px solid #f0f0f0' }}>
                   {/* Avatar */}
+                  {avatarSrc ? (
+                    <img
+                      src={avatarSrc}
+                      alt={name}
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        objectFit: 'cover',
+                        flexShrink: 0,
+                        border: '1px solid #c7d2fe'
+                      }}
+                      onError={(e) => {
+                        (e.currentTarget as HTMLElement).style.display = 'none';
+                        if (e.currentTarget.nextElementSibling) {
+                          (e.currentTarget.nextElementSibling as HTMLElement).style.display = 'flex';
+                        }
+                      }}
+                    />
+                  ) : null}
                   <div style={{ 
                     width: '40px', 
                     height: '40px', 
                     borderRadius: '50%', 
                     background: '#e0e7ff', 
                     color: 'var(--indigo, #4f46e5)', 
-                    display: 'flex', 
+                    display: avatarSrc ? 'none' : 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center', 
                     fontWeight: 700,
@@ -333,10 +543,8 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
           </div>
         )}
       </div>
-
     </div>
   );
 };
 
 export default ProductReviewsTab;
-

@@ -122,9 +122,17 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
       v.options?.some((opt: any) => opt.option_id === colorOptionId && opt.value === colorName)
     );
 
-    return variant?.prices?.find((p: any) => p.currency_code === 'vnd')?.amount
-        || variant?.prices?.[0]?.amount
-        || 0;
+    if (variant?.calculated_price) {
+      return Number(variant.calculated_price.calculated_amount ?? 0);
+    }
+    if (!variant || !variant.prices) return 0;
+    const saleP = variant.prices.find((p: any) => p.currency_code === 'vnd' && p.price_list_id)
+      || variant.prices.find((p: any) => p.price_list_id);
+    const baseP = variant.prices.find((p: any) => p.currency_code === 'vnd' && !p.price_list_id)
+      || variant.prices.find((p: any) => !p.price_list_id)
+      || variant.prices[0];
+
+    return Number((saleP || baseP)?.amount || 0);
   };
 
   return (
@@ -161,7 +169,7 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
       {/* DYNAMIC PRICE */}
       <div className="product-detail-price" style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--accent)', marginBottom: '1.5rem' }}>
         {activeVariant.price.toLocaleString('vi-VN')}đ{" "}
-        {hasDiscount && activeVariant.oldPrice && (
+        {Boolean(hasDiscount && activeVariant.oldPrice && activeVariant.oldPrice > activeVariant.price) && (
           <>
             <span style={{ fontSize: '1.1rem', textDecoration: 'line-through', color: 'var(--gray)', fontWeight: 500, marginLeft: '0.5rem' }}>
               {activeVariant.oldPrice.toLocaleString('vi-VN')}đ

@@ -11,9 +11,22 @@ export const GET = async (
   const state = req.query.state as string;
 
   const callbackUrl = state ? Buffer.from(state, "base64").toString("utf-8") : "http://localhost:5173/auth/callback";
+  const getRedirectUrl = (params: Record<string, string>) => {
+    try {
+      const url = new URL(callbackUrl);
+      for (const [key, value] of Object.entries(params)) {
+        url.searchParams.set(key, value);
+      }
+      return url.toString();
+    } catch {
+      const searchParams = new URLSearchParams(params);
+      const separator = callbackUrl.includes("?") ? "&" : "?";
+      return `${callbackUrl}${separator}${searchParams.toString()}`;
+    }
+  };
 
   if (!code) {
-    return res.redirect(`${callbackUrl}?error=missing_code`);
+    return res.redirect(getRedirectUrl({ error: "missing_code" }));
   }
 
   const clientId = process.env.FACEBOOK_APP_ID || "your_facebook_app_id_here";
@@ -47,7 +60,7 @@ export const GET = async (
     const last_name = userData.last_name || "";
 
     if (!email) {
-      return res.redirect(`${callbackUrl}?error=missing_email`);
+      return res.redirect(getRedirectUrl({ error: "missing_email" }));
     }
 
     const customerModuleService = req.scope.resolve(Modules.CUSTOMER);
@@ -80,11 +93,11 @@ export const GET = async (
       { expiresIn: "1d" }
     );
 
-    // 5. Redirect back to frontend
-    res.redirect(`${callbackUrl}?token=${token}`);
+    // 5. Redirect back to frontend while preserving existing callback parameters.
+    res.redirect(getRedirectUrl({ token, _type: "facebook" }));
 
   } catch (error: any) {
     console.error("Facebook OAuth error:", error?.response?.data || error);
-    res.redirect(`${callbackUrl}?error=server_error`);
+    res.redirect(getRedirectUrl({ error: "server_error" }));
   }
 };

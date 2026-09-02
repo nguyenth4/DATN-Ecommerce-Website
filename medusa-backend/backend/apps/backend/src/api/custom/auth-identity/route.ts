@@ -55,6 +55,7 @@ export async function GET(
     const providerIdentity = providerIdentityRes.rows[0];
     const metadata = providerIdentity.user_metadata || {};
     const email = metadata.email || "";
+    const googleAvatar = metadata.picture || metadata.avatar_url || metadata.avatar || metadata.photo || "";
 
     let customer: any = null;
     let newToken: string | null = null;
@@ -62,7 +63,7 @@ export async function GET(
     // 2. Check if a customer with this email already exists
     if (email) {
       const customerRes = await db.raw(`
-        SELECT id, email, first_name, last_name, phone 
+        SELECT id, email, first_name, last_name, phone, metadata 
         FROM customer 
         WHERE LOWER(email) = ?
         LIMIT 1
@@ -70,6 +71,22 @@ export async function GET(
 
       if (customerRes.rows.length > 0) {
         customer = customerRes.rows[0];
+
+        // Update customer avatar in database metadata if Google avatar is available
+        if (googleAvatar) {
+          try {
+            await db.raw(`
+              UPDATE customer 
+              SET metadata = COALESCE(metadata, '{}'::jsonb) || ?::jsonb
+              WHERE id = ?
+            `, [JSON.stringify({ avatar_url: googleAvatar }), customer.id]);
+
+            customer.metadata = { ...(customer.metadata || {}), avatar_url: googleAvatar };
+            customer.avatar_url = googleAvatar;
+          } catch (e) {
+            console.error("[Custom AuthIdentity API] Error updating customer Google avatar:", e);
+          }
+        }
         
         // 3. Link Google auth_identity to the existing customer
         const appMetadata = {

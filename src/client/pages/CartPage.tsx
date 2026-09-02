@@ -11,6 +11,7 @@ import {
   Ticket
 } from 'lucide-react';
 import { getCart, updateCartQty, removeFromCart } from '../utils/cart';
+import { showToast } from '../utils/compare';
 import type { CartItem } from '../utils/cart';
 
 const MEDUSA_BACKEND_URL =
@@ -26,7 +27,12 @@ const CartPage = () => {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   useEffect(() => {
-    setItems(getCart());
+    const handleCartUpdate = () => {
+      setItems(getCart());
+    };
+    handleCartUpdate();
+    window.addEventListener('cart-updated', handleCartUpdate);
+    return () => window.removeEventListener('cart-updated', handleCartUpdate);
   }, []);
 
   // Validate stock when cart items change
@@ -346,7 +352,22 @@ const CartPage = () => {
                           </div>
                           <div className="qty">
                             <button aria-label="Decrease" onClick={() => updateQty(item.id, -1)}><Minus size={16} /></button>
-                            <input type="text" value={item.qty} inputMode="numeric" aria-label="Quantity" readOnly />
+                            <input 
+                              type="number" 
+                              min="1"
+                              max={actualStock !== undefined ? actualStock : 99}
+                              value={item.qty} 
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                if (!isNaN(val) && val >= 1) {
+                                  const maxStock = stockInfo[item.id] ?? item.stock ?? 10;
+                                  const newQty = Math.min(maxStock, val);
+                                  updateCartQty(item.id, newQty);
+                                }
+                              }}
+                              aria-label="Quantity" 
+                              style={{ width: '40px', textAlign: 'center', border: 'none', background: 'transparent', fontWeight: 600 }}
+                            />
                             <button 
                               aria-label="Increase" 
                               onClick={() => updateQty(item.id, 1)}
@@ -368,7 +389,15 @@ const CartPage = () => {
 
                 <div style={{ marginTop: 'var(--s5)', display: 'flex', gap: 'var(--s3)', flexWrap: 'wrap' }}>
                   <Link to="/products" className="btn btn--ghost"><ArrowLeft size={16} style={{marginRight: '8px'}}/> Tiếp tục mua sắm</Link>
-                  <button className="btn btn--ghost" onClick={() => setItems(getCart())}>Cập nhật giỏ hàng</button>
+                  <button 
+                    className="btn btn--ghost" 
+                    onClick={() => {
+                      setItems(getCart());
+                      showToast('Đã cập nhật giỏ hàng thành công', 'success');
+                    }}
+                  >
+                    Cập nhật giỏ hàng
+                  </button>
                 </div>
 
                 {/* Trust strip */}

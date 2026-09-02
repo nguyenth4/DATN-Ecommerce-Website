@@ -41,9 +41,11 @@ const ProductDetailPage = () => {
   const fetchReviews = async () => {
     if (!id) return;
     try {
-      const res = await fetch(`http://localhost:9000/store/reviews?product_id=${id}`, {
+      const MEDUSA_BACKEND_URL = (import.meta as any).env?.VITE_MEDUSA_BACKEND_URL || 'http://localhost:9000';
+      const PUBLISHABLE_KEY = (import.meta as any).env?.VITE_MEDUSA_PUBLISHABLE_KEY || 'pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d';
+      const res = await fetch(`${MEDUSA_BACKEND_URL}/store/reviews?product_id=${id}`, {
         headers: {
-          'x-publishable-api-key': 'pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d'
+          'x-publishable-api-key': PUBLISHABLE_KEY
         }
       });
       if (res.ok) {
@@ -91,9 +93,15 @@ const ProductDetailPage = () => {
       setSuccessMessage("");
     };
 
+    const handleReviewUpdated = () => {
+      fetchReviews();
+    };
+
     window.addEventListener('test-customer-changed', handleCustomerChanged);
+    window.addEventListener('review-updated', handleReviewUpdated);
     return () => {
       window.removeEventListener('test-customer-changed', handleCustomerChanged);
+      window.removeEventListener('review-updated', handleReviewUpdated);
     };
   }, [id]);
 
@@ -245,13 +253,39 @@ const ProductDetailPage = () => {
     return matchColor && matchStorage;
   }) || productData.variants?.[0] || { id: "", price: 0, oldPrice: 0, stock: 10, inventory_quantity: 10, sku: "SPRYLO-PROD" };
 
-  const price = activeVariant.prices?.find((p: any) => p.currency_code === 'vnd')?.amount 
-    || activeVariant.prices?.[0]?.amount 
-    || activeVariant.price 
-    || productData.basePrice 
-    || 0;
+  const getVariantPricesInfo = (v: any) => {
+    if (v?.calculated_price) {
+      const calcAmt = Number(v.calculated_price.calculated_amount ?? 0);
+      const origAmt = Number(v.calculated_price.original_amount ?? calcAmt);
+      return {
+        price: calcAmt,
+        oldPrice: origAmt > calcAmt ? origAmt : (v?.oldPrice || 0)
+      };
+    }
+    if (!v?.prices || v.prices.length === 0) {
+      return { price: v?.price || productData.basePrice || 0, oldPrice: v?.oldPrice || 0 };
+    }
+    const saleP = v.prices.find((p: any) => p.currency_code === 'vnd' && p.price_list_id)
+      || v.prices.find((p: any) => p.price_list_id);
+    const baseP = v.prices.find((p: any) => p.currency_code === 'vnd' && !p.price_list_id)
+      || v.prices.find((p: any) => !p.price_list_id)
+      || v.prices[0];
 
-  const oldPrice = activeVariant.oldPrice;
+    if (saleP) {
+      return {
+        price: Number(saleP.amount),
+        oldPrice: Number(baseP?.amount || 0)
+      };
+    }
+    return {
+      price: Number(baseP?.amount || 0),
+      oldPrice: Number(v?.oldPrice || 0)
+    };
+  };
+
+  const pricesInfo = getVariantPricesInfo(activeVariant);
+  const price = pricesInfo.price;
+  const oldPrice = pricesInfo.oldPrice;
 
   // Specifications
   const specifications = productData.metadata?.specifications || {};

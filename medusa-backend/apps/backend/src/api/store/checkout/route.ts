@@ -218,28 +218,10 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
                   payment_collection_id: paymentCollections[0].id,
                 }
               });
-              
-              // In Medusa 2.0, marking the payment collection as paid is enough
-              // The order's payment_status is computed dynamically or updated by events
-              
               console.log(`[Checkout API] Marked Medusa order ${medusaOrderId} as Paid for Wallet!`);
             }
           } catch (updateErr: any) {
             console.warn(`[Checkout API] Could not mark order as paid for ${medusaOrderId}:`, updateErr.message);
-          }
-
-          // Force update the order payment collection via raw query just in case workflow fails
-          try {
-            const db = req.scope.resolve("__pg_connection__");
-            const pcRes = await db.raw(`SELECT payment_collection_id FROM order_payment_collection WHERE order_id = ?`, [medusaOrderId]);
-            if (pcRes.rows.length > 0) {
-              const pcId = pcRes.rows[0].payment_collection_id;
-              await db.raw(`UPDATE payment_collection SET status = 'authorized', captured_amount = amount, raw_captured_amount = raw_amount WHERE id = ?`, [pcId]);
-              await db.raw(`UPDATE payment SET captured_at = NOW() WHERE payment_collection_id = ?`, [pcId]);
-            }
-            console.log(`[Checkout API] Forced update payment_collection to 'authorized' for Wallet order ${medusaOrderId}`);
-          } catch (e: any) {
-            console.warn(`[Checkout API] Failed to force update payment_status:`, e.message);
           }
         }
         

@@ -78,14 +78,12 @@ export const OrdersWidget = () => {
                 {st === "confirmed" && (
                   <>
                     <Button variant="secondary" onClick={() => handleStatusChange(row.original.id, "preparing")}>Chuẩn bị</Button>
-                    <Button variant="secondary" onClick={() => handleStatusChange(row.original.id, "shipping", "ghn")}>Giao (GHN)</Button>
-                    <Button variant="secondary" onClick={() => handleStatusChange(row.original.id, "shipping", "ghtk")}>Giao (GHTK)</Button>
+                    <Button variant="secondary" onClick={() => handleStatusChange(row.original.id, "shipping")}>Giao hàng ({row.original.metadata?.shipping_method?.toUpperCase() || "GHN"})</Button>
                   </>
                 )}
                 {st === "preparing" && (
                   <>
-                    <Button variant="secondary" onClick={() => handleStatusChange(row.original.id, "shipping", "ghn")}>Giao (GHN)</Button>
-                    <Button variant="secondary" onClick={() => handleStatusChange(row.original.id, "shipping", "ghtk")}>Giao (GHTK)</Button>
+                    <Button variant="secondary" onClick={() => handleStatusChange(row.original.id, "shipping")}>Giao hàng ({row.original.metadata?.shipping_method?.toUpperCase() || "GHN"})</Button>
                   </>
                 )}
                 {st === "shipping" && (

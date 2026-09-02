@@ -15,15 +15,33 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const image = product.image || product.thumbnail || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&q=80';
   const category = product.category || product.categories?.[0]?.name || 'Sản phẩm';
 
-  // Extract price: try mapped price first, then dig into Medusa variants
   let price: number = 0;
+  let originalPrice: number = 0;
   if (typeof product.price === 'number') {
     price = product.price;
+    originalPrice = product.originalPrice || 0;
   } else if (product.variants?.length > 0) {
     const variant = product.variants[0];
-    price = variant.prices?.find((p: any) => p.currency_code === 'vnd')?.amount
-         || variant.prices?.[0]?.amount
-         || 0;
+    if (variant.calculated_price) {
+      price = Number(variant.calculated_price.calculated_amount ?? 0);
+      const origAmt = Number(variant.calculated_price.original_amount ?? price);
+      if (origAmt > price) {
+        originalPrice = origAmt;
+      }
+    } else {
+      const saleP = variant.prices?.find((p: any) => p.currency_code === 'vnd' && p.price_list_id)
+        || variant.prices?.find((p: any) => p.price_list_id);
+      const baseP = variant.prices?.find((p: any) => p.currency_code === 'vnd' && !p.price_list_id)
+        || variant.prices?.find((p: any) => !p.price_list_id)
+        || variant.prices?.[0];
+
+      if (saleP) {
+        price = Number(saleP.amount);
+        originalPrice = Number(baseP?.amount || 0);
+      } else {
+        price = Number(baseP?.amount || 0);
+      }
+    }
   }
 
   const rating = Number(product.metadata?.rating || 0);
@@ -49,7 +67,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   }, [product.id]);
 
   return (
-    <Link to={`/products/${product.id}`} className="product-card">
+    <Link to={`/product/${product.id}`} className="product-card">
       <div className="product-card-img">
         <img 
           src={image} 
@@ -78,39 +96,29 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         >
           <Heart size={16} fill={isWishlisted ? 'var(--rose)' : 'none'} stroke={isWishlisted ? 'var(--rose)' : 'currentColor'} />
         </button>
-        <div className="product-card-actions">
-          <div className="stars">
-            {ratingCount > 0 ? (
-              <>
-                <div style={{ display: 'flex', gap: '2px', color: '#fbbf24' }}>
-                  {[...Array(5)].map((_, idx) => (
-                    <Star key={idx} size={14} fill={idx < Math.round(rating) ? "#fbbf24" : "none"} />
-                  ))}
-                </div>
-                <span className="count">({ratingCount})</span>
-              </>
-            ) : (
-              <span className="count" style={{ marginLeft: 0 }}>Chưa có đánh giá</span>
-            )}
-          </div>
-          <button 
-            className="product-card-btn-add btn-add-cart" 
-            title="Thêm vào giỏ"
-            onClick={(e) => {
-              e.preventDefault();
-              alert('Đã thêm vào giỏ hàng!');
-            }}
-          >
-            <i className="bi bi-plus"></i>
-          </button>
-        </div>
       </div>
       <div className="product-card-body">
         <div className="product-category">{category}</div>
         <div className="product-name">{name}</div>
         <div className="product-price-row">
           <span className="product-price">{price.toLocaleString('vi-VN')}đ</span>
-          {product.originalPrice && <span className="product-price-old">{product.originalPrice.toLocaleString('vi-VN')}đ</span>}
+          {(originalPrice > price || product.originalPrice) && (
+            <span className="product-price-old">{(originalPrice || product.originalPrice).toLocaleString('vi-VN')}đ</span>
+          )}
+        </div>
+        <div className="stars">
+          {ratingCount > 0 ? (
+            <>
+              <div style={{ display: 'flex', gap: '2px', color: '#fbbf24' }}>
+                {[...Array(5)].map((_, idx) => (
+                  <Star key={idx} size={14} fill={idx < Math.round(rating) ? "#fbbf24" : "none"} />
+                ))}
+              </div>
+              <span className="count">({ratingCount})</span>
+            </>
+          ) : (
+            <span className="count" style={{ marginLeft: 0 }}>Chưa có đánh giá</span>
+          )}
         </div>
         <div 
           className="product-card-compare-wrapper"

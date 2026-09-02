@@ -84,11 +84,8 @@ export default function AdminOrdersPage() {
                         <button className="action-btn secondary" onClick={() => handleStatusChange(o.id, "preparing")}>
                           Chuẩn bị
                         </button>
-                        <button className="action-btn primary" onClick={() => handleStatusChange(o.id, "shipping", "ghn")}>
-                          GHN
-                        </button>
-                        <button className="action-btn primary" onClick={() => handleStatusChange(o.id, "shipping", "ghtk")}>
-                          GHTK
+                        <button className="action-btn primary" onClick={() => handleStatusChange(o.id, "shipping")}>
+                          Giao ({o.metadata?.shipping_method?.toUpperCase() || "GHN"})
                         </button>
                         <button className="action-btn danger" onClick={() => handleStatusChange(o.id, "canceled")}>
                           Hủy
@@ -97,11 +94,8 @@ export default function AdminOrdersPage() {
                     )}
                     {customStatus === "preparing" && (
                       <>
-                        <button className="action-btn primary" onClick={() => handleStatusChange(o.id, "shipping", "ghn")}>
-                          GHN
-                        </button>
-                        <button className="action-btn primary" onClick={() => handleStatusChange(o.id, "shipping", "ghtk")}>
-                          GHTK
+                        <button className="action-btn primary" onClick={() => handleStatusChange(o.id, "shipping")}>
+                          Giao ({o.metadata?.shipping_method?.toUpperCase() || "GHN"})
                         </button>
                         <button className="action-btn danger" onClick={() => handleStatusChange(o.id, "canceled")}>
                           Hủy

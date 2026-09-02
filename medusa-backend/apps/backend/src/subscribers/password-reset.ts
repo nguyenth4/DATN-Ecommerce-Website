@@ -72,7 +72,7 @@ const buildResetHtml = (email: string, resetUrl: string) => `
             <td style="background:#f1f5f9;padding:24px 40px;text-align:center;border-top:1px solid #e2e8f0;">
               <p style="margin:0;font-size:0.8rem;color:#94a3b8;">
                 © 2025 Sprylo. Mọi thắc mắc liên hệ 
-                <a href="mailto:support@sprylo.vn" style="color:#4F46E5;">support@sprylo.vn</a>
+                <a href="mailto:sprylo123@gmail.com" style="color:#4F46E5;">sprylo123@gmail.com</a>
               </p>
             </td>
           </tr>
