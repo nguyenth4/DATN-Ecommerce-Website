@@ -6,7 +6,6 @@ import {
   MessageSquare, 
   MapPin, 
   Clock, 
-  ArrowRight,
   CheckCircle2,
   AlertCircle,
   Loader2,

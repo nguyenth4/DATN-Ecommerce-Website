@@ -37,11 +37,11 @@ const ComparisonPage = () => {
   });
 
   const products = useMemo(() => {
-    if (compareIds.length === 0 || !productsData?.products) return [];
+    if (compareIds.length === 0 || !(productsData as any)?.products) return [];
     
     // Sắp xếp các sản phẩm đúng theo thứ tự lưu trong compareIds
     return compareIds
-      .map(id => productsData.products.find((p: any) => p.id === id))
+      .map(id => (productsData as any).products.find((p: any) => p.id === id))
       .filter(Boolean)
       .map((p: any) => {
         const meta = p.metadata || {};
@@ -87,7 +87,7 @@ const ComparisonPage = () => {
     }
   ];
 
-  if (isLoading && compareIds.length > 0 && !productsData?.products) {
+  if (isLoading && compareIds.length > 0 && !(productsData as any)?.products) {
     return (
       <div className="container flex-center" style={{ minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <p>Đang tải dữ liệu so sánh...</p>
@@ -280,7 +280,7 @@ const ComparisonPage = () => {
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxHeight: '320px', overflowY: 'auto', paddingRight: '4px' }}>
-                  {searchResults?.products?.map((p: any) => {
+                  {(searchResults as any)?.products?.map((p: any) => {
                     const isAlreadyCompared = compareIds.includes(p.id);
                     return (
                       <div 
@@ -317,7 +317,7 @@ const ComparisonPage = () => {
                       </div>
                     );
                   })}
-                  {(!searchResults?.products || searchResults.products.length === 0) && (
+                  {(!(searchResults as any)?.products || (searchResults as any).products.length === 0) && (
                     <div style={{ textAlign: 'center', padding: '2rem 0', color: 'var(--fg-mute)', fontSize: '0.875rem' }}>
                       Không tìm thấy sản phẩm nào phù hợp.
                     </div>

@@ -2870,7 +2870,6 @@ const AccountPage = () => {
                                getDynamicStatusStep(selectedRealOrder) === 4) &&
                               (() => {
                                 const rawItems = selectedOrder?.items?.length ? selectedOrder.items : (selectedRealOrder.items || []);
-                                const reviewedList = getReviewedProducts();
                                 const items = rawItems.map((it: any) => ({
                                   ...it,
                                   product_id: it.product_id || it.productId || it.variant?.product_id || it.id || (it.title ? `prod_${it.title}` : `prod_${it.name}`),
@@ -2901,11 +2900,11 @@ const AccountPage = () => {
                                       const savedPidData = getSavedCustomerReviews()[pid];
                                       const saved = savedKeyData || (currentOrderId ? undefined : savedPidData);
 
-                                      const rs = reviewState[key] || {
+                                      const rs = (reviewState as any)[key] || {
                                         rating: saved?.rating || 5,
                                         comment: saved?.comment || "",
                                         loading: false,
-                                        done: Boolean(saved || reviewState[key]?.done),
+                                        done: Boolean(saved || (reviewState as any)[key]?.done),
                                         isEditing: false,
                                         reviewId: saved?.reviewId || "",
                                         error: ""
@@ -4976,7 +4975,7 @@ const AccountPage = () => {
                                 isClearable
                                 isSearchable
                                 styles={{
-                                  control: (base) => ({
+                                  control: (base: any) => ({
                                     ...base,
                                     borderRadius: '6px',
                                     borderColor: '#e5e7eb',

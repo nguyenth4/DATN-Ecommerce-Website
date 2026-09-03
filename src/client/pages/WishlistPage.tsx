@@ -23,15 +23,15 @@ const WishlistPage = () => {
   const { data: productsData, isLoading } = useProducts({ limit: 100 });
 
   const wishlistProducts = useMemo(() => {
-    if (wishlistIds.length === 0 || !productsData?.products) return [];
+    if (wishlistIds.length === 0 || !(productsData as any)?.products) return [];
     
     // Maintain sequence of wishlistIds
     return wishlistIds
-      .map(id => productsData.products.find((p: any) => p.id === id))
+      .map(id => (productsData as any).products.find((p: any) => p.id === id))
       .filter(Boolean);
   }, [productsData, wishlistIds]);
 
-  if (isLoading && wishlistIds.length > 0 && !productsData?.products) {
+  if (isLoading && wishlistIds.length > 0 && !(productsData as any)?.products) {
     return (
       <div className="container flex-center" style={{ minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
