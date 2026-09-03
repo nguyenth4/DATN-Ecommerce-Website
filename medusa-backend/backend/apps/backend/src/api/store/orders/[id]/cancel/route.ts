@@ -66,6 +66,31 @@ export const POST = async (
       WHERE id = ?
     `, [JSON.stringify(updatedMetadata), id])
 
+    // Restore inventory_level stock for canceled order
+    try {
+      const orderItemsRes = await db.raw(`SELECT variant_id, quantity FROM order_item WHERE order_id = ?`, [id])
+      for (const item of orderItemsRes.rows) {
+        if (item.variant_id) {
+          const qty = Number(item.quantity || 1)
+          await db.raw(`
+            UPDATE inventory_level il
+            SET stocked_quantity = il.stocked_quantity + ?,
+                raw_stocked_quantity = jsonb_build_object(
+                  'value', (COALESCE((il.raw_stocked_quantity->>'value')::numeric, il.stocked_quantity) + ?)::text,
+                  'precision', 20
+                ),
+                updated_at = NOW()
+            FROM product_variant_inventory_item pvii
+            WHERE pvii.inventory_item_id = il.inventory_item_id
+              AND pvii.variant_id = ?
+          `, [qty, qty, item.variant_id])
+          console.log(`[Cancel Order Route] Restored ${qty} to inventory_level for variant ${item.variant_id}`)
+        }
+      }
+    } catch (invErr: any) {
+      console.error("[Cancel Order Route] Error restoring inventory:", invErr?.message || invErr)
+    }
+
     // Calculate paidTotal accurately using multiple fallbacks
     let paidTotal = Number(metadata.paid_total || order.total || 0)
     if (!paidTotal || paidTotal <= 0) {

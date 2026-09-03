@@ -377,7 +377,7 @@ const AccountPage = () => {
       if (!token) return;
 
       const response = await authService.authFetch(
-        `${MEDUSA_BACKEND_URL}/store/orders?limit=50&fields=*items,*shipping_address,*metadata`,
+        `${MEDUSA_BACKEND_URL}/store/orders?limit=500&order=-created_at&fields=*items,*shipping_address,*metadata`,
       );
       if (response.ok) {
         const { orders } = await response.json();
@@ -1044,6 +1044,24 @@ const AccountPage = () => {
     }
   };
 
+  const canRetryPayment = (order: any) => {
+    if (!order) return false;
+    if (order.canceled || order.status === "canceled" || order.metadata?.custom_status === "canceled" || order.metadata?.custom_status === "refunded") {
+      return false;
+    }
+    const isPaid =
+      order.payment_status === "captured" ||
+      order.payment_status === "paid" ||
+      order.metadata?.payment_status === "paid" ||
+      order.metadata?.payment_status === "captured" ||
+      order.paymentMethod === "wallet";
+
+    if (isPaid) return false;
+
+    const method = (order.paymentMethod || order.metadata?.payment_method || "").toLowerCase();
+    return method === "zalopay" || method === "zalo" || method === "vnpay";
+  };
+
   // Cancel is only allowed when order is pending (step 0)
   const canCancelOrder = (order: any) => {
     if (order.canceled || order.status === "canceled") return false;
@@ -1487,7 +1505,7 @@ const AccountPage = () => {
   const handleRetryPayment = async (orderId: string) => {
     setRetryingPaymentId(orderId);
     try {
-      const response = await fetch(`${MEDUSA_BACKEND_URL}/store/orders/${orderId}/payment-link`, {
+      const response = await authService.authFetch(`${MEDUSA_BACKEND_URL}/store/orders/${orderId}/payment-link`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
@@ -2098,7 +2116,7 @@ const AccountPage = () => {
                                         )}
                                       </button>
                                     )}
-                                    {order.payment_status === "awaiting" && (order.paymentMethod === "zalopay" || order.paymentMethod === "vnpay") && order.status !== "canceled" && (
+                                    {canRetryPayment(order) && (
                                       <button
                                         className="btn-order-action btn-order-cancel"
                                         style={{ borderColor: "#2563eb", color: "#2563eb" }}
@@ -2784,7 +2802,7 @@ const AccountPage = () => {
                                   )}
                                 </button>
                               )}
-                            {selectedRealOrder && selectedRealOrder.payment_status === "awaiting" && (selectedRealOrder.paymentMethod === "zalopay" || selectedRealOrder.paymentMethod === "vnpay") && selectedRealOrder.status !== "canceled" && (
+                            {selectedRealOrder && canRetryPayment(selectedRealOrder) && (
                               <button
                                 className="btn-order-action btn-order-cancel"
                                 style={{

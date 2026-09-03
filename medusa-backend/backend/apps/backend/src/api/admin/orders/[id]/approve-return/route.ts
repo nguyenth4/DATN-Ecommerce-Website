@@ -161,6 +161,32 @@ export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
         custom_status: "refunded",
       }
       await db.raw(`UPDATE "order" SET metadata = ? WHERE id = ?`, [JSON.stringify(updatedMetadata), id])
+
+      // Restore inventory_level stock for returned order
+      try {
+        const orderItems = order.items || []
+        for (const item of orderItems) {
+          const variantId = item.variant_id || (item as any).variant?.id
+          const qty = Number(item.quantity || 1)
+          if (variantId) {
+            await db.raw(`
+              UPDATE inventory_level il
+              SET stocked_quantity = il.stocked_quantity + ?,
+                  raw_stocked_quantity = jsonb_build_object(
+                    'value', (COALESCE((il.raw_stocked_quantity->>'value')::numeric, il.stocked_quantity) + ?)::text,
+                    'precision', 20
+                  ),
+                  updated_at = NOW()
+              FROM product_variant_inventory_item pvii
+              WHERE pvii.inventory_item_id = il.inventory_item_id
+                AND pvii.variant_id = ?
+            `, [qty, qty, variantId])
+            console.log(`[Approve Return Route] Restored ${qty} to inventory_level for returned variant ${variantId}`)
+          }
+        }
+      } catch (invErr: any) {
+        console.error("[Approve Return Route] Error restoring inventory:", invErr?.message || invErr)
+      }
     }
 
     try {
