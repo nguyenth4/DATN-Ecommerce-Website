@@ -80,6 +80,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
         LEFT JOIN product_variant pv ON pv.id = oli.variant_id
         LEFT JOIN product p ON p.id = oli.product_id OR p.id = pv.product_id
         WHERE (o.customer_id = ? OR o.email = ? OR ( ? != '' AND o.email = ? ))
+          AND (o.canceled_at IS NULL AND (o.metadata->>'custom_status' IS NULL OR o.metadata->>'custom_status' NOT IN ('canceled', 'refunded')))
           AND (
             oli.product_id = ? OR 
             pv.product_id = ? OR 
