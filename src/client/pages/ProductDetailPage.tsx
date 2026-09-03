@@ -384,8 +384,9 @@ const ProductDetailPage = () => {
         fetchReviews(); // Refresh review list
         window.dispatchEvent(new Event('review-added'));
       } else {
-        setErrorMessage(data.message || "Gửi đánh giá thất bại.");
-        toast.error(data.message || "Gửi đánh giá thất bại.");
+        const errMsg = data.message || data.error || "Gửi đánh giá thất bại.";
+        setErrorMessage(errMsg);
+        toast.error(errMsg);
       }
     } catch (err) {
       setErrorMessage("Không thể kết nối đến server backend.");

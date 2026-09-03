@@ -926,6 +926,7 @@ const CheckoutPage = () => {
           orderId: data.orderId,
           items: cartItems.map((i) => ({
             id: i.id,
+            product_id: (i as any).product_id || i.id,
             qty: i.qty,
             name: i.name,
             price: i.price,

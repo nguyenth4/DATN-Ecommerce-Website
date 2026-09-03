@@ -39,7 +39,7 @@ export default async function orderRefundedHandler({
       ? '<p style="color:#059669;font-weight:600;">💰 Tiền đã được hoàn vào Ví Sprylo của bạn. Bạn có thể kiểm tra trong mục "Ví điện tử Sprylo".</p>'
       : '<p>Thời gian giao dịch từ ngân hàng có thể mất từ 1-3 ngày làm việc. Nếu có bất kỳ thắc mắc nào, vui lòng liên hệ CSKH.</p>';
 
-    await resend.emails.send({
+    const { data: resData, error } = await resend.emails.send({
       from: fromEmail,
       to: order.email,
       subject: `[Sprylo] Thông báo hoàn tiền đơn hàng #${displayId}`,
@@ -58,7 +58,11 @@ export default async function orderRefundedHandler({
       `
     });
     
-    logger.info(`[order.refund.success] Successfully sent refund email to ${order.email}`);
+    if (error) {
+      logger.error(`[order.refund.success] Resend API Error for ${order.email}: ${error.message || JSON.stringify(error)}`);
+    } else {
+      logger.info(`[order.refund.success] Successfully sent refund email to ${order.email} (ID: ${resData?.id})`);
+    }
 
   } catch (err: any) {
     logger.error(`[order.refund.success] Error sending refund email: ${err.message}`);

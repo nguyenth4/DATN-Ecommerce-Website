@@ -103,9 +103,9 @@ export async function updateOrderStatus(
 
   // Define allowed transitions according to T-95 / T-97 specification
   const ALLOWED_TRANSITIONS: Record<string, string[]> = {
-    pending: ["confirmed", "canceled"],
-    confirmed: ["preparing", "shipping", "canceled"],
-    preparing: ["shipping", "canceled"],
+    pending: ["confirmed", "canceled", "completed"],
+    confirmed: ["preparing", "shipping", "canceled", "completed"],
+    preparing: ["shipping", "canceled", "completed"],
     shipping: ["delivered", "completed", "canceled"],
     delivered: ["completed", "canceled"],
     completed: [],
@@ -122,8 +122,8 @@ export async function updateOrderStatus(
     }
   }
 
-  // Capture COD payment if status transitions to completed
-  if (newStatus === "completed") {
+  // Capture COD payment if status transitions to delivered or completed
+  if (newStatus === "delivered" || newStatus === "completed") {
     const paymentMethod = (order as any).metadata?.payment_method;
     if (paymentMethod === "cod") {
       const paycolRes = await db.raw(`
@@ -228,9 +228,13 @@ export async function updateOrderStatus(
 
   // Merge with existing metadata
   const existingMetadata = (order as any).metadata || {}
+  const paymentMethod = existingMetadata.payment_method;
+  const isCodAndReceived = paymentMethod === "cod" && (newStatus === "delivered" || newStatus === "completed");
+
   const metadata: Record<string, any> = {
     ...existingMetadata,
-    custom_status: newStatus
+    custom_status: newStatus,
+    ...(isCodAndReceived ? { payment_status: "paid" } : {})
   }
 
   // Save timestamps and actors in metadata

@@ -260,8 +260,9 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
           await checkEligibility();
           window.dispatchEvent(new Event('review-updated'));
         } else {
-          setUpdateMessage({ type: 'error', text: data.message || 'Cập nhật đánh giá thất bại.' });
-          toast.error(data.message || 'Cập nhật thất bại.');
+          const errTxt = data.message || data.error || 'Cập nhật đánh giá thất bại.';
+          setUpdateMessage({ type: 'error', text: errTxt });
+          toast.error(errTxt);
         }
       } catch (err) {
         setUpdateMessage({ type: 'error', text: 'Không thể kết nối đến server backend.' });

@@ -88,7 +88,7 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
             ? ILIKE '%' || COALESCE(p.title, oli.title, '') || '%' OR
             COALESCE(p.title, oli.title, '') ILIKE '%' || ? || '%'
           )
-          AND (o.status = 'completed' OR o.status = 'delivered' OR o.fulfillment_status = 'fulfilled' OR o.payment_status = 'captured' OR o.payment_status = 'paid')
+          AND (o.status = 'completed' OR o.status = 'delivered' OR o.metadata->>'custom_status' = 'completed' OR o.metadata->>'custom_status' = 'delivered' OR o.metadata->>'payment_status' = 'paid')
       ) AS is_eligible
     `, [customerId, customerId, customerEmail, customerEmail, product_id, product_id, product_id, product_id, product_id, product_id]);
 

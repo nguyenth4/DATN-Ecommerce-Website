@@ -1,6 +1,8 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { updateOrderStatus } from "../../../../admin/orders/controller";
 
+export const AUTHENTICATE = false;
+
 /**
  * POST /store/orders/:id/confirm-receipt
  * Cập nhật trạng thái đơn hàng sang completed (Đã nhận hàng)
@@ -25,7 +27,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
     // Lấy thông tin đơn hàng hiện tại
     const orderRes = await db.raw(`
-      SELECT id, status, fulfillment_status, metadata 
+      SELECT id, status, metadata 
       FROM "order" 
       WHERE id = ? OR display_id::text = ?
     `, [id, id]);
@@ -47,10 +49,9 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     }
 
     const customStatus = order.metadata?.custom_status;
-    const fulfillmentStatus = order.fulfillment_status;
     
     // Auto advance custom status to shipping if it's currently pending/confirmed/preparing so transition to completed works
-    if (customStatus && customStatus !== 'shipping' && customStatus !== 'delivered' && customStatus !== 'completed') {
+    if (!customStatus || (customStatus !== 'shipping' && customStatus !== 'delivered' && customStatus !== 'completed')) {
       console.log(`[Confirm Receipt API] Auto-advancing custom_status from '${customStatus}' to 'shipping' for order ${realOrderId}`);
       const updatedMetadata = { ...(order.metadata || {}), custom_status: 'shipping' };
       await db.raw(`
@@ -151,6 +152,14 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
               updated_at = NOW()
           WHERE id = ?
         `, [paycol.amount, rawAmountStr, paycol.amount, rawAmountStr, paycol.id]);
+
+        const currentMeta = order.metadata || {};
+        const updatedMeta = { ...currentMeta, payment_status: 'paid' };
+        await db.raw(`
+          UPDATE "order"
+          SET metadata = ?, updated_at = NOW()
+          WHERE id = ?
+        `, [JSON.stringify(updatedMeta), realOrderId]);
 
         console.log(`[Confirm Receipt API] COD Payment captured and status updated to completed for order: ${realOrderId}`);
       }

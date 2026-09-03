@@ -252,7 +252,7 @@ const AccountPage = () => {
         toast.success(isUpdating ? "Đã cập nhật đánh giá thành công!" : "Cảm ơn bạn đã gửi đánh giá!");
         window.dispatchEvent(new Event('review-updated'));
       } else {
-        const errMessage = data.message || "Gửi đánh giá thất bại.";
+        const errMessage = data.message || data.error || "Gửi đánh giá thất bại.";
         setReviewState(prev => ({
           ...prev,
           [key]: { ...state, loading: false, error: errMessage },
@@ -386,8 +386,11 @@ const AccountPage = () => {
 
           const remoteMapped = orders.map((o: any) => {
             const items = (o.items || []).map((item: any) => ({
+              id: item.id,
+              product_id: item.product_id || item.variant?.product_id || item.variant_id,
+              title: item.title || item.product_title || "Sản phẩm",
               name: item.title || item.product_title || "Sản phẩm",
-              variant: item.variant_title || "",
+              variant: item.variant_title || item.variant?.title || "",
               qty: item.quantity,
               price: item.unit_price,
               img: item.thumbnail || "",
@@ -442,7 +445,6 @@ const AccountPage = () => {
 
   // Profile form state
 
-  const [refundDestination, setRefundDestination] = useState<"wallet" | "bank_transfer">("wallet");
   const [showTopupModal, setShowTopupModal] = useState(false);
   const [topupAmount, setTopupAmount] = useState<number | string>(100000);
   const [topupLoading, setTopupLoading] = useState(false);
@@ -1079,7 +1081,7 @@ const AccountPage = () => {
   const [customReturnReason, setCustomReturnReason] = useState<string>('');
   
   // Refund info state
-  const [refundMethod, setRefundMethod] = useState<string>('bank_transfer');
+  const [refundMethod, setRefundMethod] = useState<string>('wallet');
   const [refundBankName, setRefundBankName] = useState<string>('');
   const [refundAccountNumber, setRefundAccountNumber] = useState<string>('');
   const [refundAccountName, setRefundAccountName] = useState<string>('');
@@ -1381,7 +1383,11 @@ const AccountPage = () => {
           selectedRealOrder.payment_status === "paid" ||
           selectedRealOrder.metadata?.payment_status === "paid" ||
           selectedRealOrder.metadata?.payment_status === "captured" ||
-          selectedRealOrder.paymentMethod === "wallet"
+          selectedRealOrder.paymentMethod === "wallet" ||
+          (selectedRealOrder.paymentMethod === "cod" &&
+            (selectedRealOrder.metadata?.custom_status === "delivered" ||
+             selectedRealOrder.metadata?.custom_status === "completed" ||
+             selectedRealOrder.status === "completed"))
             ? "Đã thanh toán"
             : "Chưa thanh toán",
         shippingStatus: getOrderFulfillmentBadgeText(selectedRealOrder),
@@ -1447,7 +1453,7 @@ const AccountPage = () => {
       );
       if (response.ok) {
         const updated = realOrders.map((o) =>
-          o.orderId === orderId
+          o.orderId === orderId || String(o.display_id) === String(orderId)
             ? {
                 ...o,
                 status: "completed",
@@ -2015,7 +2021,11 @@ const AccountPage = () => {
                                   order.payment_status === "paid" ||
                                   order.metadata?.payment_status === "paid" ||
                                   order.metadata?.payment_status === "captured" ||
-                                  order.paymentMethod === "wallet" ? (
+                                  order.paymentMethod === "wallet" ||
+                                  (order.paymentMethod === "cod" &&
+                                    (order.metadata?.custom_status === "delivered" ||
+                                     order.metadata?.custom_status === "completed" ||
+                                     order.status === "completed")) ? (
                                     <span className="status-badge badge-completed">
                                       <i className="bi bi-check-circle-fill"></i>{" "}
                                       Đã thanh toán
@@ -2953,7 +2963,7 @@ const AccountPage = () => {
                                       </span>
                                     </div>
                                     {items.map((it: any, index: number) => {
-                                      const pid = it.product_id || `prod_${index}`;
+                                      const pid = it.product_id || it.id || it.productId || (it.title && it.title !== "Sản phẩm" ? it.title : "") || (it.name && it.name !== "Sản phẩm" ? it.name : "") || `prod_${index}`;
                                       const currentOrderId = selectedOrder?.id || selectedRealOrder?.id || selectedOrderId;
                                       const key = currentOrderId ? `${currentOrderId}_${pid}` : pid;
                                       const savedKeyData = getSavedCustomerReviews()[key];
@@ -4714,132 +4724,183 @@ const AccountPage = () => {
                   </motion.div>
                 )}
 
-                {(() => {
-                  const modalOrder = realOrders.find(o => o.orderId === returnModalOrderId);
-                  const pMethod = modalOrder?.metadata?.payment_method;
-                  const isZalopayOrVnpay = pMethod === 'zalopay' || pMethod === 'vnpay';
-                  if (!isZalopayOrVnpay) {
-                    return (
-                      <motion.div 
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed var(--rule)' }}
-                      >
-                        <h4 style={{ fontSize: '0.9rem', marginBottom: '1rem', color: '#d97706', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <i className="bi bi-wallet2"></i> Phương thức nhận tiền hoàn
-                        </h4>
-                        
-                        <div style={{ display: 'flex', gap: '10px', marginBottom: '1rem' }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', cursor: 'pointer' }}>
-                            <input 
-                              type="radio" 
-                              name="refundMethod" 
-                              value="bank_transfer" 
-                              checked={refundMethod === 'bank_transfer'} 
-                              onChange={() => setRefundMethod('bank_transfer')} 
-                              style={{ accentColor: '#d97706' }}
-                            />
-                            Chuyển khoản Ngân hàng
-                          </label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', cursor: 'pointer' }}>
-                            <input 
-                              type="radio" 
-                              name="refundMethod" 
-                              value="wallet" 
-                              checked={refundMethod === 'wallet'} 
-                              onChange={() => {
-                                setRefundMethod('wallet');
-                                setRefundAccountNumber('');
-                                setRefundAccountName('');
-                              }}
-                              style={{ accentColor: '#d97706' }}
-                            />
-                            Ví điện tử Sprylo
-                          </label>
+                {/* Phương thức nhận tiền hoàn */}
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  style={{ marginTop: '1.5rem', paddingTop: '1.2rem', borderTop: '1px dashed var(--rule)' }}
+                >
+                  <h4 style={{ fontSize: '0.9rem', marginBottom: '1rem', color: '#d97706', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                    <i className="bi bi-wallet2"></i> Phương thức nhận tiền hoàn
+                  </h4>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '1rem' }}>
+                    {/* Ví Sprylo Option */}
+                    <label style={{ 
+                      display: 'flex', 
+                      alignItems: 'flex-start', 
+                      gap: '10px', 
+                      padding: '0.85rem 1rem', 
+                      border: refundMethod === 'wallet' ? '1.5px solid #7c3aed' : '1.5px solid var(--rule)', 
+                      borderRadius: '12px', 
+                      background: refundMethod === 'wallet' ? '#faf5ff' : 'white', 
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}>
+                      <input 
+                        type="radio" 
+                        name="refundMethod" 
+                        value="wallet" 
+                        checked={refundMethod === 'wallet'} 
+                        onChange={() => setRefundMethod('wallet')} 
+                        style={{ accentColor: '#7c3aed', marginTop: '3px' }}
+                      />
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.88rem', color: refundMethod === 'wallet' ? '#6d28d9' : 'var(--ink)' }}>
+                          Ví Sprylo
                         </div>
+                        <div style={{ fontSize: '0.75rem', color: refundMethod === 'wallet' ? '#7c3aed' : 'var(--text-muted)', marginTop: '2px' }}>
+                          Nhận tiền ngay lập tức
+                        </div>
+                      </div>
+                    </label>
 
-                        {refundMethod === 'bank_transfer' && (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <div>
-                              <label className="form-label" style={{ fontSize: '0.78rem' }}>Ngân Hàng *</label>
-                              <Select
-                                options={banks.map(bank => ({ value: bank.bin, label: `${bank.shortName} - ${bank.name}` }))}
-                                value={refundBankName ? { value: refundBankName, label: banks.find(b => b.bin === refundBankName) ? `${banks.find(b => b.bin === refundBankName).shortName} - ${banks.find(b => b.bin === refundBankName).name}` : refundBankName } : null}
-                                onChange={(selectedOption: any) => setRefundBankName(selectedOption ? selectedOption.value : '')}
-                                placeholder="Chọn hoặc tìm ngân hàng..."
-                                isClearable
-                                isSearchable
-                                styles={{
-                                  control: (base: Record<string, unknown>) => ({
-                                    ...base,
-                                    borderRadius: '6px',
-                                    borderColor: '#e5e7eb',
-                                    boxShadow: 'none',
-                                    '&:hover': {
-                                      borderColor: '#d97706'
-                                    }
-                                  })
-                                }}
-                              />
-                            </div>
-                            <div>
-                              <label className="form-label" style={{ fontSize: '0.78rem' }}>Số Tài Khoản *</label>
-                              <input 
-                                type="text" 
-                                className="form-control" 
-                                placeholder="Nhập số tài khoản" 
-                                value={refundAccountNumber} 
-                                onChange={e => setRefundAccountNumber(e.target.value)} 
-                                style={{ borderRadius: '6px' }} 
-                              />
-                            </div>
-                            <div>
-                              <label className="form-label" style={{ fontSize: '0.78rem', display: 'flex', justifyContent: 'space-between' }}>
-                                <span>Tên Chủ Tài Khoản *</span>
-                                {isLookingUp && <span style={{ color: '#d97706', fontSize: '0.7rem' }}><i className="bi bi-arrow-repeat spin"></i> Đang tra cứu...</span>}
-                              </label>
-                              <input 
-                                type="text" 
-                                className="form-control" 
-                                placeholder={isLookingUp ? "Đang lấy tên..." : "NGUYEN VAN A"} 
-                                value={refundAccountName} 
-                                onChange={e => setRefundAccountName(e.target.value.toUpperCase())} 
-                                style={{ borderRadius: '6px', background: isLookingUp ? '#f3f4f6' : 'white' }} 
-                                readOnly={isLookingUp}
-                              />
-                            </div>
-                            <div>
-                              <label className="form-label" style={{ fontSize: '0.78rem' }}>Ngày phát hành thẻ (Tháng/Năm)</label>
-                              <input 
-                                type="text" 
-                                className="form-control" 
-                                placeholder="MM/YY (ví dụ: 08/23)" 
-                                maxLength={5}
-                                value={refundCardIssueDate} 
-                                onChange={e => {
-                                  let val = e.target.value.replace(/\D/g, '');
-                                  if (val.length >= 3) {
-                                    val = val.slice(0, 2) + '/' + val.slice(2, 4);
-                                  }
-                                  setRefundCardIssueDate(val);
-                                }} 
-                                style={{ borderRadius: '6px' }} 
-                              />
-                            </div>
-                          </div>
-                        )}
+                    {/* Ngân hàng Option */}
+                    <label style={{ 
+                      display: 'flex', 
+                      alignItems: 'flex-start', 
+                      gap: '10px', 
+                      padding: '0.85rem 1rem', 
+                      border: refundMethod === 'bank_transfer' ? '1.5px solid #d97706' : '1.5px solid var(--rule)', 
+                      borderRadius: '12px', 
+                      background: refundMethod === 'bank_transfer' ? '#fffbeb' : 'white', 
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}>
+                      <input 
+                        type="radio" 
+                        name="refundMethod" 
+                        value="bank_transfer" 
+                        checked={refundMethod === 'bank_transfer'} 
+                        onChange={() => setRefundMethod('bank_transfer')} 
+                        style={{ accentColor: '#d97706', marginTop: '3px' }}
+                      />
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.88rem', color: refundMethod === 'bank_transfer' ? '#b45309' : 'var(--ink)' }}>
+                          Ngân hàng
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: refundMethod === 'bank_transfer' ? '#d97706' : 'var(--text-muted)', marginTop: '2px' }}>
+                          Chuyển khoản 1-3 ngày
+                        </div>
+                      </div>
+                    </label>
+                  </div>
 
-                        {refundMethod === 'wallet' && (
-                          <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted, #64748b)' }}>
-                            Tiền hoàn sẽ được cộng vào Ví điện tử Sprylo của bạn sau khi yêu cầu được duyệt.
-                          </p>
-                        )}
+                  {/* Wallet details banner */}
+                  {refundMethod === 'wallet' && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      style={{ 
+                        padding: '0.9rem 1.1rem', 
+                        background: '#faf5ff', 
+                        border: '1px solid #e9d5ff', 
+                        borderRadius: '12px',
+                        display: 'flex',
+                        gap: '12px',
+                        alignItems: 'flex-start'
+                      }}
+                    >
+                      <div style={{ color: '#7c3aed', fontSize: '1.2rem', marginTop: '2px' }}>
+                        <i className="bi bi-wallet-fill"></i>
+                      </div>
+                      <div>
+                        <h5 style={{ margin: '0 0 4px 0', fontSize: '0.88rem', color: '#6d28d9', fontWeight: 700 }}>
+                          Hoàn tiền về Ví Sprylo
+                        </h5>
+                        <p style={{ margin: 0, fontSize: '0.82rem', color: '#5b21b6', lineHeight: 1.5 }}>
+                          Số dư ví sẽ được cộng ngay sau khi admin duyệt hoàn tiền. Bạn có thể sử dụng số dư ví để thanh toán các đơn hàng tiếp theo.
+                        </p>
+                      </div>
+                    </motion.div>
+                  )}
 
-                      </motion.div>
-                    );
-                  }
-                  return null;
-                })()}
+                  {/* Bank transfer form */}
+                  {refundMethod === 'bank_transfer' && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}
+                    >
+                      <div>
+                        <label className="form-label" style={{ fontSize: '0.78rem' }}>Ngân Hàng *</label>
+                        <Select
+                          options={banks.map(bank => ({ value: bank.bin, label: `${bank.shortName} - ${bank.name}` }))}
+                          value={refundBankName ? { value: refundBankName, label: banks.find(b => b.bin === refundBankName) ? `${banks.find(b => b.bin === refundBankName).shortName} - ${banks.find(b => b.bin === refundBankName).name}` : refundBankName } : null}
+                          onChange={(selectedOption: any) => setRefundBankName(selectedOption ? selectedOption.value : '')}
+                          placeholder="Chọn hoặc tìm ngân hàng..."
+                          isClearable
+                          isSearchable
+                          styles={{
+                            control: (base: Record<string, unknown>) => ({
+                              ...base,
+                              borderRadius: '6px',
+                              borderColor: '#e5e7eb',
+                              boxShadow: 'none',
+                              '&:hover': {
+                                borderColor: '#d97706'
+                              }
+                            })
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label className="form-label" style={{ fontSize: '0.78rem' }}>Số Tài Khoản *</label>
+                        <input 
+                          type="text" 
+                          className="form-control" 
+                          placeholder="Nhập số tài khoản" 
+                          value={refundAccountNumber} 
+                          onChange={e => setRefundAccountNumber(e.target.value)} 
+                          style={{ borderRadius: '6px' }} 
+                        />
+                      </div>
+                      <div>
+                        <label className="form-label" style={{ fontSize: '0.78rem', display: 'flex', justifyContent: 'space-between' }}>
+                          <span>Tên Chủ Tài Khoản *</span>
+                          {isLookingUp && <span style={{ color: '#d97706', fontSize: '0.7rem' }}><i className="bi bi-arrow-repeat spin"></i> Đang tra cứu...</span>}
+                        </label>
+                        <input 
+                          type="text" 
+                          className="form-control" 
+                          placeholder={isLookingUp ? "Đang lấy tên..." : "NGUYEN VAN A"} 
+                          value={refundAccountName} 
+                          onChange={e => setRefundAccountName(e.target.value.toUpperCase())} 
+                          style={{ borderRadius: '6px', background: isLookingUp ? '#f3f4f6' : 'white' }} 
+                          readOnly={isLookingUp}
+                        />
+                      </div>
+                      <div>
+                        <label className="form-label" style={{ fontSize: '0.78rem' }}>Ngày phát hành thẻ (Tháng/Năm)</label>
+                        <input 
+                          type="text" 
+                          className="form-control" 
+                          placeholder="MM/YY (ví dụ: 08/23)" 
+                          maxLength={5}
+                          value={refundCardIssueDate} 
+                          onChange={e => {
+                            let val = e.target.value.replace(/\D/g, '');
+                            if (val.length >= 3) {
+                              val = val.slice(0, 2) + '/' + val.slice(2, 4);
+                            }
+                            setRefundCardIssueDate(val);
+                          }} 
+                          style={{ borderRadius: '6px' }} 
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </motion.div>
               </div>
               <div className="address-modal-footer">
                 <button className="btn btn--ghost" onClick={() => setReturnModalOrderId(null)}>Quay lại</button>
@@ -4852,24 +4913,19 @@ const AccountPage = () => {
                       alert("Vui lòng chọn hoặc nhập lý do trả hàng.");
                       return;
                     }
-                    const modalOrder = realOrders.find(o => o.orderId === returnModalOrderId);
-                    const pMethod = modalOrder?.metadata?.payment_method;
-                    const isZalopayOrVnpay = pMethod === 'zalopay' || pMethod === 'vnpay';
                     
                     let compiledRefundInfo = '';
-                    if (!isZalopayOrVnpay) {
-                      if (refundMethod === 'bank_transfer') {
-                        if (!refundBankName.trim() || !refundAccountNumber.trim() || !refundAccountName.trim()) {
-                          alert("Vui lòng điền đầy đủ thông tin ngân hàng.");
-                          return;
-                        }
-                        compiledRefundInfo = `Ngân hàng: ${refundBankName.trim()} - STK: ${refundAccountNumber.trim()} - Chủ thẻ: ${refundAccountName.trim()}${refundCardIssueDate.trim() ? ` - Ngày PH: ${refundCardIssueDate.trim()}` : ''}`;
-                      } else if (refundMethod === 'wallet') {
-                        compiledRefundInfo = 'Ví điện tử Sprylo';
+                    if (refundMethod === 'bank_transfer') {
+                      if (!refundBankName.trim() || !refundAccountNumber.trim() || !refundAccountName.trim()) {
+                        alert("Vui lòng điền đầy đủ thông tin ngân hàng.");
+                        return;
                       }
+                      compiledRefundInfo = `Ngân hàng: ${refundBankName.trim()} - STK: ${refundAccountNumber.trim()} - Chủ thẻ: ${refundAccountName.trim()}${refundCardIssueDate.trim() ? ` - Ngày PH: ${refundCardIssueDate.trim()}` : ''}`;
+                    } else if (refundMethod === 'wallet') {
+                      compiledRefundInfo = 'Ví điện tử Sprylo';
                     }
 
-                    handleReturnOrder(returnModalOrderId, finalReason, compiledRefundInfo);
+                    handleReturnOrder(returnModalOrderId, finalReason, compiledRefundInfo, refundMethod);
                   }}
                   disabled={returningOrderId === returnModalOrderId}
                 >
