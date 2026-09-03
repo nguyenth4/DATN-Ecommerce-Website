@@ -1,4 +1,5 @@
-const API_URL = 'http://localhost:9000/store';
+const backendUrl = (import.meta as any).env?.VITE_MEDUSA_BACKEND_URL || 'http://localhost:9000';
+const API_URL = `${backendUrl}/store`;
 
 const PUBLISHABLE_KEY =
   (import.meta as any).env?.VITE_MEDUSA_PUBLISHABLE_KEY ||

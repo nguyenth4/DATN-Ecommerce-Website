@@ -51,7 +51,8 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
   useEffect(() => {
     const fetchPromotions = async () => {
       try {
-        const res = await fetch(`http://localhost:9000/store/promotions`, {
+        const backendUrl = (import.meta as any).env?.VITE_MEDUSA_BACKEND_URL || 'http://localhost:9000';
+        const res = await fetch(`${backendUrl}/store/promotions`, {
           headers: {
             'x-publishable-api-key': 'pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d'
           }

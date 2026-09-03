@@ -262,7 +262,8 @@ const Header = () => {
   useEffect(() => {
     const fetchPromotions = async () => {
       try {
-        const res = await fetch("http://localhost:9000/store/promotions", {
+        const backendUrl = (import.meta as any).env?.VITE_MEDUSA_BACKEND_URL || 'http://localhost:9000';
+        const res = await fetch(`${backendUrl}/store/promotions`, {
           headers: {
             "x-publishable-api-key":
               "pk_a2f0825ab169a70b98f5a520693ca5e8e633f36c1b5dabd5548326c5451c4e6d",
@@ -530,7 +531,7 @@ const Header = () => {
                 >
                   {customerInfo.email === "sprylo123@gmail.com" && (
                     <a
-                      href="http://localhost:9000/app"
+                      href={`${(import.meta as any).env?.VITE_MEDUSA_BACKEND_URL || 'http://localhost:9000'}/app`}
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{
