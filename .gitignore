@@ -28,3 +28,8 @@ dist-ssr
 .npm-cache/
 shopflow-ui/
 
+# Environment files (giữ .env.example, bỏ qua .env thật)
+.env
+.env.local
+.env.*.local
+
