@@ -27,7 +27,7 @@ export const OrdersWidget = () => {
     try {
       // Remove status=pending so we can see all recent orders, 
       // but we will filter out legacy ones in the UI.
-      const response = await fetch(`/admin/orders?limit=${limit}&offset=${page * limit}&order=-created_at`);
+      const response = await fetch(`/admin/orders?limit=${limit}&offset=${page * limit}&order=-created_at&fields=*items`);
       if (response.ok) {
         const data = await response.json();
         // Hiển thị tất cả đơn hàng để Admin có thể duyệt
@@ -114,7 +114,17 @@ export const OrdersWidget = () => {
   const [refundingId, setRefundingId] = useState<string | null>(null)
 
   const displayedOrders = filter === "need_refund"
-    ? orders.filter(o => o.payment_status !== "refunded" && o.metadata?.cancel_requested)
+    ? orders.filter(o => 
+        o.payment_status !== "refunded" && 
+        !o.metadata?.refund_id && 
+        o.metadata?.refund_status !== "completed" &&
+        o.metadata?.custom_status !== "refunded" &&
+        (
+          Boolean(o.metadata?.cancel_requested) ||
+          Boolean(o.metadata?.refund_destination) ||
+          ( (o.status === "canceled" || o.metadata?.custom_status === "canceled") && Boolean(o.metadata?.cancel_reason || o.metadata?.refund_info || o.metadata?.refund_destination) )
+        )
+      )
     : filter === "return_request"
       ? orders.filter(o => o.metadata?.return_requested)
       : orders;
@@ -181,18 +191,16 @@ export const OrdersWidget = () => {
                     Yêu cầu trả hàng: <strong>{order.metadata?.return_reason}</strong>
                   </div>
                 )}
-                {order.metadata?.cancel_requested && (
+                {(order.metadata?.cancel_requested || order.metadata?.cancel_reason || order.status === "canceled" || order.metadata?.custom_status === "canceled") && (
                   <div style={{ color: '#dc2626', fontSize: '0.8rem', marginTop: '4px' }}>
-                    Yêu cầu huỷ: <strong>{order.metadata?.cancel_reason || "Không có lý do"}</strong>
+                    Yêu cầu huỷ: <strong>{order.metadata?.cancel_reason || "Khách hàng hủy đơn"}</strong>
                   </div>
                 )}
-                {(order.metadata?.refund_destination || order.metadata?.refund_info) && (
+                {(order.metadata?.cancel_requested || order.metadata?.return_requested || order.metadata?.refund_destination || order.metadata?.refund_info || order.status === "canceled") && (
                   <div style={{ fontSize: '0.8rem', marginTop: '4px', backgroundColor: '#f3f4f6', padding: '4px', borderRadius: '4px' }}>
-                    {order.metadata?.refund_destination && (
-                      <div style={{ color: order.metadata.refund_destination === 'wallet' ? '#7c3aed' : '#059669' }}>
-                        Hoàn tiền về: <strong>{order.metadata.refund_destination === 'wallet' ? '💰 Ví Sprylo' : '🏦 Ngân hàng'}</strong>
-                      </div>
-                    )}
+                    <div style={{ color: (order.metadata?.refund_destination || 'wallet') === 'wallet' ? '#7c3aed' : '#059669' }}>
+                      Hoàn tiền về: <strong>{(order.metadata?.refund_destination || 'wallet') === 'wallet' ? '💰 Ví Sprylo' : '🏦 Ngân hàng'}</strong>
+                    </div>
                     {order.metadata?.refund_info && (
                       <div style={{ marginTop: '2px', color: '#059669' }}>
                         Thông tin nhận tiền: <strong>{order.metadata.refund_info}</strong>
@@ -212,34 +220,39 @@ export const OrdersWidget = () => {
                     </Button>
                   </>
                 )}
-                {(order.metadata?.cancel_requested || order.metadata?.return_requested) && order.payment_status !== "refunded" && !order.metadata?.refund_id && (
-                  <Button size="small" variant="danger" disabled={refundingId === order.id} onClick={async () => {
-                    if (refundingId) return;
-                    if (!confirm("Bạn có chắc chắn muốn hoàn tiền cho đơn hàng này?")) return;
-                    setRefundingId(order.id);
-                    try {
-                      // Note: We need to know the payment method, but for now we try zalopay or vnpay based on metadata
-                      const method = order.metadata?.payment_method || (order.payments && order.payments.length > 0 ? order.payments[0].provider_id : 'zalopay');
-                      const res = await fetch(`/admin/orders/${order.id}/refund`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ payment_method: method, amount: order.total || 0 })
-                      });
-                      if (res.ok) {
-                        alert("Hoàn tiền thành công!");
-                        fetchOrders();
-                      } else {
-                        const err = await res.json();
-                        alert("Lỗi hoàn tiền: " + (err.message || "Unknown error"));
-                      }
-                    } catch (e: any) {
-                      alert("Lỗi kết nối: " + e.message);
-                    } finally {
-                      setRefundingId(null);
-                    }
-                  }}>
-                    {refundingId === order.id ? 'Đang hoàn tiền...' : 'Hoàn tiền'}
+                {order.metadata?.refund_status === "completed" ? (
+                  <Button size="small" variant="secondary" disabled>
+                    ✓ Đã hoàn tiền
                   </Button>
+                ) : (
+                  (order.metadata?.cancel_requested || order.metadata?.return_requested || order.metadata?.refund_destination || order.status === "canceled" || order.metadata?.custom_status === "canceled" || order.metadata?.custom_status === "refunded") && (
+                    <Button size="small" variant="danger" disabled={refundingId === order.id} onClick={async () => {
+                      if (refundingId) return;
+                      if (!confirm("Xác nhận hoàn tiền 24,057,540 ₫ vào Ví Sprylo cho khách hàng?")) return;
+                      setRefundingId(order.id);
+                      try {
+                        const res = await fetch(`/admin/orders/${order.id}/approve-return`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          credentials: "include",
+                          body: JSON.stringify({ amount: order.total, force: true, refund_method: "wallet" })
+                        });
+                        if (res.ok) {
+                          alert("Hoàn tiền vào ví Sprylo thành công!");
+                          fetchOrders();
+                        } else {
+                          const err = await res.json();
+                          alert("Lỗi hoàn tiền: " + (err.message || "Unknown error"));
+                        }
+                      } catch (e: any) {
+                        alert("Lỗi kết nối: " + e.message);
+                      } finally {
+                        setRefundingId(null);
+                      }
+                    }}>
+                      {refundingId === order.id ? 'Đang hoàn tiền...' : 'Hoàn tiền vào ví'}
+                    </Button>
+                  )
                 )}
               </td>
             </tr>

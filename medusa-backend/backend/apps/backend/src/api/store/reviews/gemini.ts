@@ -83,3 +83,97 @@ Trả về định dạng JSON chính xác như sau:
     return { safe: true, relevant: true, reason: "Lỗi kết nối API Gemini: " + error.message };
   }
 }
+
+export async function checkTextSafety(
+  comment: string,
+  productName: string
+): Promise<{ safe: boolean; reason: string }> {
+  const apiKey = process.env.GEMINI_API_KEY;
+
+  // Loại bỏ dấu tiếng Việt và ký tự đặc biệt để bắt trọn từ cố tình viết lách
+  const removeAccents = (str: string) => {
+    return str
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/đ/g, 'd')
+      .replace(/Đ/g, 'D')
+      .toLowerCase();
+  };
+
+  const normalizedComment = removeAccents(comment);
+  const lowerComment = comment.toLowerCase();
+
+  // Danh sách từ cấm thô tục tiếng Việt (bao gồm cả có dấu & không dấu & biến thể)
+  const PROFANITY_LIST = [
+    "quan que", "quan que di", "quần quề", "quần quề dị", "quề dị",
+    "lon", "lồn", "lồnn", "lồn", "dai", "dái", "buoi", "buồi", "đái", "ia", "ỉa", 
+    "du", "đụ", "dm", "đm", "dmm", "đmm", "vai lon", "vãi lồn", "vãi lon", "vãi l", "chich", "chịch", 
+    "cho de", "chó đẻ", "me kiep", "mẹ kiếp", "con me", "con mẹ", "cac", "cạc", "cc", "cl", "vl", "vkl",
+    "dme", "đmê", "dit", "địt", "địt mẹ", "dit me"
+  ];
+
+  for (const profanity of PROFANITY_LIST) {
+    const normalizedProfanity = removeAccents(profanity);
+    if (lowerComment.includes(profanity) || normalizedComment.includes(normalizedProfanity)) {
+      return {
+        safe: false,
+        reason: `Bình luận chứa từ ngữ thô tục / xúc phạm ("${profanity}"). Vui lòng sử dụng ngôn từ văn minh.`
+      };
+    }
+  }
+
+  if (!apiKey) {
+    return { safe: true, reason: "Bypass do thiếu API key" };
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+  const payload = {
+    contents: [
+      {
+        parts: [
+          {
+            text: `Bạn là một hệ thống kiểm duyệt bình luận tự động cho website thương mại điện tử. 
+Hãy kiểm tra xem bình luận sau đây đối với sản phẩm "${productName}" có an toàn không:
+Bình luận: "${comment}"
+
+Tiêu chí đánh giá:
+- "safe": false nếu bình luận chứa từ ngữ thô tục, chửi thề, lăng mạ, xúc phạm danh dự, từ lóng tục tĩu (ví dụ: quần quề, lồn, dái, buồi, đụ, dm, v.v.), ngôn từ thù hận, bạo lực hoặc khiêu dâm.
+- "safe": true nếu bình luận lịch sự, nêu nhận xét thật (dù là khen hay chê sản phẩm).
+
+Trả về định dạng JSON chính xác như sau:
+{
+  "safe": true hoặc false,
+  "reason": "Lý do ngắn gọn bằng tiếng Việt"
+}`
+          }
+        ]
+      }
+    ],
+    generationConfig: {
+      responseMimeType: "application/json"
+    }
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) return { safe: true, reason: "Bypass" };
+
+    const data = await response.json() as any;
+    const textResult = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (textResult) {
+      const cleanText = textResult.replace(/```json/gi, "").replace(/```/g, "").trim();
+      return JSON.parse(cleanText);
+    }
+    return { safe: true, reason: "OK" };
+  } catch (err) {
+    console.error("Gemini text safety check error:", err);
+    return { safe: true, reason: "Lỗi kết nối API" };
+  }
+}

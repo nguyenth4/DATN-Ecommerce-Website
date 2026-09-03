@@ -1,5 +1,5 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
-import { checkImageSafety } from "./gemini";
+import { checkImageSafety, checkTextSafety } from "./gemini";
 
 export async function GET(
   req: MedusaRequest,
@@ -137,9 +137,10 @@ export async function POST(
 
     // Resolve real Medusa product_id
     let realProductId = product_id;
+    let productTitle = "";
     try {
       const prodRes = await db.raw(`
-        SELECT p.id
+        SELECT p.id, p.title
         FROM product p
         LEFT JOIN product_variant pv ON pv.product_id = p.id
         WHERE p.id = ? OR pv.id = ? OR ? ILIKE '%' || p.title || '%' OR ? ILIKE '%' || replace(p.title, ' ', '') || '%'
@@ -147,12 +148,13 @@ export async function POST(
       `, [product_id, product_id, product_id, product_id]);
       if (prodRes.rows?.[0]?.id) {
         realProductId = prodRes.rows[0].id;
+        productTitle = prodRes.rows[0].title || "";
       }
     } catch (_) {}
 
     // Kiểm tra xem đã có đánh giá trước đó của khách hàng này cho sản phẩm hay chưa
     const existingReviewRes = await db.raw(`
-      SELECT id 
+      SELECT r.id 
       FROM reviews r
       LEFT JOIN product p ON p.id = r.product_id OR ('prod_' || p.title) = r.product_id OR r.product_id ILIKE '%' || p.title || '%'
       WHERE (r.user_id = ? OR r.user_id = ? OR ( ? != '' AND r.user_id = ? ))
@@ -183,16 +185,20 @@ export async function POST(
               LEFT JOIN order_item oi ON oi.order_id = o.id
               LEFT JOIN order_line_item oli ON oli.id = oi.item_id
               LEFT JOIN product_variant pv ON pv.id = oli.variant_id
-              WHERE (o.id = ? OR o.display_id::text = ?)
+              LEFT JOIN product p ON p.id = oli.product_id OR p.id = pv.product_id
+              WHERE (o.id = ? OR o.display_id::text = ? OR o.id = ? OR o.display_id::text = ?)
+                AND (o.canceled_at IS NULL AND (o.metadata->>'custom_status' IS NULL OR o.metadata->>'custom_status' NOT IN ('canceled', 'refunded')))
                 AND (
                   oli.product_id = ? OR 
                   pv.product_id = ? OR 
                   oli.variant_id = ? OR 
                   oli.id = ? OR
-                  ? ILIKE '%' || COALESCE(oli.title, '') || '%'
+                  p.id = ? OR
+                  ? ILIKE '%' || COALESCE(p.title, oli.title, '') || '%' OR
+                  COALESCE(p.title, oli.title, '') ILIKE '%' || ? || '%'
                 )
             ) AS has_purchased
-          `, [order_id, String(order_id).replace(/^order_/, ''), product_id, product_id, product_id, product_id, product_id]);
+          `, [order_id, String(order_id).replace(/^order_/, ''), order_id.replace(/^order_/, ''), String(order_id), product_id, product_id, product_id, product_id, product_id, product_id, product_id]);
           hasPurchased = orderCheck.rows[0]?.has_purchased || false;
         }
 
@@ -204,23 +210,28 @@ export async function POST(
               LEFT JOIN order_item oi ON oi.order_id = o.id
               LEFT JOIN order_line_item oli ON oli.id = oi.item_id
               LEFT JOIN product_variant pv ON pv.id = oli.variant_id
-              WHERE (o.customer_id = ? OR o.email = ? OR o.email = (SELECT email FROM customer WHERE id = ? LIMIT 1))
+              LEFT JOIN product p ON p.id = oli.product_id OR p.id = pv.product_id
+              WHERE (o.customer_id = ? OR o.email = ? OR ( ? != '' AND o.email = (SELECT c_sub.email FROM customer c_sub WHERE c_sub.id = ? LIMIT 1)))
+                AND (o.canceled_at IS NULL AND (o.metadata->>'custom_status' IS NULL OR o.metadata->>'custom_status' NOT IN ('canceled', 'refunded')))
                 AND (
                   oli.product_id = ? OR 
                   pv.product_id = ? OR 
                   oli.variant_id = ? OR 
                   oli.id = ? OR
-                  ? ILIKE '%' || COALESCE(oli.title, '') || '%'
+                  p.id = ? OR
+                  ? ILIKE '%' || COALESCE(p.title, oli.title, '') || '%' OR
+                  COALESCE(p.title, oli.title, '') ILIKE '%' || ? || '%'
                 )
             ) AS has_purchased
-          `, [customerId, customer.email, customerId, product_id, product_id, product_id, product_id, product_id]);
+          `, [customerId, customer.email || "", customerId || "", customerId || "", product_id, product_id, product_id, product_id, product_id, product_id, product_id]);
           hasPurchased = custCheck.rows[0]?.has_purchased || false;
         }
 
-        if (!hasPurchased && (order_id || customerId)) {
+        if (!hasPurchased && order_id) {
           hasPurchased = true;
         }
       } catch (err) {
+        console.error("Purchase check error:", err);
         hasPurchased = true;
       }
 
@@ -228,6 +239,18 @@ export async function POST(
         return res.status(403).json({ 
           message: "Chỉ khách hàng đã mua sản phẩm này mới có thể viết đánh giá." 
         });
+      }
+    }
+
+    // Kiểm duyệt văn bản bình luận (từ ngữ thô tục / Gemini)
+    if (comment && comment.trim()) {
+      try {
+        const textSafety = await checkTextSafety(comment.trim(), productTitle || "Sản phẩm này");
+        if (!textSafety.safe) {
+          return res.status(400).json({ message: textSafety.reason || "Nội dung đánh giá chứa từ ngữ thô tục/không phù hợp." });
+        }
+      } catch (err: any) {
+        console.error("Text safety check error:", err);
       }
     }
 
@@ -254,18 +277,18 @@ export async function POST(
       const existingId = existingReviewRes.rows[0].id;
       const updateRes = await db.raw(`
         UPDATE reviews 
-        SET rating = ?, comment = ?, user_name = ?, images = ?, created_at = NOW()
+        SET rating = ?, comment = ?, user_name = ?, images = ?::text[], created_at = NOW()
         WHERE id = ?
         RETURNING id, user_id, product_id, rating, comment, created_at, user_name, images
-      `, [numRating, comment || "", fullName, imagesArray, existingId]);
+      `, [numRating, comment || "", fullName, imagesArray || [], existingId]);
       newReview = updateRes.rows[0];
     } else {
       // Insert review mới
       const insertRes = await db.raw(`
         INSERT INTO reviews (user_id, product_id, rating, comment, user_name, images, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, NOW())
+        VALUES (?, ?, ?, ?, ?, ?::text[], NOW())
         RETURNING id, user_id, product_id, rating, comment, created_at, user_name, images
-      `, [customerId, realProductId, numRating, comment || "", fullName, imagesArray]);
+      `, [customerId, realProductId, numRating, comment || "", fullName, imagesArray || []]);
       newReview = insertRes.rows[0];
     }
 
@@ -277,18 +300,20 @@ export async function POST(
     `, [realProductId, product_id]);
 
     const stats = statsRes.rows[0];
-    const avgRating = stats.avg_rating ? parseFloat(parseFloat(stats.avg_rating).toFixed(1)) : 5.0;
-    const totalCount = parseInt(stats.total_count) || 0;
+    const avgRating = stats?.avg_rating ? parseFloat(parseFloat(stats.avg_rating).toFixed(1)) : 5.0;
+    const totalCount = parseInt(stats?.total_count || "0") || 0;
 
     // Cập nhật rating và review_count vào metadata của product
-    await db.raw(`
-      UPDATE product 
-      SET metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object(
-        'rating', ?::numeric, 
-        'review_count', ?::integer
-      )
-      WHERE id = ? OR id = ?
-    `, [avgRating, totalCount, realProductId, product_id]);
+    try {
+      await db.raw(`
+        UPDATE product 
+        SET metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object(
+          'rating', ?::numeric, 
+          'review_count', ?::integer
+        )
+        WHERE id = ? OR id = ?
+      `, [avgRating, totalCount, realProductId, product_id]);
+    } catch (_) {}
 
     res.status(201).json({
       message: "Gửi đánh giá thành công",
@@ -299,7 +324,8 @@ export async function POST(
       }
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error("POST /store/reviews internal error:", error);
+    res.status(500).json({ error: error.message || "Lỗi máy chủ khi gửi đánh giá" });
   }
 }
 
@@ -371,13 +397,26 @@ export async function PUT(
       imagesArray = [];
     }
 
+    if (comment && comment.trim()) {
+      try {
+        const prodRes = await db.raw(`SELECT title FROM product WHERE id = ? OR ('prod_' || title) = ?`, [targetProductId, targetProductId]);
+        const pTitle = prodRes.rows[0]?.title || "sản phẩm";
+        const textSafety = await checkTextSafety(comment.trim(), pTitle);
+        if (!textSafety.safe) {
+          return res.status(400).json({ message: textSafety.reason || "Nội dung đánh giá chứa từ ngữ thô tục/không phù hợp." });
+        }
+      } catch (err: any) {
+        console.error("Text safety check error:", err);
+      }
+    }
+
     // Cập nhật rating và comment
     const updateRes = await db.raw(`
       UPDATE reviews 
-      SET rating = ?, comment = ?, images = ?, created_at = NOW()
+      SET rating = ?, comment = ?, images = ?::text[], created_at = NOW()
       WHERE id = ?
       RETURNING id, user_id, product_id, rating, comment, created_at, user_name, images
-    `, [numRating, comment || "", imagesArray, review_id]);
+    `, [numRating, comment || "", imagesArray || [], review_id]);
 
     const updatedReview = updateRes.rows[0];
 
