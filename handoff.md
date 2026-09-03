@@ -2,13 +2,22 @@
 
 Tài liệu này tổng hợp các lỗi hiện tại trên hệ thống (cả phần Client và Admin) và danh sách các tính năng/luồng xử lý chưa được hoàn thiện.
 
----
+## 1. Mục tiêu (Mục đích nhánh `feature/checkout`)
+Hoàn thiện luồng Checkout (Thanh toán), bao gồm:
+- Tính phí vận chuyển (Shipping Fee) tự động và có tuỳ chọn (Nhanh / Tiết kiệm).
+- Tích hợp tính toán khối lượng và kích thước động từ giỏ hàng.
+- Xử lý luồng tạo Order (từ phía Frontend đến Backend API).
+- Sử dụng Subscriber `order.placed` (thay cho `order.created` trên bản Medusa v2) để trừ tồn kho (Inventory), thanh toán (Payment) và đẩy vận đơn sang giao hàng (GHN SOC).
 
 ## 1. Các luồng chức năng chưa hoàn chỉnh (Cần ưu tiên xử lý)
 
 *(Tất cả các luồng chức năng ưu tiên đã được xử lý hoàn tất! 🎉)*
 
----
+### 2.2. Phía Backend (Medusa Framework & Docker)
+- **API `/store/checkout`**: Được khởi tạo tại `medusa-backend/apps/backend/src/api/store/checkout/route.ts` nhằm nhận request từ Frontend, validation giỏ hàng và trả về link payment.
+- **Subscriber `order.placed`**: Được tạo tại `medusa-backend/apps/backend/src/subscribers/order-placed.ts` để xử lý Inventory, Payment và gọi API GHN SOC tạo vận đơn tự động.
+- **Fix lỗi Admin Path (Medusa v2)**: Đổi `admin.path` từ `/admin` sang `/app` trong `medusa-config.ts` do v2 cấm sử dụng `/admin`.
+- **Fix lỗi Vite trên Docker**: Ép Vite chạy Admin ở cổng cố định `0.0.0.0:7001`, expose port `7001` trong `docker-compose.yml`, và xử lý triệt để lỗi xung đột bộ nhớ đệm (cache `.medusa`) khi chuyển ổ đĩa bằng cách đổi tên thư mục `src/admin/i18n` thành `i18n_bak`.
 
 ## 2. Danh sách lỗi web (Bugs) đang gặp phải
 
