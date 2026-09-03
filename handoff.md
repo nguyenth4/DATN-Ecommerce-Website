@@ -300,6 +300,9 @@ Yêu cầu hoàn tiền có `refund_id` để tránh duyệt/hoàn tiền trùng
 - [x] Luồng thanh toán: Hoàn trả tồn kho khi thanh toán cổng VNPAY/ZaloPay thất bại
 - [x] Thông báo hoàn tiền: Đã tích hợp gửi email tự động qua SendGrid khi Admin duyệt hoàn tiền.
 - [x] Form Liên hệ: Chuyển đổi logic từ Resend sang SendGrid để gửi thành công email Contact Form.
+- [x] Khắc phục lỗi Build Frontend: Sửa toàn bộ lỗi TypeScript (strict mode) giúp Vercel deploy thành công.
+- [x] Triển khai Production (Vercel & Railway): Đã cấu hình biến môi trường và thiết lập CORS chuẩn xác, backend và frontend đã giao tiếp bình thường.
+- [x] Dọn dẹp Codebase: Xóa toàn bộ file script test rác và file `.md` cũ, chỉ giữ lại tài liệu `handoff.md` duy nhất.
 
 ---
 
