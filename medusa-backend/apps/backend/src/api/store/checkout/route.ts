@@ -188,7 +188,8 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
             payment_method: paymentMethod,
             shipping_method: payload.shippingMethod,
             customer_name: payload.customer?.fullName,
-            customer_phone: payload.customer?.phoneNumber
+            customer_phone: payload.customer?.phoneNumber,
+            inventory_deducted: true
           },
           items: items.map((i: any) => ({
             title: i.name || "Unknown item",
@@ -304,6 +305,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
             customer_name: payload.customer?.fullName,
             customer_phone: payload.customer?.phoneNumber,
             payment_status: 'pending',
+            inventory_deducted: true,
           },
           items: items.map((i: any) => ({
             title: i.name || "Unknown item",

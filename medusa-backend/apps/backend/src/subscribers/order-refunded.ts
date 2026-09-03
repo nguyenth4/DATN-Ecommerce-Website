@@ -12,8 +12,57 @@ export default async function orderRefundedHandler({
   const logger = container.resolve("logger") as any;
 
   try {
-    const order = await orderService.retrieveOrder(id);
-    if (!order || !order.email) {
+    const order = await orderService.retrieveOrder(id, { relations: ["items"] });
+    if (!order) {
+      return;
+    }
+
+    // --- Restock Inventory for Returned Order ---
+    const db = container.resolve("__pg_connection__") as any;
+    const productModuleService = container.resolve(Modules.PRODUCT);
+    try {
+      if (order.items && order.items.length > 0) {
+        for (const item of (order as any).items) {
+          if (item.variant_id) {
+            // Update inventory_level (Medusa 2.0 module)
+            await db.raw(`
+              UPDATE inventory_level il
+              SET stocked_quantity = il.stocked_quantity + ?,
+                  raw_stocked_quantity = jsonb_build_object(
+                    'value', (COALESCE((il.raw_stocked_quantity->>'value')::numeric, il.stocked_quantity) + ?)::text,
+                    'precision', 20
+                  ),
+                  updated_at = NOW()
+              FROM product_variant_inventory_item pvii
+              WHERE pvii.inventory_item_id = il.inventory_item_id
+                AND pvii.variant_id = ?
+            `, [Number(item.quantity || 1), Number(item.quantity || 1), item.variant_id]);
+            
+            // Update inventory_quantity on variant
+            if (productModuleService) {
+              try {
+                const variant = (await productModuleService.retrieveProductVariant(item.variant_id)) as any;
+                if (variant && typeof variant.inventory_quantity === 'number') {
+                  const newQuantity = variant.inventory_quantity + item.quantity;
+                  await productModuleService.updateProductVariants(
+                    item.variant_id,
+                    { inventory_quantity: newQuantity } as any
+                  );
+                }
+              } catch (variantErr) {
+                logger.warn(`[order.refund.success] Could not update variant inventory_quantity: ${variantErr}`);
+              }
+            }
+
+            logger.info(`[order.refund.success] Restored ${item.quantity} to inventory_level for returned variant ${item.variant_id}`);
+          }
+        }
+      }
+    } catch (invErr: any) {
+      logger.error(`[order.refund.success] Failed to restock inventory: ${invErr.message}`);
+    }
+
+    if (!order.email) {
       return;
     }
 
