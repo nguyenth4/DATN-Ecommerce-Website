@@ -19,7 +19,9 @@ export const OrdersWidget = () => {
   const fetchOrders = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`/admin/orders?limit=${limit}&offset=${page * limit}&order=-created_at&status=pending`);
+      // Remove status=pending so we can see all recent orders, 
+      // but we will filter out legacy ones in the UI.
+      const response = await fetch(`/admin/orders?limit=${limit}&offset=${page * limit}&order=-created_at`);
       if (response.ok) {
         const data = await response.json();
         setOrders(data.orders || []);
@@ -101,6 +103,15 @@ export const OrdersWidget = () => {
     setLoading(false)
   }
 
+  const [filter, setFilter] = useState<"all" | "need_refund" | "return_request">("all")
+  const [refundingId, setRefundingId] = useState<string | null>(null)
+
+  const displayedOrders = filter === "need_refund"
+    ? orders.filter(o => o.payment_status !== "refunded" && o.metadata?.cancel_requested)
+    : filter === "return_request"
+      ? orders.filter(o => o.metadata?.return_requested)
+      : orders;
+
   return (
     <Container className="p-6">
       <div className="flex items-center justify-between mb-4">
@@ -127,6 +138,30 @@ export const OrdersWidget = () => {
               </td>
               <td style={{ padding: "8px" }}>
                 {Number(order.total || 0).toLocaleString()} ₫
+                {order.metadata?.return_requested && (
+                  <div style={{ color: '#d97706', fontSize: '0.8rem', marginTop: '4px' }}>
+                    Yêu cầu trả hàng: <strong>{order.metadata?.return_reason}</strong>
+                  </div>
+                )}
+                {order.metadata?.cancel_requested && (
+                  <div style={{ color: '#dc2626', fontSize: '0.8rem', marginTop: '4px' }}>
+                    Yêu cầu huỷ: <strong>{order.metadata?.cancel_reason || "Không có lý do"}</strong>
+                  </div>
+                )}
+                {(order.metadata?.refund_destination || order.metadata?.refund_info) && (
+                  <div style={{ fontSize: '0.8rem', marginTop: '4px', backgroundColor: '#f3f4f6', padding: '4px', borderRadius: '4px' }}>
+                    {order.metadata?.refund_destination && (
+                      <div style={{ color: order.metadata.refund_destination === 'wallet' ? '#7c3aed' : '#059669' }}>
+                        Hoàn tiền về: <strong>{order.metadata.refund_destination === 'wallet' ? '💰 Ví Sprylo' : '🏦 Ngân hàng'}</strong>
+                      </div>
+                    )}
+                    {order.metadata?.refund_info && (
+                      <div style={{ marginTop: '2px', color: '#059669' }}>
+                        Thông tin nhận tiền: <strong>{order.metadata.refund_info}</strong>
+                      </div>
+                    )}
+                  </div>
+                )}
               </td>
               <td style={{ padding: "8px", display: "flex", gap: "8px" }}>
                 {order.status !== "fulfilled" && (
@@ -138,6 +173,35 @@ export const OrdersWidget = () => {
                       Duyệt (GHTK)
                     </Button>
                   </>
+                )}
+                {(order.metadata?.cancel_requested || order.metadata?.return_requested) && order.payment_status !== "refunded" && !order.metadata?.refund_id && (
+                  <Button size="small" variant="danger" disabled={refundingId === order.id} onClick={async () => {
+                    if (refundingId) return;
+                    if (!confirm("Bạn có chắc chắn muốn hoàn tiền cho đơn hàng này?")) return;
+                    setRefundingId(order.id);
+                    try {
+                      // Note: We need to know the payment method, but for now we try zalopay or vnpay based on metadata
+                      const method = order.metadata?.payment_method || (order.payments && order.payments.length > 0 ? order.payments[0].provider_id : 'zalopay');
+                      const res = await fetch(`/admin/orders/${order.id}/refund`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ payment_method: method, amount: order.total || 0 })
+                      });
+                      if (res.ok) {
+                        alert("Hoàn tiền thành công!");
+                        fetchOrders();
+                      } else {
+                        const err = await res.json();
+                        alert("Lỗi hoàn tiền: " + (err.message || "Unknown error"));
+                      }
+                    } catch (e: any) {
+                      alert("Lỗi kết nối: " + e.message);
+                    } finally {
+                      setRefundingId(null);
+                    }
+                  }}>
+                    {refundingId === order.id ? 'Đang hoàn tiền...' : 'Hoàn tiền'}
+                  </Button>
                 )}
               </td>
             </tr>

@@ -284,7 +284,7 @@ const AccountPage = () => {
       if (!token) return;
 
       const response = await authService.authFetch(
-        `${MEDUSA_BACKEND_URL}/store/orders?limit=50&fields=*items,*shipping_address`,
+        `${MEDUSA_BACKEND_URL}/store/orders?limit=50&fields=*items,*shipping_address,*metadata`,
       );
       if (response.ok) {
         const { orders } = await response.json();
@@ -990,6 +990,7 @@ const AccountPage = () => {
   const [refundBankName, setRefundBankName] = useState<string>('');
   const [refundAccountNumber, setRefundAccountNumber] = useState<string>('');
   const [refundAccountName, setRefundAccountName] = useState<string>('');
+  const [refundCardIssueDate, setRefundCardIssueDate] = useState<string>('');
   const [returningOrderId, setReturningOrderId] = useState<string | null>(null);
   
   const [banks, setBanks] = useState<any[]>([]);
@@ -1417,8 +1418,8 @@ const AccountPage = () => {
   const handleCancelOrder = async (
     orderId: string,
     reason: string,
-    _refundDest?: string,
-    _refundInfo?: string,
+    refundDest?: string,
+    refundInfo?: string,
   ) => {
     setCancelingOrderId(orderId);
     try {
@@ -1431,13 +1432,13 @@ const AccountPage = () => {
           body: JSON.stringify({ 
             items: order?.items || [],
             cancelReason: reason,
-            refundDestination: cancelRefundDestination,
-            refundInfo: cancelRefundInfo
+            refundDestination: refundDest || cancelRefundDestination,
+            refundInfo: refundInfo || cancelRefundInfo
           }),
         },
       );
       if (response.ok) {
-        // Mark order as canceled in localStorage
+        // Mark order as canceled in localStorage & refresh orders
         const updated = realOrders.map((o) =>
           o.orderId === orderId
             ? { ...o, canceled: true, status: "canceled", cancelReason: reason }
@@ -1447,6 +1448,9 @@ const AccountPage = () => {
         setRealOrders(updated);
         setSelectedOrderId(null);
         setCancelModalOrderId(null);
+        setCancelRefundDestination("");
+        setCancelRefundInfo("");
+        await syncOrders();
         alert("Đơn hàng đã được hủy thành công.");
       } else {
         alert("Hủy đơn hàng thất bại. Vui lòng thử lại.");
@@ -1913,7 +1917,6 @@ const AccountPage = () => {
                             {realOrders.map((order) => (
                               <tr
                                 key={order.orderId}
-                                style={{ opacity: order.canceled ? 0.6 : 1 }}
                               >
                                 <td
                                   style={{
@@ -1963,18 +1966,25 @@ const AccountPage = () => {
                                   )}
                                 </td>
                                 <td>
-                                  <span
-                                    className={getOrderFulfillmentBadgeClass(
-                                      order,
-                                    )}
-                                  >
-                                    <i
-                                      className={getOrderFulfillmentBadgeIcon(
+                                  {order.metadata?.custom_status === "refunded" || order.metadata?.refund_status === "completed" ? (
+                                    <span className="status-badge" style={{ backgroundColor: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" }}>
+                                      <i className="bi bi-arrow-counterclockwise"></i>{" "}
+                                      Đã trả hàng/Hoàn tiền
+                                    </span>
+                                  ) : (
+                                    <span
+                                      className={getOrderFulfillmentBadgeClass(
                                         order,
                                       )}
-                                    ></i>{" "}
-                                    {getOrderFulfillmentBadgeText(order)}
-                                  </span>
+                                    >
+                                      <i
+                                        className={getOrderFulfillmentBadgeIcon(
+                                          order,
+                                        )}
+                                      ></i>{" "}
+                                      {getOrderFulfillmentBadgeText(order)}
+                                    </span>
+                                  )}
                                 </td>
                                 <td style={{ textAlign: "right" }}>
                                   <div
@@ -2285,22 +2295,37 @@ const AccountPage = () => {
                               </div>
                             </div>
                           </div>
-                          <span
-                            className={getShippingBadgeClass(
-                              selectedOrder.shippingStatus,
-                            )}
-                            style={{
-                              padding: "0.4rem 1rem",
-                              fontSize: "0.85rem",
-                            }}
-                          >
-                            <i
-                              className={getShippingBadgeIcon(
+                          {selectedOrder.metadata?.custom_status === "refunded" || selectedOrder.metadata?.refund_status === "completed" || selectedOrder.canceled || selectedOrder.shippingStatus === "Đã hủy" ? (
+                            <span
+                              className="status-badge"
+                              style={{
+                                padding: "0.4rem 1rem",
+                                fontSize: "0.85rem",
+                                backgroundColor: "#fef2f2",
+                                color: "#dc2626",
+                                border: "1px solid #fecaca"
+                              }}
+                            >
+                              <i className="bi bi-arrow-counterclockwise"></i> Đã trả hàng/Hoàn tiền
+                            </span>
+                          ) : (
+                            <span
+                              className={getShippingBadgeClass(
                                 selectedOrder.shippingStatus,
                               )}
-                            ></i>{" "}
-                            {selectedOrder.shippingStatus}
-                          </span>
+                              style={{
+                                padding: "0.4rem 1rem",
+                                fontSize: "0.85rem",
+                              }}
+                            >
+                              <i
+                                className={getShippingBadgeIcon(
+                                  selectedOrder.shippingStatus,
+                                )}
+                              ></i>{" "}
+                              {selectedOrder.shippingStatus}
+                            </span>
+                          )}
                         </div>
 
                         {/* STEPPER PROGRESS */}
@@ -2430,22 +2455,29 @@ const AccountPage = () => {
                               </span>
                               <div
                                 className="flex-center text-xs"
-                                style={{ justifyContent: "flex-start" }}
+                                style={{ justifyContent: "flex-start", gap: "0.5rem" }}
                               >
                                 <span
-                                  className={`status-badge ${selectedOrder.paymentStatus === "Đã thanh toán" ? "badge-completed" : "badge-pending"}`}
+                                  className={`status-badge ${selectedOrder.paymentStatus === "Đã thanh toán" || selectedOrder.metadata?.refund_status === "completed" ? "badge-completed" : "badge-pending"}`}
                                 >
                                   <i
                                     className={
                                       selectedOrder.paymentStatus ===
-                                      "Đã thanh toán"
+                                        "Đã thanh toán" || selectedOrder.metadata?.refund_status === "completed"
                                         ? "bi bi-check-circle-fill"
                                         : "bi bi-exclamation-circle-fill"
                                     }
                                   ></i>
-                                  {selectedOrder.paymentStatus}
+                                  {selectedOrder.metadata?.refund_status === "completed" ? "Đã hoàn tiền" : selectedOrder.paymentStatus}
                                 </span>
                               </div>
+
+                              {(selectedOrder.metadata?.refund_status === "completed" || selectedOrder.canceled || selectedOrder.metadata?.custom_status === "refunded" || selectedOrder.metadata?.refund_id) && (
+                                <div style={{ marginTop: "0.6rem", padding: "0.5rem 0.75rem", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "6px", fontSize: "0.8rem", color: "#166534" }}>
+                                  <i className="bi bi-wallet2" style={{ marginRight: "0.4rem" }}></i>
+                                  Đã hoàn tiền {Number(selectedOrder.metadata?.refund_amount || selectedOrder.total || 0).toLocaleString("vi-VN")} đ vào Ví Sprylo lúc {new Date(selectedOrder.metadata?.refund_at || Date.now()).toLocaleTimeString("vi-VN")} {new Date(selectedOrder.metadata?.refund_at || Date.now()).toLocaleDateString("vi-VN")}
+                                </div>
+                              )}
                             </div>
                           </div>
                           {selectedOrder.trackingNumber &&
@@ -2822,8 +2854,13 @@ const AccountPage = () => {
                                 </span>
                               )}
 
-                            {/* ─── REVIEW BLOCK (hiện khi đơn hàng hoàn thành / đã nhận) ─── */}
+                            {/* ─── REVIEW BLOCK (hiện khi đơn hàng hoàn thành / đã nhận và chưa hủy/hoàn tiền) ─── */}
                             {selectedRealOrder &&
+                              !selectedRealOrder.canceled &&
+                              selectedRealOrder.status !== "canceled" &&
+                              selectedRealOrder.metadata?.custom_status !== "canceled" &&
+                              selectedRealOrder.metadata?.custom_status !== "refunded" &&
+                              !selectedRealOrder.metadata?.return_requested &&
                               (selectedRealOrder.status === "completed" ||
                                selectedRealOrder.metadata?.custom_status === "completed" ||
                                selectedRealOrder.metadata?.custom_status === "delivered" ||
@@ -4652,6 +4689,24 @@ const AccountPage = () => {
                                 readOnly={isLookingUp}
                               />
                             </div>
+                            <div>
+                              <label className="form-label" style={{ fontSize: '0.78rem' }}>Ngày phát hành thẻ (Tháng/Năm)</label>
+                              <input 
+                                type="text" 
+                                className="form-control" 
+                                placeholder="MM/YY (ví dụ: 08/23)" 
+                                maxLength={5}
+                                value={refundCardIssueDate} 
+                                onChange={e => {
+                                  let val = e.target.value.replace(/\D/g, '');
+                                  if (val.length >= 3) {
+                                    val = val.slice(0, 2) + '/' + val.slice(2, 4);
+                                  }
+                                  setRefundCardIssueDate(val);
+                                }} 
+                                style={{ borderRadius: '6px' }} 
+                              />
+                            </div>
                           </div>
                         )}
 
@@ -4689,7 +4744,7 @@ const AccountPage = () => {
                           alert("Vui lòng điền đầy đủ thông tin ngân hàng.");
                           return;
                         }
-                        compiledRefundInfo = `Ngân hàng: ${refundBankName.trim()} - STK: ${refundAccountNumber.trim()} - Chủ thẻ: ${refundAccountName.trim()}`;
+                        compiledRefundInfo = `Ngân hàng: ${refundBankName.trim()} - STK: ${refundAccountNumber.trim()} - Chủ thẻ: ${refundAccountName.trim()}${refundCardIssueDate.trim() ? ` - Ngày PH: ${refundCardIssueDate.trim()}` : ''}`;
                       } else if (refundMethod === 'wallet') {
                         compiledRefundInfo = 'Ví điện tử Sprylo';
                       }
@@ -4706,264 +4761,7 @@ const AccountPage = () => {
           </div>
         )}
 
-        {/* Return Modal */}
-        {returnModalOrderId && (
-          <div className="address-modal-overlay">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
-              className="address-modal-container"
-              style={{ maxWidth: '500px' }}
-            >
-              <div className="address-modal-header" style={{ borderBottom: '1px solid var(--rule)' }}>
-                <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#d97706' }}>
-                  <i className="bi bi-arrow-return-left"></i> Lý do trả hàng
-                </h3>
-                <button className="close-btn" onClick={() => setReturnModalOrderId(null)}>
-                  <i className="bi bi-x-lg"></i>
-                </button>
-              </div>
-              <div className="address-modal-body" style={{ padding: '1.5rem' }}>
-                <p style={{ fontSize: '0.875rem', color: 'var(--fg-soft)', marginBottom: '1.2rem', lineHeight: 1.5 }}>
-                  Vui lòng chọn lý do trả hàng cho đơn <strong>#{formatOrderId(returnModalOrderId)}</strong>. Yêu cầu của bạn sẽ được gửi tới Admin để phê duyệt.
-                </p>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                  {[
-                    "Hàng lỗi / Không hoạt động",
-                    "Giao sai sản phẩm / Thiếu phụ kiện",
-                    "Sản phẩm khác với mô tả",
-                    "Hàng hỏng hóc do vận chuyển",
-                    "Lý do khác"
-                  ].map((reason) => (
-                    <label 
-                      key={reason} 
-                      style={{ 
-                        display: 'flex', 
-                        alignItems: 'flex-start', 
-                        gap: '10px', 
-                        fontSize: '0.9rem', 
-                        cursor: 'pointer', 
-                        fontWeight: 500, 
-                        color: 'var(--ink)',
-                        padding: '0.8rem 1rem',
-                        border: returnReason === reason ? '1.5px solid var(--amber-600)' : '1.5px solid var(--rule)',
-                        borderRadius: '10px',
-                        background: returnReason === reason ? '#fffbeb' : 'white',
-                        transition: 'all 0.15s ease'
-                      }}
-                    >
-                      <input 
-                        type="radio" 
-                        name="returnReason" 
-                        value={reason}
-                        checked={returnReason === reason}
-                        onChange={() => setReturnReason(reason)}
-                        style={{ accentColor: '#d97706', marginTop: '3px' }}
-                      />
-                      <span>{reason}</span>
-                    </label>
-                  ))}
-                </div>
-
-                {returnReason === "Lý do khác" && (
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    style={{ marginTop: '1rem' }}
-                  >
-                    <label className="form-label" style={{ marginBottom: '0.4rem', fontSize: '0.78rem' }}>Chi tiết lý do khác *</label>
-                    <textarea 
-                      className="form-control" 
-                      rows={3} 
-                      placeholder="Vui lòng nhập lý do cụ thể..." 
-                      value={customReturnReason}
-                      onChange={(e) => setCustomReturnReason(e.target.value)}
-                      style={{ borderRadius: '8px', resize: 'none' }}
-                    />
-                  </motion.div>
-                )}
-
-                {(() => {
-
-
-
-                  
-                  return (
-                    <motion.div 
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed var(--rule)' }}
-                    >
-                      <h4 style={{ fontSize: '0.9rem', marginBottom: '1rem', color: '#d97706', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <i className="bi bi-wallet2"></i> Phương thức nhận tiền hoàn
-                      </h4>
-
-
-                      <div style={{ display: 'flex', gap: '10px', marginBottom: '1rem' }}>
-                        <label style={{ 
-                          display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', cursor: 'pointer',
-                          padding: '0.7rem 1rem', borderRadius: '10px', flex: 1,
-                          border: refundDestination === 'wallet' ? '2px solid #7c3aed' : '1.5px solid var(--rule)',
-                          background: refundDestination === 'wallet' ? '#f5f3ff' : 'white',
-                          transition: 'all 0.15s ease'
-                        }}>
-                          <input 
-                            type="radio" 
-                            name="refundDestination" 
-                            value="wallet" 
-                            checked={refundDestination === 'wallet'} 
-                            onChange={() => setRefundDestination('wallet')} 
-                            style={{ accentColor: '#7c3aed' }}
-                          />
-                          <div>
-                            <div style={{ fontWeight: 600, color: refundDestination === 'wallet' ? '#7c3aed' : 'var(--ink)' }}>
-                              <i className="bi bi-wallet2" style={{ marginRight: '4px' }}></i> Ví Sprylo
-                            </div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--fg-mute)', marginTop: '2px' }}>Nhận tiền ngay lập tức</div>
-                          </div>
-                        </label>
-                        <label style={{ 
-                          display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem', cursor: 'pointer',
-                          padding: '0.7rem 1rem', borderRadius: '10px', flex: 1,
-                          border: refundDestination === 'bank_transfer' ? '2px solid #d97706' : '1.5px solid var(--rule)',
-                          background: refundDestination === 'bank_transfer' ? '#fffbeb' : 'white',
-                          transition: 'all 0.15s ease'
-                        }}>
-                          <input 
-                            type="radio" 
-                            name="refundDestination" 
-                            value="bank_transfer" 
-                            checked={refundDestination === 'bank_transfer'} 
-                            onChange={() => setRefundDestination('bank_transfer')} 
-                            style={{ accentColor: '#d97706' }}
-                          />
-                          <div>
-                            <div style={{ fontWeight: 600, color: refundDestination === 'bank_transfer' ? '#d97706' : 'var(--ink)' }}>
-                              <i className="bi bi-bank" style={{ marginRight: '4px' }}></i> Ngân hàng
-                            </div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--fg-mute)', marginTop: '2px' }}>Chuyển khoản 1-3 ngày</div>
-                          </div>
-                        </label>
-                      </div>
-
-                      {refundDestination === 'wallet' && (
-                        <motion.div
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          style={{ background: '#f5f3ff', borderRadius: '10px', padding: '1rem 1.2rem', border: '1px solid #ddd6fe' }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #7c3aed, #a78bfa)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '1.1rem' }}>
-                              <i className="bi bi-wallet-fill"></i>
-                            </div>
-                            <div>
-                              <div style={{ fontWeight: 700, color: '#5b21b6', fontSize: '0.95rem' }}>Hoàn tiền về Ví Sprylo</div>
-                              <div style={{ fontSize: '0.8rem', color: '#7c3aed' }}>
-                                Số dư ví sẽ được cộng ngay sau khi admin duyệt hoàn tiền. Bạn có thể sử dụng số dư ví để thanh toán các đơn hàng tiếp theo.
-                              </div>
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
-
-                      {refundDestination === 'bank_transfer' && (
-                        <motion.div
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                        >
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <div>
-                              <label className="form-label" style={{ fontSize: '0.78rem' }}>Ngân Hàng *</label>
-                              <Select
-                                options={banks.map(bank => ({ value: bank.bin, label: `${bank.shortName} - ${bank.name}` }))}
-                                value={refundBankName ? { value: refundBankName, label: banks.find(b => b.bin === refundBankName) ? `${banks.find(b => b.bin === refundBankName).shortName} - ${banks.find(b => b.bin === refundBankName).name}` : refundBankName } : null}
-                                onChange={(selectedOption: any) => setRefundBankName(selectedOption ? selectedOption.value : '')}
-                                placeholder="Chọn hoặc tìm ngân hàng..."
-                                isClearable
-                                isSearchable
-                                styles={{
-                                  control: (base) => ({
-                                    ...base,
-                                    borderRadius: '6px',
-                                    borderColor: '#e5e7eb',
-                                    boxShadow: 'none',
-                                    '&:hover': {
-                                      borderColor: '#d97706'
-                                    }
-                                  })
-                                }}
-                              />
-                            </div>
-                            <div>
-                              <label className="form-label" style={{ fontSize: '0.78rem' }}>Số Tài Khoản *</label>
-                              <input 
-                                type="text" 
-                                className="form-control" 
-                                placeholder="Nhập số tài khoản" 
-                                value={refundAccountNumber} 
-                                onChange={e => setRefundAccountNumber(e.target.value)} 
-                                style={{ borderRadius: '6px' }} 
-                              />
-                            </div>
-                            <div>
-                              <label className="form-label" style={{ fontSize: '0.78rem', display: 'flex', justifyContent: 'space-between' }}>
-                                <span>Tên Chủ Tài Khoản *</span>
-                                {isLookingUp && <span style={{ color: '#d97706', fontSize: '0.7rem' }}><i className="bi bi-arrow-repeat spin"></i> Đang tra cứu...</span>}
-                              </label>
-                              <input 
-                                type="text" 
-                                className="form-control" 
-                                placeholder={isLookingUp ? "Đang lấy tên..." : "NGUYEN VAN A"} 
-                                value={refundAccountName} 
-                                onChange={e => setRefundAccountName(e.target.value.toUpperCase())} 
-                                style={{ borderRadius: '6px', background: isLookingUp ? '#f3f4f6' : 'white' }} 
-                                readOnly={isLookingUp}
-                              />
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
-
-                    </motion.div>
-                  );
-                })()}
-              </div>
-              <div className="address-modal-footer">
-                <button className="btn btn--ghost" onClick={() => setReturnModalOrderId(null)}>Quay lại</button>
-                <button 
-                  className="btn" 
-                  style={{ background: '#d97706', color: 'white', border: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
-                  onClick={() => {
-                    const finalReason = returnReason === 'Lý do khác' ? customReturnReason : returnReason;
-                    if (!finalReason || !finalReason.trim()) {
-                      alert("Vui lòng chọn hoặc nhập lý do trả hàng.");
-                      return;
-                    }
-                    
-                    let compiledRefundInfo = '';
-                    if (refundDestination === 'bank_transfer') {
-                      if (!refundBankName.trim() || !refundAccountNumber.trim() || !refundAccountName.trim()) {
-                        alert("Vui lòng điền đầy đủ thông tin ngân hàng.");
-                        return;
-                      }
-                      compiledRefundInfo = `Ngân hàng: ${refundBankName.trim()} - STK: ${refundAccountNumber.trim()} - Chủ thẻ: ${refundAccountName.trim()}`;
-                    }
-
-                    if (!returnModalOrderId) return;
-                    handleReturnOrder(returnModalOrderId, finalReason, compiledRefundInfo, refundDestination);
-                  }}
-                  disabled={returningOrderId === returnModalOrderId}
-                >
-                  {returningOrderId === returnModalOrderId ? 'Đang gửi...' : 'Gửi yêu cầu trả hàng'}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      {/* TOPUP MODAL */}
+        {/* TOPUP MODAL */}
         {showTopupModal && (
           <div className="address-modal-overlay" onClick={() => setShowTopupModal(false)}>
             <motion.div 
