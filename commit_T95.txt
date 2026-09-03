@@ -1,9 +1,0 @@
-feat(order): T-95 Cập nhật luồng trạng thái đơn hàng và quản lý tồn kho
-
-- Sửa đổi file controller.ts để chặn lưu trạng thái tuỳ chỉnh không hợp lệ vào Enum gốc của Medusa.
-- Triển khai bộ mapper: Ánh xạ trạng thái tiếng Việt (pending, confirmed, preparing, shipping, delivered, completed, canceled) sang metadata.custom_status và cập nhật status gốc tương ứng.
-- Chỉnh sửa logic xử lý tồn kho và giao hàng:
-  + Nếu shipping (hoặc preparing), kiểm tra cờ metadata.inventory_deducted và trừ tồn kho (chỉ trừ 1 lần).
-  + Tích hợp logic GHN/GHTK khi customStatus === 'shipping'.
-  + Hỗ trợ hoàn kho tự động khi chuyển sang canceled.
-- Cập nhật kết quả trả về: Frontend có thể đọc metadata.custom_status để hiển thị trạng thái chính xác.
