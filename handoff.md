@@ -1,63 +1,28 @@
-# Handoff Document — Sprylo E-Commerce (DATN)
+# Tài Liệu Handoff - Tổng Hợp Lỗi Và Các Vấn Đề Chưa Hoàn Chỉnh
 
-> **Cập nhật lần cuối:** 2026-09-02
-> **Dự án:** Website Thương Mại Điện Tử — Đồ Án Tốt Nghiệp FPT Polytechnic  
-> **Tên thương hiệu:** Sprylo
+Tài liệu này tổng hợp các lỗi hiện tại trên hệ thống (cả phần Client và Admin) và danh sách các tính năng/luồng xử lý chưa được hoàn thiện.
 
 ---
 
-## 1. Tổng quan kiến trúc
+## 1. Các luồng chức năng chưa hoàn chỉnh (Cần ưu tiên xử lý)
 
-```
-DATN-Ecommerce-Website/
-├── src/                          ← Frontend (React + Vite, port 5174)
-│   └── client/
-│       ├── pages/                ← Các trang chính
-│       ├── components/           ← Các component tái sử dụng
-│       ├── services/             ← API calls, auth service
-│       ├── routes/               ← Định nghĩa routing (React Router v7)
-│       └── utils/
-│
-└── medusa-backend/backend/       ← Backend (Medusa v2, port 9000)
-    └── apps/backend/
-        ├── src/api/store/        ← Custom API routes
-        ├── src/modules/          ← Custom Medusa modules
-        ├── src/subscribers/      ← Event subscribers
-        ├── src/workflows/        ← Workflows
-        └── .env                  ← File cấu hình chính
-```
-
-**Tech stack:**
-| Tầng | Công nghệ |
-|------|-----------|
-| Frontend | React 18, Vite 8, React Router v7, Framer Motion, Lucide React |
-| Backend | Medusa v2, Node.js, TypeScript |
-| Database | PostgreSQL (Supabase cloud) |
-| File Storage | Supabase S3-compatible Storage |
-| Admin UI | Medusa Admin (`http://localhost:9000/app`) |
+*(Tất cả các luồng chức năng ưu tiên đã được xử lý hoàn tất! 🎉)*
 
 ---
 
-## 2. Cách khởi động dự án
+## 2. Danh sách lỗi web (Bugs) đang gặp phải
 
-### 2.1 Backend (Medusa)
+### A. Phía Client (Storefront - Website bán hàng)
 
-```bash
-cd medusa-backend/backend
-npm run dev
-# Backend chạy tại: http://localhost:9000
-# Admin UI tại:     http://localhost:9000/app
-```
+- **Trang Tài khoản (Account Page):** Cần rà soát lại UI/UX và logic load dữ liệu (như hiển thị lịch sử đơn hàng, trạng thái đơn hàng chưa đồng bộ đúng).
+- **Xử lý lỗi UI (Error Handling):** Các thông báo lỗi khi thanh toán thất bại hoặc thêm vào giỏ hàng lỗi chưa được hiển thị rõ ràng cho người dùng.
+- _(Cần rà soát & bổ sung thêm các lỗi về giao diện responsive, tốc độ load trang...)_
 
-> **Quan trọng:** File `.env` cần có đầy đủ thông tin — xem mục 4.
+### B. Phía Admin (Medusa Dashboard)
 
-### 2.2 Frontend (React/Vite)
-
-```bash
-# Tại thư mục gốc dự án
-npm run dev
-# Frontend chạy tại: http://localhost:5174
-```
+- **Quản lý đơn hàng:** Chưa có luồng rõ ràng để Admin xử lý các đơn hàng bị kẹt ở trạng thái thanh toán (unpaid) một cách tự động, hiện tại đang phải dùng script thủ công.
+- **Quản lý hoàn tiền:** Giao diện hoặc logic xử lý hoàn tiền qua cổng thanh toán thứ 3 từ Admin dashboard cần được kiểm thử lại toàn diện.
+- _(Cần rà soát & bổ sung thêm các lỗi về hiển thị danh sách, phân trang, lọc dữ liệu...)_
 
 ---
 
@@ -134,12 +99,21 @@ VNPAY_IPN_URL=http://localhost:9000/store/payment/vnpay/ipn
 GOOGLE_CLIENT_ID=xxxxxxxxxxxxxxxx-xxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxxxxxxxxxxxxxx
 GOOGLE_CALLBACK_URL=http://localhost:9000/auth/customer/google/callback
-FACEBOOK_APP_ID=xxxxxxxxxxxxxxxx
-FACEBOOK_APP_SECRET=xxxxxxxxxxxxxxxx
+# Facebook OAuth credentials (giá trị thật chỉ lưu trong backend/.env, không commit)
+FACEBOOK_APP_ID=<Meta App ID>
+FACEBOOK_APP_SECRET=<Meta App Secret>
 FACEBOOK_CALLBACK_URL=http://localhost:9000/auth/customer/facebook/callback
 ```
 
-> Facebook Login redirect về `/auth/callback?_type=facebook&token=...`. Backend phải được khởi động lại sau khi thay đổi route để nạp callback và endpoint `/store/custom/auth-identity`.
+Facebook Login redirect về `/auth/callback?_type=facebook&token=...`. Ba biến `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET` và `FACEBOOK_CALLBACK_URL` phải nằm trong `medusa-backend/backend/apps/backend/.env`.
+
+**Lưu ý vận hành (đã xử lý):** Khi backend chưa được khởi động lại sau khi cập nhật `.env`, `POST /auth/customer/facebook` sẽ dùng fallback `your_facebook_app_id_here`, làm Meta báo _ID ứng dụng không hợp lệ_. Dừng tiến trình cũ trên cổng `9000` và chạy lại tại thư mục `medusa-backend/backend/apps/backend`:
+
+```powershell
+npm run dev
+```
+
+Kiểm tra cấu hình đang được nạp bằng request `POST http://localhost:9000/auth/customer/facebook`. Trường `location` trả về phải có `client_id=<Meta App ID>`, không phải `your_facebook_app_id_here`. Trên Meta Developers, thêm Redirect URI hợp lệ: `http://localhost:9000/auth/customer/facebook/callback`; khi app còn ở Development mode, tài khoản kiểm thử phải có vai trò Admin, Developer hoặc Tester.
 
 ### Email (Resend)
 
@@ -196,25 +170,25 @@ Hệ thống báo giá vận chuyển tại trang Checkout được đồng bộ
 
 Tất cả routes trong `src/api/store/`:
 
-| Method     | Endpoint                        | Chức năng                                                          |
-| ---------- | ------------------------------- | ------------------------------------------------------------------ |
-| `POST`     | `/store/checkout`               | Tạo đơn hàng, trừ tồn kho, tạo payment collection, build VNPAY URL |
-| `GET`      | `/store/payment/vnpay/ipn`      | IPN callback từ VNPAY (xác nhận giao dịch server-to-server)        |
-| `POST`     | `/store/payment/vnpay/ipn`      | IPN callback từ VNPAY                                              |
-| `GET/POST` | `/store/ghn/fee`                | Tính phí vận chuyển GHN                                            |
-| `POST`     | `/store/ghtk/fee`               | Tính phí vận chuyển GHTK                                           |
-| `GET/POST` | `/store/ghn/soc`                | Tạo đơn vận chuyển GHN                                             |
-| `GET/POST` | `/store/orders/:id/cancel`      | Hủy đơn hàng, hoàn trả tồn kho                                     |
-| `GET/POST` | `/store/wallet`                 | Quản lý ví điện tử                                                 |
-| `GET/POST` | `/store/reviews`                | Đánh giá sản phẩm                                                  |
-| `GET/POST` | `/store/recommendations`        | Gợi ý sản phẩm (AI Gemini)                                         |
-| `GET/POST` | `/store/interactions`           | Lịch sử xem/tương tác sản phẩm                                     |
-| `POST`     | `/store/custom/profile`         | Cập nhật hồ sơ khách hàng                                          |
-| `POST`     | `/store/custom/upload-avatar`   | Upload ảnh đại diện                                                |
-| `POST`     | `/store/custom/change-password` | Đổi mật khẩu                                                       |
-| `GET`      | `/store/custom/auth-identity`   | Lấy metadata OAuth, liên kết customer và cấp token customer       |
-| `POST`     | `/store/orders/:id/request-return` | Khách gửi lý do trả hàng và phương thức hoàn tiền               |
-| `POST`     | `/admin/orders/:id/approve-return` | Admin duyệt trả hàng, xử lý hoàn tiền và gửi email SendGrid      |
+| Method     | Endpoint                           | Chức năng                                                          |
+| ---------- | ---------------------------------- | ------------------------------------------------------------------ |
+| `POST`     | `/store/checkout`                  | Tạo đơn hàng, trừ tồn kho, tạo payment collection, build VNPAY URL |
+| `GET`      | `/store/payment/vnpay/ipn`         | IPN callback từ VNPAY (xác nhận giao dịch server-to-server)        |
+| `POST`     | `/store/payment/vnpay/ipn`         | IPN callback từ VNPAY                                              |
+| `GET/POST` | `/store/ghn/fee`                   | Tính phí vận chuyển GHN                                            |
+| `POST`     | `/store/ghtk/fee`                  | Tính phí vận chuyển GHTK                                           |
+| `GET/POST` | `/store/ghn/soc`                   | Tạo đơn vận chuyển GHN                                             |
+| `GET/POST` | `/store/orders/:id/cancel`         | Hủy đơn hàng, hoàn trả tồn kho                                     |
+| `GET/POST` | `/store/wallet`                    | Quản lý ví điện tử                                                 |
+| `GET/POST` | `/store/reviews`                   | Đánh giá sản phẩm                                                  |
+| `GET/POST` | `/store/recommendations`           | Gợi ý sản phẩm (AI Gemini)                                         |
+| `GET/POST` | `/store/interactions`              | Lịch sử xem/tương tác sản phẩm                                     |
+| `POST`     | `/store/custom/profile`            | Cập nhật hồ sơ khách hàng                                          |
+| `POST`     | `/store/custom/upload-avatar`      | Upload ảnh đại diện                                                |
+| `POST`     | `/store/custom/change-password`    | Đổi mật khẩu                                                       |
+| `GET`      | `/store/custom/auth-identity`      | Lấy metadata OAuth, liên kết customer và cấp token customer        |
+| `POST`     | `/store/orders/:id/request-return` | Khách gửi lý do trả hàng và phương thức hoàn tiền                  |
+| `POST`     | `/admin/orders/:id/approve-return` | Admin duyệt trả hàng, xử lý hoàn tiền và gửi email SendGrid        |
 
 ---
 
@@ -296,6 +270,7 @@ Yêu cầu hoàn tiền có `refund_id` để tránh duyệt/hoàn tiền trùng
 
 - [x] Xác thực người dùng: Đăng ký, Đăng nhập, Quên/Đặt lại mật khẩu
 - [x] OAuth: Google Login
+- [x] OAuth: Facebook Login (đã nạp biến môi trường và xác nhận endpoint tạo OAuth URL dùng Meta App ID)
 - [x] Danh sách & lọc sản phẩm (theo danh mục, giá, rating)
 - [x] Chi tiết sản phẩm + gallery ảnh
 - [x] Giỏ hàng (LocalStorage)
@@ -305,14 +280,17 @@ Yêu cầu hoàn tiền có `refund_id` để tránh duyệt/hoàn tiền trùng
 - [x] Thanh toán VNPAY sandbox (URL hợp lệ có chữ ký HMAC-SHA512)
 - [x] Ví điện tử: nạp tiền, trừ tiền khi mua, lịch sử giao dịch
 - [x] Trang tài khoản: hồ sơ cá nhân, đơn hàng, đổi mật khẩu, upload avatar
-- [x] Hủy đơn hàng (hoàn trả tồn kho)
-- [x] Đánh giá sản phẩm
+- [x] Hủy đơn hàng (hoàn trả tồn kho) và chặn hủy đơn khi đã duyệt
+- [x] Đánh giá sản phẩm (tự động kiểm duyệt bằng AI Gemini, hiển thị UI Admin)
 - [x] So sánh sản phẩm
 - [x] Wishlist
 - [x] Gợi ý sản phẩm (AI Gemini)
 - [x] Tra cứu đơn hàng
 - [x] Trang liên hệ
 - [x] Medusa Admin Dashboard kết nối đúng với DB
+- [x] Luồng thanh toán: Hoàn trả tồn kho khi thanh toán cổng VNPAY/ZaloPay thất bại
+- [x] Thông báo hoàn tiền: Đã tích hợp gửi email tự động qua SendGrid khi Admin duyệt hoàn tiền.
+- [x] Form Liên hệ: Chuyển đổi logic từ Resend sang SendGrid để gửi thành công email Contact Form.
 
 ---
 
@@ -320,8 +298,7 @@ Yêu cầu hoàn tiền có `refund_id` để tránh duyệt/hoàn tiền trùng
 
 ### Ưu tiên cao
 
-- [ ] **Email thật:** Thay `RESEND_API_KEY` bằng key thật để gửi email xác nhận đơn hàng, quên mật khẩu
-- [ ] **Facebook OAuth:** Điền `FACEBOOK_APP_ID` và `FACEBOOK_APP_SECRET` thật
+- [ ] **Email thật:** Hoàn tất cấu hình `SENDGRID_API_KEY` để thay thế toàn bộ các luồng Resend cũ (email xác nhận đơn hàng, quên mật khẩu) bằng SendGrid.
 - [ ] **VNPAY Production:** Khi go-live, thay `VNPAY_HOST`, `VNPAY_TMN_CODE`, `VNPAY_SECURE_SECRET` bằng credentials production và bỏ `testMode: true`
 - [ ] **Cấu hình kho vận chuyển thực:** Điền `GHTK_PICK_PROVINCE`, `GHTK_PICK_DISTRICT` và thay district/ward GHN hard-code bằng địa chỉ kho thực tế.
 
@@ -378,6 +355,20 @@ Yêu cầu hoàn tiền có `refund_id` để tránh duyệt/hoàn tiền trùng
 
 ---
 
+## 13. Cấu hình SendGrid Dynamic Template (Tham khảo)
+
+- **Template Hoàn Tiền (Refund Approved):** Đã tạo mã HTML sẵn trong file `sendgrid-refund-template.html` (đính kèm ở artifact).
+- Các biến (Variables) sử dụng trong template:
+  - `{{customer_name}}`: Tên khách hàng.
+  - `{{order_display_id}}`: Mã đơn hàng hiển thị (vd: SF2026-123).
+  - `{{refund_amount_formatted}}`: Số tiền hoàn (vd: 500.000 đ).
+  - `{{refund_info}}`: Phương thức hoàn tiền (Ví Sprylo, VNPay, ZaloPay, etc).
+  - `{{return_reason}}`: Lý do hoàn.
+  - `{{support_email}}`: Email hỗ trợ (SENDGRID_FROM_EMAIL).
+  - `{{is_wallet}}`: true/false (để đổi giao diện nếu hoàn vào ví).
+
+---
+
 ## 13. Thông tin tài khoản dịch vụ
 
 | Dịch vụ              | Ghi chú                                    |
@@ -386,4 +377,6 @@ Yêu cầu hoàn tiền có `refund_id` để tránh duyệt/hoàn tiền trùng
 | GHN                  | Sandbox — khachhang.ghn.vn                 |
 | VNPAY Sandbox        | TMN Code: `ALPIZLIR`                       |
 | Google Cloud Console | Client ID đã cấu hình OAuth consent screen |
-| Resend               | Cần thay API key thật trước khi gửi email  |
+| SendGrid             | `SENDGRID_API_KEY` dùng cho toàn bộ email  |
+
+_Ghi chú: Tài liệu này cần được cập nhật liên tục trong quá trình fix bug và hoàn thiện tính năng._

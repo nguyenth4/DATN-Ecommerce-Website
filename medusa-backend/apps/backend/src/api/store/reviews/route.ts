@@ -1,4 +1,5 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
+import { checkImageSafety } from "./gemini";
 
 export async function GET(
   req: MedusaRequest,
@@ -42,6 +43,7 @@ export async function GET(
         r.comment, 
         r.created_at, 
         r.user_name,
+        r.images,
         COALESCE(
           c.metadata->>'avatar_url', 
           c.metadata->>'picture', 
@@ -94,7 +96,7 @@ export async function POST(
   res: MedusaResponse
 ) {
   try {
-    const { product_id, rating, comment, order_id } = req.body as any;
+    const { product_id, rating, comment, order_id, image_base64, mime_type } = req.body as any;
 
     if (!product_id || typeof product_id !== 'string') {
       return res.status(400).json({ message: "Thiếu product_id" });
@@ -235,12 +237,29 @@ export async function POST(
       }
     }
 
+    let imagesArray: string[] = [];
+    // Kiểm duyệt hình ảnh với Gemini
+    if (image_base64) {
+      try {
+        const safetyResult = await checkImageSafety(image_base64, mime_type || "image/jpeg", productTitle || "Sản phẩm này");
+        if (!safetyResult.safe) {
+          return res.status(400).json({ message: `Hình ảnh vi phạm chính sách cộng đồng: ${safetyResult.reason}` });
+        }
+        if (!safetyResult.relevant) {
+          return res.status(400).json({ message: `Hình ảnh không hợp lệ: ${safetyResult.reason}` });
+        }
+        imagesArray = [image_base64];
+      } catch (err: any) {
+        console.error("Image safety check failed", err);
+      }
+    }
+
     // Insert review mới
     const insertRes = await db.raw(`
-      INSERT INTO reviews (user_id, product_id, rating, comment, user_name, created_at)
-      VALUES (?, ?, ?, ?, ?, NOW())
-      RETURNING id, user_id, product_id, rating, comment, created_at, user_name
-    `, [customerId, realProductId, numRating, comment || "", fullName]);
+      INSERT INTO reviews (user_id, product_id, rating, comment, user_name, images, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, NOW())
+      RETURNING id, user_id, product_id, rating, comment, created_at, user_name, images
+    `, [customerId, realProductId, numRating, comment || "", fullName, imagesArray]);
 
     const newReview = insertRes.rows[0];
 
@@ -283,7 +302,7 @@ export async function PUT(
   res: MedusaResponse
 ) {
   try {
-    const { review_id, rating, comment, product_id } = req.body as any;
+    const { review_id, rating, comment, product_id, image_base64, mime_type } = req.body as any;
 
     if (!review_id) {
       return res.status(400).json({ message: "Thiếu review_id" });
@@ -313,7 +332,7 @@ export async function PUT(
 
     // Kiểm tra quyền chỉnh sửa đánh giá này
     const reviewCheck = await db.raw(`
-      SELECT id, product_id, user_id FROM reviews 
+      SELECT id, product_id, user_id, images FROM reviews 
       WHERE id = ? AND (user_id = ? OR user_id = ? OR ( ? != '' AND user_id = ? ))
     `, [review_id, customerId, customerEmail, customerEmail, customerEmail]);
 
@@ -323,13 +342,36 @@ export async function PUT(
 
     const targetProductId = reviewCheck.rows[0].product_id || product_id;
 
+    let imagesArray = reviewCheck.rows[0].images || [];
+    if (image_base64) {
+      try {
+        // Resolve product name for context
+        const prodRes = await db.raw(`SELECT title FROM product WHERE id = ? OR ('prod_' || title) = ?`, [targetProductId, targetProductId]);
+        const pTitle = prodRes.rows[0]?.title || "sản phẩm";
+        
+        const safetyResult = await checkImageSafety(image_base64, mime_type || "image/jpeg", pTitle);
+        if (!safetyResult.safe) {
+          return res.status(400).json({ message: `Hình ảnh vi phạm chính sách cộng đồng: ${safetyResult.reason}` });
+        }
+        if (!safetyResult.relevant) {
+          return res.status(400).json({ message: `Hình ảnh không hợp lệ: ${safetyResult.reason}` });
+        }
+        imagesArray = [image_base64];
+      } catch (err: any) {
+        console.error("Image safety check failed", err);
+      }
+    } else if (image_base64 === '') {
+      // Clear image if explicitly empty string passed
+      imagesArray = [];
+    }
+
     // Cập nhật rating và comment
     const updateRes = await db.raw(`
       UPDATE reviews 
-      SET rating = ?, comment = ?, created_at = NOW()
+      SET rating = ?, comment = ?, images = ?, created_at = NOW()
       WHERE id = ?
-      RETURNING id, user_id, product_id, rating, comment, created_at, user_name
-    `, [numRating, comment || "", review_id]);
+      RETURNING id, user_id, product_id, rating, comment, created_at, user_name, images
+    `, [numRating, comment || "", imagesArray, review_id]);
 
     const updatedReview = updateRes.rows[0];
 

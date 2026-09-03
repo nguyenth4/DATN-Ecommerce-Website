@@ -38,9 +38,10 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
       const db = req.scope.resolve("__pg_connection__");
 
       // 1. Check if this transaction was already processed
+      // Dùng description để check do transaction_id column không tồn tại
       const existingTx = await db.raw(
-        `SELECT id FROM wallet_transaction WHERE transaction_id = ? AND type = 'topup'`,
-        [transactionNo]
+        `SELECT id FROM wallet_transaction WHERE description LIKE ? AND type = 'topup'`,
+        [`%MGD: ${transactionNo}%`]
       );
 
       if (existingTx.rows.length === 0) {
@@ -51,23 +52,30 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
 
           // 3. Update wallet balance
           await db.raw(
-            `UPDATE wallet SET balance = balance + ?, updated_at = NOW() WHERE id = ?`,
-            [amount, wallet.id]
+            `UPDATE wallet 
+             SET balance = balance + ?, 
+                 raw_balance = jsonb_build_object('value', (balance + ?)::text, 'precision', 20), 
+                 updated_at = NOW() 
+             WHERE id = ?`,
+            [amount, amount, wallet.id]
           );
 
           // 4. Insert wallet_transaction
+          const txId = `wtx_${Date.now()}_${Math.floor(Math.random()*1000)}`;
+          const desc = `Nạp tiền qua VNPAY (MGD: ${transactionNo})`;
+          
           await db.raw(
             `INSERT INTO wallet_transaction (
-              id, wallet_id, type, amount, status, description, transaction_id, created_at, updated_at
+              id, wallet_id, type, amount, raw_amount, description
             ) VALUES (
-              ?, ?, 'topup', ?, 'completed', ?, ?, NOW(), NOW()
+              ?, ?, 'topup', ?, jsonb_build_object('value', ?::text, 'precision', 20), ?
             )`,
             [
-              `wtx_${Date.now()}_${Math.floor(Math.random()*1000)}`,
+              txId,
               wallet.id,
               amount,
-              `Nạp tiền qua VNPAY (MGD: ${transactionNo})`,
-              transactionNo
+              amount.toString(),
+              desc
             ]
           );
           console.log(`[VNPay Topup Callback] ✅ Successfully topped up ${amount} for customer ${customerId}`);

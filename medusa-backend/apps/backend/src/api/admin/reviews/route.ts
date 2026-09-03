@@ -17,6 +17,7 @@ export async function GET(
         r.comment, 
         r.created_at, 
         r.user_name,
+        r.images,
         COALESCE(p.title, r.product_id) as product_title,
         p.thumbnail as product_thumbnail
       FROM reviews r
@@ -33,8 +34,9 @@ export async function GET(
       FROM reviews
     `);
 
-    const reviews = reviewsRes.rows || [];
-    const stats = statsRes.rows[0] || { total_reviews: 0, avg_rating: 0, five_star_count: 0 };
+    const reviews = Array.isArray(reviewsRes) ? reviewsRes : (reviewsRes.rows || []);
+    const statsArray = Array.isArray(statsRes) ? statsRes : (statsRes.rows || []);
+    const stats = statsArray[0] || { total_reviews: 0, avg_rating: 0, five_star_count: 0 };
 
     res.status(200).json({
       reviews,
@@ -66,13 +68,15 @@ export async function DELETE(
       DELETE FROM reviews WHERE id = ? RETURNING *
     `, [id]);
 
-    if (deleteRes.rowCount === 0) {
+    const deletedRow = Array.isArray(deleteRes) ? deleteRes[0] : (deleteRes.rows ? deleteRes.rows[0] : null);
+
+    if (!deletedRow) {
       return res.status(404).json({ message: "Không tìm thấy đánh giá" });
     }
 
     res.status(200).json({
       message: "Xóa đánh giá thành công",
-      deleted: deleteRes.rows[0]
+      deleted: deletedRow
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

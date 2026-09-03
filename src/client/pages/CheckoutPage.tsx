@@ -157,7 +157,7 @@ const CheckoutPage = () => {
   const [customer, setCustomer] = useState<MedusaCustomer | null>(null);
 
   const [walletBalance, setWalletBalance] = useState<number>(0);
-  const [useWallet, setUseWallet] = useState(false);
+  const useWallet = paymentMethod === 'wallet';
   const [isProcessing, setIsProcessing] = useState(false);
   const [authTab, setAuthTab] = useState<"login" | "register" | "guest">(
     "login",
@@ -837,7 +837,11 @@ const CheckoutPage = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        showToast(data.error || data.message || "Thanh toán thất bại", "error");
+        let errorMessage = data.error || data.message || "Thanh toán thất bại";
+        if (errorMessage.toLowerCase().includes("not found") || errorMessage.toLowerCase().includes("không tìm thấy")) {
+          errorMessage = "Một số sản phẩm trong giỏ hàng không còn tồn tại hoặc đã bị xóa. Vui lòng kiểm tra lại giỏ hàng.";
+        }
+        showToast(errorMessage, "error");
         setIsProcessing(false);
         return;
       }
@@ -1004,9 +1008,13 @@ const CheckoutPage = () => {
         }).then(async (res) => {
           const data = await res.json();
           if (!res.ok) {
-            throw new Error(data.message || data.error || "Unable to calculate GHN fee");
+            console.error("GHN fetch error for service:", serviceTypeId, data);
+            return { data: { total: 0 } }; // Return 0 instead of throwing to prevent crashing Promise.all
           }
           return data;
+        }).catch(err => {
+          console.error("GHN fetch exception:", err);
+          return { data: { total: 0 } };
         });
       };
 
@@ -1087,7 +1095,7 @@ const CheckoutPage = () => {
   ]);
 
   const total = Math.max(0, subtotal + shippingFee - promoDiscount);
-  const walletDeduction = paymentMethod === 'wallet' ? Math.min(walletBalance, total) : 0;
+  const walletDeduction = useWallet ? Math.min(walletBalance, total) : 0;
   const remainingTotal = total - walletDeduction;
 
   if (cartItems.length === 0) {
@@ -1850,75 +1858,7 @@ const CheckoutPage = () => {
                   </div>
                 </motion.div>
 
-                {isLoggedIn && walletBalance > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="checkout-section wallet-section"
-                    style={{
-                      border: "1px solid #c7d2fe",
-                      background:
-                        "linear-gradient(135deg, #f5f3ff 0%, #e0e7ff 100%)",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "12px",
-                        }}
-                      >
-                        <div
-                          style={{
-                            background: "var(--checkout-accent)",
-                            color: "white",
-                            padding: "10px",
-                            borderRadius: "10px",
-                          }}
-                        >
-                          <Wallet size={20} />
-                        </div>
-                        <div>
-                          <h3
-                            style={{
-                              margin: 0,
-                              fontSize: "1rem",
-                              fontWeight: 700,
-                              color: "var(--checkout-text)",
-                            }}
-                          >
-                            Sử dụng Ví Sprylo
-                          </h3>
-                          <p
-                            style={{
-                              margin: 0,
-                              fontSize: "0.85rem",
-                              color: "var(--checkout-text-soft)",
-                            }}
-                          >
-                            Số dư hiện tại:{" "}
-                            <strong style={{ color: "var(--checkout-accent)" }}>
-                              {walletBalance.toLocaleString("vi-VN")}đ
-                            </strong>
-                          </p>
-                        </div>
-                      </div>
-                      <div
-                        className={`custom-toggle ${useWallet ? "active" : ""}`}
-                        onClick={() => setUseWallet(!useWallet)}
-                      >
-                        <div className="toggle-knob" />
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
+
 
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -1984,16 +1924,6 @@ const CheckoutPage = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
                   className="checkout-section"
-                  style={{
-                    opacity:
-                      useWallet && walletBalance >= subtotal + shippingFee
-                        ? 0.5
-                        : 1,
-                    pointerEvents:
-                      useWallet && walletBalance >= subtotal + shippingFee
-                        ? "none"
-                        : "auto",
-                  }}
                 >
                   <h2 className="section-title">
                     <CreditCard size={22} /> Phương thức thanh toán
@@ -2043,20 +1973,26 @@ const CheckoutPage = () => {
                         </div>
                       )}
                     </div>
-                    <div 
-                      className={`option-card ${paymentMethod === 'wallet' ? 'selected' : ''}`}
-                      onClick={() => setPaymentMethod('wallet')}
-                    >
-                      <div className="option-card-header">
-                        <span className="option-name" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Wallet size={16} /> Ví Sprylo
+                    {isLoggedIn && walletBalance > 0 && (
+                      <div 
+                        className={`option-card ${paymentMethod === 'wallet' ? 'selected' : ''}`}
+                        onClick={() => setPaymentMethod('wallet')}
+                      >
+                        <div className="option-card-header">
+                          <span className="option-name" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Wallet size={16} /> Ví Sprylo
+                          </span>
+                        </div>
+                        <span className="option-desc">
+                          Số dư: {walletBalance.toLocaleString('vi-VN')}đ
                         </span>
+                        {paymentMethod === 'wallet' && (
+                          <div className="check-badge">
+                            <CheckCircle2 size={12} />
+                          </div>
+                        )}
                       </div>
-                      <span className="option-desc">
-                        {isLoggedIn ? `Số dư: ${walletBalance.toLocaleString('vi-VN')}đ` : 'Cần đăng nhập'}
-                      </span>
-                      {paymentMethod === 'wallet' && <div className="check-badge"><CheckCircle2 size={12} /></div>}
-                    </div>
+                    )}
                   </div>
                 </motion.div>
               </>

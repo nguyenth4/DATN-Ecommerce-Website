@@ -1,17 +1,10 @@
 import { Request, Response } from 'express';
 import { MedusaError, Modules } from '@medusajs/framework/utils';
-import { Resend } from 'resend';
 import { refundOrder } from '../../../../../services/refund.service';
 
 type RefundRequest = {
   payment_method: 'zalopay' | 'vnpay' | 'cod' | 'COD' | string;
   amount?: number;
-};
-
-const getResend = () => {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) return null;
-  return new Resend(apiKey);
 };
 
 /**
@@ -135,36 +128,50 @@ export const POST = async (req: Request, res: Response) => {
     }
   });
 
-  // Send Refund Notification Email
-  const resend = getResend();
-  if (resend && order.email) {
-    const fromEmail = process.env.RESEND_FROM_EMAIL || 'Sprylo <onboarding@resend.dev>';
-    const displayId = order.display_id || order.id;
-    const walletNote = refundDestination === 'wallet'
-      ? '<p style="color:#059669;font-weight:600;">💰 Tiền đã được hoàn vào Ví Sprylo của bạn. Bạn có thể kiểm tra trong mục "Ví điện tử Sprylo".</p>'
-      : '<p>Thời gian giao dịch từ ngân hàng có thể mất từ 1-3 ngày làm việc. Nếu có bất kỳ thắc mắc nào, vui lòng liên hệ CSKH.</p>';
+  // Emit Refund Success Event
+  const eventBus = req.scope.resolve(Modules.EVENT_BUS);
+  await eventBus.emit({
+    name: "order.refund.success",
+    data: { 
+      id, 
+      refundAmount, 
+      method: refundMethodLabel,
+      refundDestination
+    },
+  });
 
+  // Send email using SendGrid if API key is provided
+  const sendgridApiKey = process.env.SENDGRID_API_KEY;
+  const from = process.env.SENDGRID_FROM_EMAIL;
+  const templateId = process.env.SENDGRID_RETURN_APPROVED_TEMPLATE_ID;
+
+  if (order.email && sendgridApiKey && from && templateId) {
     try {
-      await resend.emails.send({
-        from: fromEmail,
+      const sgMail = require("@sendgrid/mail");
+      sgMail.setApiKey(sendgridApiKey);
+      
+      const customerName = order.customer?.first_name 
+        ? `${order.customer.last_name || ''} ${order.customer.first_name}`.trim() 
+        : (order.metadata?.customer_name || "Quý khách");
+
+      await sgMail.send({
         to: order.email,
-        subject: `[Sprylo] Thông báo hoàn tiền đơn hàng #${displayId}`,
-        html: `
-          <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-            <h2 style="color: #d97706;">Hoàn tiền thành công</h2>
-            <p>Xin chào,</p>
-            <p>Chúng tôi xin thông báo yêu cầu hoàn tiền cho đơn hàng <strong>#${displayId}</strong> của bạn đã được xử lý.</p>
-            <p>Số tiền hoàn lại: <strong>${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(refundAmount)}</strong></p>
-            <p>Hình thức hoàn: <strong>${refundMethodLabel}</strong></p>
-            ${walletNote}
-            <br/>
-            <p>Trân trọng,</p>
-            <p><strong>Đội ngũ Sprylo</strong></p>
-          </div>
-        `
+        from,
+        templateId,
+        dynamicTemplateData: {
+          customer_name: customerName,
+          order_display_id: order.display_id || order.id,
+          refund_amount_formatted: `${refundAmount.toLocaleString("vi-VN")} đ`,
+          refund_info: order.metadata?.refund_info || refundMethodLabel,
+          return_reason: order.metadata?.return_reason || "Hoàn tiền chủ động từ cửa hàng",
+          support_email: from,
+          is_wallet: refundDestination === "wallet",
+          is_bank_transfer: refundDestination !== "wallet",
+        },
       });
-    } catch (e) {
-      console.error(`Failed to send refund email to ${order.email}:`, e);
+      console.log(`[Refund API] SendGrid notification sent for order ${id}`);
+    } catch (emailErr: any) {
+      console.error("[Refund API] SendGrid notification failed:", emailErr.response?.body || emailErr);
     }
   }
 

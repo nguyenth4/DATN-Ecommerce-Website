@@ -14,7 +14,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     const vnpUrl = process.env.VNPAY_URL || "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
     
     // Use the backend's ngrok URL or localhost if not available
-    const callbackUrl = process.env.VNPAY_TOPUP_CALLBACK_URL || `${process.env.MEDUSA_BACKEND_URL || 'http://localhost:9000'}/store/wallet/topup/vnpay-callback`;
+    const callbackUrl = process.env.VNPAY_TOPUP_CALLBACK_URL || `${process.env.MEDUSA_BACKEND_URL || 'http://localhost:9000'}/payment/vnpay-wallet-callback`;
 
     const now = new Date();
     const pad = (n: number) => n.toString().padStart(2, "0");

@@ -26,6 +26,10 @@ interface ProductReviewsTabProps {
   onAddReview: (e: React.FormEvent) => void;
   errorMessage?: string;
   successMessage?: string;
+  imageBase64?: string;
+  mimeType?: string;
+  setImageBase64?: (val: string) => void;
+  setMimeType?: (val: string) => void;
 }
 
 const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
@@ -41,6 +45,10 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
   onAddReview,
   errorMessage,
   successMessage,
+  imageBase64,
+  mimeType,
+  setImageBase64,
+  setMimeType,
 }) => {
   const [customerInfo, setCustomerInfo] = useState<any>(() => {
     const info = localStorage.getItem('customer_info');
@@ -56,6 +64,15 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
   const [isSubmittingUpdate, setIsSubmittingUpdate] = useState<boolean>(false);
   const [updateMessage, setUpdateMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isCheckingEligibility, setIsCheckingEligibility] = useState<boolean>(true);
+
+  // Local state for image upload in case the parent doesn't provide it
+  const [localImageBase64, setLocalImageBase64] = useState<string>('');
+  const [localMimeType, setLocalMimeType] = useState<string>('');
+
+  const actualImageBase64 = imageBase64 !== undefined ? imageBase64 : localImageBase64;
+  const actualMimeType = mimeType !== undefined ? mimeType : localMimeType;
+  const setActualImageBase64 = setImageBase64 || setLocalImageBase64;
+  const setActualMimeType = setMimeType || setLocalMimeType;
 
   useEffect(() => {
     const handleAuthChange = () => {
@@ -149,6 +166,48 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
     window.dispatchEvent(new Event('test-customer-changed'));
   };
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setActualImageBase64('');
+      setActualMimeType('');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        // Create an image to resize it
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 800; // max width/height to prevent huge base64 strings
+
+          if (width > height && width > maxDim) {
+            height *= maxDim / width;
+            width = maxDim;
+          } else if (height > maxDim) {
+            width *= maxDim / height;
+            height = maxDim;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          const resizedDataUrl = canvas.toDataURL(file.type, 0.8);
+          setActualImageBase64(resizedDataUrl);
+          setActualMimeType(file.type);
+        };
+        img.src = dataUrl;
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isEditing && existingReview) {
@@ -182,7 +241,9 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
             rating: newReviewRating,
             comment: newReviewComment,
             product_id: productId,
-            customer_id: currentCustomerId
+            customer_id: currentCustomerId,
+            image_base64: actualImageBase64,
+            mime_type: actualMimeType
           })
         });
 
@@ -453,6 +514,32 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
               💡 Vui lòng chia sẻ trải nghiệm thực tế. Không dùng ngôn ngữ thô tục, không đăng link, không spam.
             </p>
           </div>
+
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, marginBottom: '0.3rem' }}>Đính kèm hình ảnh (Không bắt buộc)</label>
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={handleImageChange}
+              style={{ fontSize: '0.8rem', color: '#4b5563', padding: '0.4rem 0' }}
+            />
+            {actualImageBase64 && (
+              <div style={{ marginTop: '0.5rem', position: 'relative', display: 'inline-block' }}>
+                <img src={actualImageBase64} alt="Preview" style={{ height: '80px', borderRadius: '4px', border: '1px solid #e5e7eb' }} />
+                <button 
+                  type="button" 
+                  onClick={() => { setActualImageBase64(''); setActualMimeType(''); }}
+                  style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#ef4444', color: 'white', border: 'none', borderRadius: '50%', width: '20px', height: '20px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+            <p style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '0.3rem' }}>
+              📸 Đăng tải hình ảnh thực tế giúp đánh giá của bạn hữu ích hơn.
+            </p>
+          </div>
+
           <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             <button 
               type="submit" 
@@ -544,7 +631,22 @@ const ProductReviewsTab: React.FC<ProductReviewsTabProps> = ({
                     <div className="stars" style={{ color: '#ffc107', fontSize: '0.85rem', marginBottom: '0.4rem' }}>
                       {"★".repeat(rev.rating) + "☆".repeat(5 - rev.rating)}
                     </div>
-                    <p style={{ fontSize: '0.85rem', color: '#444', lineHeight: '1.6' }}>{rev.comment}</p>
+                    <p style={{ fontSize: '0.85rem', color: '#444', lineHeight: '1.6', marginBottom: (rev as any).images?.length ? '0.5rem' : '0' }}>{rev.comment}</p>
+                    
+                    {/* Render attached images */}
+                    {(rev as any).images && (rev as any).images.length > 0 && (
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {(rev as any).images.map((imgUrl: string, i: number) => (
+                          <img 
+                            key={i}
+                            src={imgUrl} 
+                            alt="Review attachment" 
+                            style={{ height: '70px', width: '70px', objectFit: 'cover', borderRadius: '4px', border: '1px solid #eaeaea' }} 
+                            onClick={() => window.open(imgUrl, '_blank')}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               );

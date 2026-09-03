@@ -13,6 +13,40 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     console.log(`[Cancel API] Canceling order: ${id}`);
 
     const productModuleService = req.scope.resolve(Modules.PRODUCT);
+    const orderService = req.scope.resolve(Modules.ORDER);
+
+    // Prevent cancellation if order is not pending
+    if (orderService) {
+      try {
+        const order = await orderService.retrieveOrder(id);
+        const customStatus = order?.metadata?.custom_status;
+        if (order && (order.status !== "pending" || (customStatus && customStatus !== "pending"))) {
+          return res.status(400).json({ error: "Chỉ có thể hủy đơn hàng đang ở trạng thái chờ duyệt (pending)." });
+        }
+        
+        const { cancelReason, refundDestination, refundInfo } = payload;
+        
+        const db = req.scope.resolve("__pg_connection__") as any;
+        if (db) {
+          const currentMetadata = order?.metadata || {};
+          const newMetadata = {
+            ...currentMetadata,
+            ...(cancelReason && { cancel_reason: cancelReason }),
+            ...(refundDestination && { refund_destination: refundDestination, cancel_requested: true }),
+            ...(refundInfo && { refund_info: refundInfo }),
+          };
+          
+          await db.raw(`
+            UPDATE "order" 
+            SET status = 'canceled', metadata = ?::jsonb, updated_at = NOW() 
+            WHERE id = ?
+          `, [JSON.stringify(newMetadata), id]);
+          console.log(`[Cancel API] Order ${id} status updated to canceled with metadata`);
+        }
+      } catch (err) {
+        console.warn(`[Cancel API] Could not retrieve/update order ${id} status:`, err);
+      }
+    }
 
     // Prefer items from request body; fallback to in-memory pending orders cache
     let items: Array<{ id: string; qty: number }> = [];
