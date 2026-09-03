@@ -5,7 +5,18 @@ import { updateOrderStatus } from "../../../../admin/orders/controller";
  * POST /store/orders/:id/confirm-receipt
  * Cập nhật trạng thái đơn hàng sang completed (Đã nhận hàng)
  */
+export async function OPTIONS(req: MedusaRequest, res: MedusaResponse) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-publishable-api-key, x-customer-id");
+  return res.status(200).send();
+}
+
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-publishable-api-key, x-customer-id");
+
   try {
     const { id } = req.params;
     console.log(`[Confirm Receipt API] Processing order: ${id}`);

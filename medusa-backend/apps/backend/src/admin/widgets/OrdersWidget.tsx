@@ -104,13 +104,48 @@ export const OrdersWidget = () => {
       }
 
       fetchOrders()
-    } catch (e) {
-      console.error("Fulfill error", e)
+    } catch (error) {
+      alert("Lỗi thực thi: " + (error as any).message);
+      setLoading(false);
     }
-    setLoading(false)
+  }
+
+  const handleUpdateCustomStatus = async (orderId: string, status: string) => {
+    setLoading(true);
+    try {
+      const order = orders.find((o) => o.id === orderId);
+      if (!order) return;
+      
+      const payload: any = { custom_status: status };
+      if (status === "completed") {
+        payload.delivered_at = new Date().toISOString();
+      }
+
+      const res = await fetch(`/admin/orders/${orderId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          metadata: {
+            ...order.metadata,
+            ...payload
+          }
+        })
+      });
+      if (res.ok) {
+        fetchOrders();
+      } else {
+        const err = await res.json();
+        alert("Lỗi: " + (err.message || JSON.stringify(err)));
+      }
+    } catch (error) {
+      alert("Lỗi: " + (error as any).message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   const [filter, setFilter] = useState<"all" | "need_refund" | "return_request">("all")
+  const [refundingId, setRefundingId] = useState<string | null>(null)
 
   const displayedOrders = filter === "need_refund"
     ? orders.filter(o => o.payment_status !== "refunded" && o.metadata?.cancel_requested)
@@ -169,9 +204,23 @@ export const OrdersWidget = () => {
                 </div>
               </td>
               <td style={{ padding: "8px" }}>
-                <StatusBadge color={statusColorMap[order.status] || "grey"}>
-                  {order.status}
-                </StatusBadge>
+                <div style={{ marginBottom: "8px" }}>
+                  <StatusBadge color={statusColorMap[order.status] || "grey"}>
+                    {order.status}
+                  </StatusBadge>
+                </div>
+                <select 
+                  value={order.metadata?.custom_status || "pending"}
+                  onChange={(e) => handleUpdateCustomStatus(order.id, e.target.value)}
+                  style={{ padding: "4px", fontSize: "0.8rem", borderRadius: "4px", border: "1px solid #ccc" }}
+                >
+                  <option value="pending">Chờ xác nhận</option>
+                  <option value="confirmed">Đã xác nhận</option>
+                  <option value="preparing">Đóng gói hàng</option>
+                  <option value="shipping">Đang giao</option>
+                  <option value="completed">Đã giao / Đã nhận</option>
+                  <option value="canceled">Đã hủy</option>
+                </select>
               </td>
               <td style={{ padding: "8px" }}>
                 {Number(order.total || 0).toLocaleString()} ₫
@@ -211,9 +260,11 @@ export const OrdersWidget = () => {
                     </Button>
                   </>
                 )}
-                {(order.metadata?.cancel_requested || order.metadata?.return_requested) && order.payment_status !== "refunded" && (
-                  <Button size="small" variant="danger" onClick={async () => {
+                {(order.metadata?.cancel_requested || order.metadata?.return_requested) && order.payment_status !== "refunded" && !order.metadata?.refund_id && (
+                  <Button size="small" variant="danger" disabled={refundingId === order.id} onClick={async () => {
+                    if (refundingId) return;
                     if (!confirm("Bạn có chắc chắn muốn hoàn tiền cho đơn hàng này?")) return;
+                    setRefundingId(order.id);
                     try {
                       // Note: We need to know the payment method, but for now we try zalopay or vnpay based on metadata
                       const method = order.metadata?.payment_method || (order.payments && order.payments.length > 0 ? order.payments[0].provider_id : 'zalopay');
@@ -231,9 +282,11 @@ export const OrdersWidget = () => {
                       }
                     } catch (e: any) {
                       alert("Lỗi kết nối: " + e.message);
+                    } finally {
+                      setRefundingId(null);
                     }
                   }}>
-                    Hoàn tiền
+                    {refundingId === order.id ? 'Đang hoàn tiền...' : 'Hoàn tiền'}
                   </Button>
                 )}
               </td>

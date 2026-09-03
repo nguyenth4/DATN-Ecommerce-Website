@@ -257,8 +257,8 @@ textarea {
 }
 .site-header .container {
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: var(--s7);
+  grid-template-columns: auto auto 1fr auto;
+  gap: var(--s5);
   align-items: center;
   height: 84px;
 }

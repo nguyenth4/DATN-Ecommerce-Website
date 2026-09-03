@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Select from "react-select";
+import toast from "react-hot-toast";
 import "../styles/account.css";
 import "../styles/order-tracking.css";
 import {
@@ -63,11 +64,11 @@ const formatTiktokOrderId = (displayId?: string | number | null, orderId?: strin
 const AccountPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParamsQ] = useSearchParams();
+  const [searchParamsQ, setSearchParams] = useSearchParams();
 
-  // Đọc ?tab= từ URL để tự động mở tab đúng (ví dụ: /account?tab=orders từ VNPayReturnPage)
+  // Đọc ?tab= từ URL hoặc localStorage để tự động giữ nguyên tab khi F5 / load lại trang
   const initialTab = (() => {
-    const t = searchParamsQ.get("tab");
+    const t = searchParamsQ.get("tab") || localStorage.getItem("sprylo_active_account_tab");
     const valid = [
       "profile",
       "orders",
@@ -89,11 +90,25 @@ const AccountPage = () => {
     | "password"
     | "policies"
   >(initialTab);
+
+  const handleTabChange = (tab: typeof activeTab) => {
+    setActiveTab(tab);
+    setSelectedOrderId(null);
+  };
+
+  useEffect(() => {
+    localStorage.setItem("sprylo_active_account_tab", activeTab);
+    const currentTabInUrl = searchParamsQ.get("tab");
+    if (currentTabInUrl !== activeTab) {
+      setSearchParams({ tab: activeTab }, { replace: true });
+    }
+  }, [activeTab, searchParamsQ, setSearchParams]);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [walletData, setWalletData] = useState<any>(null);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [realOrders, setRealOrders] = useState(getRealOrders);
   const [cancelingOrderId, setCancelingOrderId] = useState<string | null>(null);
+  const [retryingPaymentId, setRetryingPaymentId] = useState<string | null>(null);
   const [confirmingOrderId, setConfirmingOrderId] = useState<string | null>(
     null,
   );
@@ -107,14 +122,37 @@ const AccountPage = () => {
   const [copiedOrderId, setCopiedOrderId] = useState<string | null>(null);
 
   // ─── Review States ──────────────────────────────────────────────────────────
-  // reviewState: map productId -> { rating, comment, loading, done, error }
+  interface SavedReviewData {
+    reviewId?: string;
+    rating: number;
+    comment: string;
+    updatedAt?: string;
+  }
+
+  // reviewState: map key -> { rating, comment, loading, done, isEditing, reviewId, error }
   const [reviewState, setReviewState] = useState<Record<string, {
     rating: number;
     comment: string;
     loading: boolean;
     done: boolean;
+    isEditing?: boolean;
+    reviewId?: string;
     error: string;
   }>>({});
+
+  const getSavedCustomerReviews = (): Record<string, SavedReviewData> => {
+    try {
+      return JSON.parse(localStorage.getItem("sprylo_customer_reviews") || "{}");
+    } catch {
+      return {};
+    }
+  };
+
+  const saveCustomerReviewData = (key: string, data: SavedReviewData) => {
+    const reviews = getSavedCustomerReviews();
+    reviews[key] = data;
+    localStorage.setItem("sprylo_customer_reviews", JSON.stringify(reviews));
+  };
 
   // Lấy danh sách product đã được review từ localStorage
   const getReviewedProducts = (): string[] => {
@@ -134,12 +172,25 @@ const AccountPage = () => {
     _productName: string,
     orderId?: string
   ) => {
-    const state = reviewState[productId] || { rating: 5, comment: "", loading: false, done: false, error: "" };
-    if (!state.comment.trim() || state.comment.trim().replace(/\s+/g, "").length < 10) {
-      setReviewState(prev => ({ ...prev, [productId]: { ...state, error: "Vui lòng nhập ít nhất 10 ký tự cho bình luận." } }));
+    const key = orderId ? `${orderId}_${productId}` : productId;
+    const state = reviewState[key] || reviewState[productId] || { rating: 5, comment: "", loading: false, done: false, isEditing: false, reviewId: "", error: "" };
+
+    const commentTrimmed = state.comment.trim();
+    if (!commentTrimmed) {
+      const err = "Vui lòng nhập nội dung đánh giá của bạn.";
+      setReviewState(prev => ({ ...prev, [key]: { ...state, error: err }, [productId]: { ...state, error: err } }));
+      toast.error(err);
       return;
     }
-    setReviewState(prev => ({ ...prev, [productId]: { ...state, loading: true, error: "" } }));
+
+    if (commentTrimmed.replace(/\s+/g, "").length < 10) {
+      const err = "Đánh giá quá ngắn, vui lòng nhập ít nhất 10 ký tự.";
+      setReviewState(prev => ({ ...prev, [key]: { ...state, error: err }, [productId]: { ...state, error: err } }));
+      toast.error(err);
+      return;
+    }
+
+    setReviewState(prev => ({ ...prev, [key]: { ...state, loading: true, error: "" }, [productId]: { ...state, loading: true, error: "" } }));
 
     const info = localStorage.getItem("customer_info");
     let custId = "";
@@ -154,25 +205,68 @@ const AccountPage = () => {
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
     try {
+      const isUpdating = Boolean(state.reviewId);
       const res = await fetch(`${MEDUSA_BACKEND_URL}/store/reviews`, {
-        method: "POST",
+        method: isUpdating ? "PUT" : "POST",
         headers,
         body: JSON.stringify({
+          review_id: isUpdating ? state.reviewId : undefined,
           product_id: productId,
           order_id: orderId || selectedOrderId || undefined,
           rating: state.rating,
-          comment: state.comment.trim(),
+          comment: commentTrimmed,
         }),
       });
+
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
-        setReviewState(prev => ({ ...prev, [productId]: { ...state, loading: false, done: true, error: "" } }));
+        const reviewId = data.review?.id || state.reviewId || "";
+        const savedData: SavedReviewData = {
+          reviewId,
+          rating: state.rating,
+          comment: commentTrimmed,
+          updatedAt: new Date().toISOString(),
+        };
+
+        saveCustomerReviewData(key, savedData);
+        saveCustomerReviewData(productId, savedData);
         markProductReviewed(productId);
+
+        const updatedState = {
+          rating: state.rating,
+          comment: commentTrimmed,
+          loading: false,
+          done: true,
+          isEditing: false,
+          reviewId,
+          error: "",
+        };
+
+        setReviewState(prev => ({
+          ...prev,
+          [key]: updatedState,
+          [productId]: updatedState,
+        }));
+
+        toast.success(isUpdating ? "Đã cập nhật đánh giá thành công!" : "Cảm ơn bạn đã gửi đánh giá!");
+        window.dispatchEvent(new Event('review-updated'));
       } else {
-        setReviewState(prev => ({ ...prev, [productId]: { ...state, loading: false, error: data.message || "Gửi đánh giá thất bại." } }));
+        const errMessage = data.message || "Gửi đánh giá thất bại.";
+        setReviewState(prev => ({
+          ...prev,
+          [key]: { ...state, loading: false, error: errMessage },
+          [productId]: { ...state, loading: false, error: errMessage },
+        }));
+        toast.error(errMessage);
       }
     } catch {
-      setReviewState(prev => ({ ...prev, [productId]: { ...state, loading: false, error: "Lỗi kết nối máy chủ." } }));
+      const errMessage = "Lỗi kết nối máy chủ.";
+      setReviewState(prev => ({
+        ...prev,
+        [key]: { ...state, loading: false, error: errMessage },
+        [productId]: { ...state, loading: false, error: errMessage },
+      }));
+      toast.error(errMessage);
     }
   };
 
@@ -244,6 +338,11 @@ const AccountPage = () => {
     if (order.canceled || order.status === "canceled") return "Đã hủy";
 
     const customStatus = order.metadata?.custom_status;
+    
+    // Ưu tiên hiển thị trạng thái Trả hàng / Hoàn tiền
+    if (customStatus === "refunded") return "Đã trả hàng/Hoàn tiền";
+    if (order.metadata?.return_requested && customStatus !== "refunded") return "Đang duyệt trả hàng";
+
     if (customStatus) {
       if (customStatus === "pending") return "Chờ xác nhận";
       if (customStatus === "confirmed") return "Đã xác nhận";
@@ -252,7 +351,6 @@ const AccountPage = () => {
       if (customStatus === "delivered" || customStatus === "completed")
         return "Đã nhận";
       if (customStatus === "canceled") return "Đã hủy";
-      if (customStatus === "refunded") return "Đã hoàn tiền";
     }
 
     if (order.status === "completed") return "Đã nhận";
@@ -278,7 +376,7 @@ const AccountPage = () => {
       if (!token) return;
 
       const response = await authService.authFetch(
-        `${MEDUSA_BACKEND_URL}/store/orders?limit=50&fields=id,display_id,status,fulfillment_status,payment_status,metadata,created_at,items.title,items.thumbnail,items.variant_title,items.unit_price,items.quantity,shipping_address.*`,
+        `${MEDUSA_BACKEND_URL}/store/orders?limit=50&fields=*items,*shipping_address`,
       );
       if (response.ok) {
         const { orders } = await response.json();
@@ -327,7 +425,7 @@ const AccountPage = () => {
               canceled: o.status === "canceled",
               cancelReason: o.metadata?.cancel_reason || "",
             };
-          });
+          }).sort((a: any, b: any) => b.created_at - a.created_at);
 
           setRealOrders(remoteMapped);
           // Optional: Only update sprylo_orders if we want to cache it, but safer to just rely on state
@@ -770,10 +868,10 @@ const AccountPage = () => {
     };
   }, []);
 
-  // Fetch product data from Medusa/fallback mock data for wishlist items
-  const { data: productsData, isLoading: isWishlistLoading } = useProducts(
-    wishlistIds.length > 0 ? { id: wishlistIds, limit: 10 } : undefined,
-  );
+  // Fetch product data from Medusa for wishlist items (leveraging cached query)
+  const { data: productsData, isLoading: isWishlistLoading } = useProducts({
+    limit: 100,
+  });
 
   const wishlistProducts = useMemo(() => {
     if (wishlistIds.length === 0 || !productsData?.products) return [];
@@ -931,7 +1029,16 @@ const AccountPage = () => {
 
     if (order.status === "completed") return 4;
 
-    return 0;
+    switch (order.fulfillment_status) {
+      case "shipped":
+      case "partially_shipped":
+        return 3;
+      case "fulfilled":
+      case "partially_fulfilled":
+        return 2;
+      default:
+        return 0;
+    }
   };
 
   // Cancel is only allowed when order is pending (step 0)
@@ -1239,14 +1346,21 @@ const AccountPage = () => {
         shippingFee: selectedRealOrder.shippingFee || 35000,
         paymentStatus:
           selectedRealOrder.payment_status === "captured" ||
-          selectedRealOrder.payment_status === "paid"
+          selectedRealOrder.payment_status === "paid" ||
+          selectedRealOrder.metadata?.payment_status === "paid" ||
+          selectedRealOrder.metadata?.payment_status === "captured" ||
+          selectedRealOrder.paymentMethod === "wallet"
             ? "Đã thanh toán"
             : "Chưa thanh toán",
         shippingStatus: getOrderFulfillmentBadgeText(selectedRealOrder),
         shippingAddress: {
-          name: selectedRealOrder.customer?.fullName || "Khách Hàng",
-          phone: selectedRealOrder.customer?.phoneNumber || "0000000000",
-          address: selectedRealOrder.address || "Địa chỉ mặc định",
+          name: selectedRealOrder.shipping_address?.first_name 
+            ? `${selectedRealOrder.shipping_address.last_name || ''} ${selectedRealOrder.shipping_address.first_name}`.trim() 
+            : selectedRealOrder.customer?.fullName || "Khách Hàng",
+          phone: selectedRealOrder.shipping_address?.phone || selectedRealOrder.customer?.phoneNumber || "Chưa cập nhật số ĐT",
+          address: selectedRealOrder.shipping_address?.address_1 
+            ? `${selectedRealOrder.shipping_address.address_1}${selectedRealOrder.shipping_address.city ? `, ${selectedRealOrder.shipping_address.city}` : ''}${selectedRealOrder.shipping_address.province ? `, ${selectedRealOrder.shipping_address.province}` : ''}` 
+            : selectedRealOrder.address || "Chưa cập nhật địa chỉ",
         },
         paymentMethod:
           selectedRealOrder.paymentMethod === "cod"
@@ -1349,6 +1463,30 @@ const AccountPage = () => {
   };
 
   // Cancel a real order and restore inventory
+  const handleRetryPayment = async (orderId: string) => {
+    setRetryingPaymentId(orderId);
+    try {
+      const response = await fetch(`${MEDUSA_BACKEND_URL}/store/orders/${orderId}/payment-link`, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "x-publishable-api-key": (import.meta as any).env?.VITE_MEDUSA_PUBLISHABLE_KEY || "pk_test"
+        },
+      });
+      const data = await response.json();
+      if (response.ok && data.paymentUrl) {
+        window.location.href = data.paymentUrl;
+      } else {
+        alert(data.error || "Không thể tạo liên kết thanh toán. Vui lòng thử lại sau.");
+      }
+    } catch (error) {
+      console.error("Retry payment error:", error);
+      alert("Đã xảy ra lỗi khi tạo liên kết thanh toán.");
+    } finally {
+      setRetryingPaymentId(null);
+    }
+  };
+
   const handleCancelOrder = async (orderId: string, reason: string, refundDest?: string, refundInfo?: string) => {
     setCancelingOrderId(orderId);
     try {
@@ -1560,20 +1698,14 @@ const AccountPage = () => {
               <div style={{ padding: "0.5rem 0" }}>
                 <div
                   className={`account-nav-item ${activeTab === "profile" ? "active" : ""}`}
-                  onClick={() => {
-                    setActiveTab("profile");
-                    setSelectedOrderId(null);
-                  }}
+                  onClick={() => handleTabChange("profile")}
                 >
                   <User size={18} style={{ marginRight: "12px" }} /> Thông tin
                   cá nhân
                 </div>
                 <div
                   className={`account-nav-item ${activeTab === "orders" ? "active" : ""}`}
-                  onClick={() => {
-                    setActiveTab("orders");
-                    setSelectedOrderId(null);
-                  }}
+                  onClick={() => handleTabChange("orders")}
                 >
                   <Receipt size={18} style={{ marginRight: "12px" }} /> Đơn hàng
                   của tôi
@@ -1597,53 +1729,31 @@ const AccountPage = () => {
                 </div>
                 <div
                   className={`account-nav-item ${activeTab === "addresses" ? "active" : ""}`}
-                  onClick={() => {
-                    setActiveTab("addresses");
-                    setSelectedOrderId(null);
-                  }}
+                  onClick={() => handleTabChange("addresses")}
                 >
                   <MapPin size={18} style={{ marginRight: "12px" }} /> Địa chỉ
                   giao hàng
                 </div>
                 <div
                   className={`account-nav-item ${activeTab === "wishlist" ? "active" : ""}`}
-                  onClick={() => {
-                    setActiveTab("wishlist");
-                    setSelectedOrderId(null);
-                  }}
+                  onClick={() => handleTabChange("wishlist")}
                 >
                   <Heart size={18} style={{ marginRight: "12px" }} /> Sản phẩm
                   yêu thích
                 </div>
                 <div
                   className={`account-nav-item ${activeTab === "wallet" ? "active" : ""}`}
-                  onClick={() => {
-                    setActiveTab("wallet");
-                    setSelectedOrderId(null);
-                  }}
+                  onClick={() => handleTabChange("wallet")}
                 >
                   <Wallet size={18} style={{ marginRight: "12px" }} /> Ví điện
                   tử Sprylo
                 </div>
                 <div
                   className={`account-nav-item ${activeTab === "password" ? "active" : ""}`}
-                  onClick={() => {
-                    setActiveTab("password");
-                    setSelectedOrderId(null);
-                  }}
+                  onClick={() => handleTabChange("password")}
                 >
                   <Lock size={18} style={{ marginRight: "12px" }} /> Đổi mật
                   khẩu
-                </div>
-                <div
-                  className={`account-nav-item ${activeTab === "policies" ? "active" : ""}`}
-                  onClick={() => {
-                    setActiveTab("policies");
-                    setSelectedOrderId(null);
-                  }}
-                >
-                  <CheckCircle size={18} style={{ marginRight: "12px" }} /> Quản
-                  lý chính sách (Seller)
                 </div>
                 <div className="account-nav-divider"></div>
                 <Link
@@ -1877,7 +1987,10 @@ const AccountPage = () => {
                                 </td>
                                 <td>
                                   {order.payment_status === "captured" ||
-                                  order.payment_status === "paid" ? (
+                                  order.payment_status === "paid" ||
+                                  order.metadata?.payment_status === "paid" ||
+                                  order.metadata?.payment_status === "captured" ||
+                                  order.paymentMethod === "wallet" ? (
                                     <span className="status-badge badge-completed">
                                       <i className="bi bi-check-circle-fill"></i>{" "}
                                       Đã thanh toán
@@ -1950,6 +2063,20 @@ const AccountPage = () => {
                                             <i className="bi bi-check-circle-fill"></i>{" "}
                                             Đã nhận đơn
                                           </>
+                                        )}
+                                      </button>
+                                    )}
+                                    {order.payment_status !== "captured" && order.payment_status !== "paid" && (order.paymentMethod === "zalopay" || order.paymentMethod === "vnpay") && order.status !== "canceled" && (
+                                      <button
+                                        className="btn-order-action btn-order-cancel"
+                                        style={{ borderColor: "#2563eb", color: "#2563eb" }}
+                                        onClick={() => handleRetryPayment(order.orderId)}
+                                        disabled={retryingPaymentId === order.orderId}
+                                      >
+                                        {retryingPaymentId === order.orderId ? (
+                                          <><Loader2 className="animate-spin" size={13} /> Xử lý...</>
+                                        ) : (
+                                          <><i className="bi bi-wallet2"></i> Thanh toán lại</>
                                         )}
                                       </button>
                                     )}
@@ -2603,6 +2730,27 @@ const AccountPage = () => {
                                   )}
                                 </button>
                               )}
+                            {selectedRealOrder && selectedRealOrder.payment_status !== "captured" && selectedRealOrder.payment_status !== "paid" && (selectedRealOrder.paymentMethod === "zalopay" || selectedRealOrder.paymentMethod === "vnpay") && selectedRealOrder.status !== "canceled" && (
+                              <button
+                                className="btn-order-action btn-order-cancel"
+                                style={{
+                                  padding: "0.6rem 1.5rem",
+                                  borderRadius: "8px",
+                                  fontSize: "0.85rem",
+                                  borderColor: "#2563eb",
+                                  color: "#2563eb",
+                                  marginRight: "10px"
+                                }}
+                                onClick={() => handleRetryPayment(selectedRealOrder.orderId)}
+                                disabled={retryingPaymentId === selectedRealOrder.orderId}
+                              >
+                                {retryingPaymentId === selectedRealOrder.orderId ? (
+                                  <><Loader2 className="animate-spin" size={13} /> Xử lý...</>
+                                ) : (
+                                  <><i className="bi bi-wallet2"></i> Thanh toán lại</>
+                                )}
+                              </button>
+                            )}
                             {selectedRealOrder &&
                               canCancelOrder(selectedRealOrder) && (
                                 <button
@@ -2747,63 +2895,144 @@ const AccountPage = () => {
                                     </div>
                                     {items.map((it: any, index: number) => {
                                       const pid = it.product_id || `prod_${index}`;
-                                      const isAlreadyReviewed = reviewedList.includes(pid);
-                                      const rs = reviewState[pid] || { rating: 5, comment: "", loading: false, done: isAlreadyReviewed, error: "" };
+                                      const currentOrderId = selectedOrder?.id || selectedRealOrder?.id || selectedOrderId;
+                                      const key = currentOrderId ? `${currentOrderId}_${pid}` : pid;
+                                      const savedKeyData = getSavedCustomerReviews()[key];
+                                      const savedPidData = getSavedCustomerReviews()[pid];
+                                      const saved = savedKeyData || (currentOrderId ? undefined : savedPidData);
+
+                                      const rs = reviewState[key] || {
+                                        rating: saved?.rating || 5,
+                                        comment: saved?.comment || "",
+                                        loading: false,
+                                        done: Boolean(saved || reviewState[key]?.done),
+                                        isEditing: false,
+                                        reviewId: saved?.reviewId || "",
+                                        error: ""
+                                      };
+
+                                      const isEditing = rs.isEditing;
+
                                       return (
                                         <div key={pid || index} style={{
                                           background: "white",
-                                          borderRadius: "10px",
+                                          borderRadius: "12px",
                                           border: "1px solid #e9d5ff",
-                                          padding: "1rem",
-                                          marginBottom: "0.75rem",
+                                          padding: "1rem 1.25rem",
+                                          marginBottom: "0.85rem",
+                                          boxShadow: "0 2px 4px rgba(0,0,0,0.02)"
                                         }}>
                                           {/* Product info */}
-                                          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "0.75rem" }}>
+                                          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "0.85rem" }}>
                                             <img
                                               src={it.thumbnail || it.image || it.img || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=80&q=80"}
                                               alt={it.title || it.name}
                                               style={{ width: 48, height: 48, borderRadius: 8, objectFit: "cover", border: "1px solid #f3f4f6" }}
                                             />
-                                            <div>
-                                              <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "#1e1b4b" }}>{it.title || it.name}</div>
-                                              {it.variant?.title && <div style={{ fontSize: "0.78rem", color: "#6b7280" }}>{it.variant.title}</div>}
+                                            <div style={{ flex: 1 }}>
+                                              <div style={{ fontWeight: 700, fontSize: "0.92rem", color: "#1e1b4b" }}>{it.title || it.name}</div>
+                                              {it.variant?.title && <div style={{ fontSize: "0.78rem", color: "#6b7280" }}>Phân loại: {it.variant.title}</div>}
                                             </div>
                                           </div>
 
-                                          {rs.done || isAlreadyReviewed ? (
-                                            <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#059669", fontWeight: 600, fontSize: "0.88rem" }}>
-                                              <i className="bi bi-check-circle-fill" />{" "}Đã gửi đánh giá — cảm ơn bạn!
+                                          {rs.done && !isEditing ? (
+                                            /* SAVED REVIEW DISPLAY VIEW */
+                                            <div style={{
+                                              background: "#f8fafc",
+                                              borderRadius: "10px",
+                                              border: "1px solid #e2e8f0",
+                                              padding: "0.85rem 1rem"
+                                            }}>
+                                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+                                                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                                  <span style={{ color: "#059669", fontWeight: 700, fontSize: "0.85rem", display: "flex", alignItems: "center", gap: "4px" }}>
+                                                    <i className="bi bi-check-circle-fill" /> Đã gửi đánh giá
+                                                  </span>
+                                                  <span style={{ color: "#f59e0b", fontWeight: 700, fontSize: "0.95rem" }}>
+                                                    {"★".repeat(rs.rating)}{"☆".repeat(5 - rs.rating)} ({rs.rating}/5)
+                                                  </span>
+                                                </div>
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    const currentData = {
+                                                      rating: rs.rating || saved?.rating || 5,
+                                                      comment: rs.comment || saved?.comment || "",
+                                                      loading: false,
+                                                      done: true,
+                                                      isEditing: true,
+                                                      reviewId: rs.reviewId || saved?.reviewId || "",
+                                                      error: ""
+                                                    };
+                                                    setReviewState(prev => ({
+                                                      ...prev,
+                                                      [key]: currentData,
+                                                      [pid]: currentData
+                                                    }));
+                                                  }}
+                                                  style={{
+                                                    background: "#ffffff",
+                                                    border: "1px solid #cbd5e1",
+                                                    borderRadius: "6px",
+                                                    padding: "4px 10px",
+                                                    fontSize: "0.78rem",
+                                                    fontWeight: 600,
+                                                    color: "#475569",
+                                                    cursor: "pointer",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: "4px"
+                                                  }}
+                                                >
+                                                  <i className="bi bi-pencil-square" /> Chỉnh sửa
+                                                </button>
+                                              </div>
+
+                                              <div style={{ fontSize: "0.88rem", color: "#334155", fontStyle: "italic", lineHeight: "1.5" }}>
+                                                "{rs.comment || "Đánh giá xuất sắc!"}"
+                                              </div>
                                             </div>
                                           ) : (
+                                            /* FORM INPUT / EDIT MODE */
                                             <>
                                               {/* Star Rating */}
                                               <div style={{ display: "flex", gap: "4px", marginBottom: "0.6rem" }}>
-                                                {[1,2,3,4,5].map(star => (
+                                                {[1, 2, 3, 4, 5].map(star => (
                                                   <button
                                                     key={star}
-                                                    onClick={() => setReviewState(prev => ({ ...prev, [pid]: { ...rs, rating: star } }))}
+                                                    type="button"
+                                                    onClick={() => setReviewState(prev => ({
+                                                      ...prev,
+                                                      [key]: { ...rs, rating: star },
+                                                      [pid]: { ...rs, rating: star }
+                                                    }))}
                                                     style={{
                                                       background: "none", border: "none", cursor: "pointer",
-                                                      fontSize: "1.4rem", padding: "0 2px",
+                                                      fontSize: "1.5rem", padding: "0 2px",
                                                       color: star <= rs.rating ? "#f59e0b" : "#d1d5db",
                                                       transition: "color 0.15s",
                                                     }}
                                                   >★</button>
                                                 ))}
-                                                <span style={{ fontSize: "0.8rem", color: "#6b7280", alignSelf: "center", marginLeft: "4px" }}>
-                                                  {["Rất tệ","Tệ","Bình thường","Tốt","Xuất sắc"][rs.rating - 1]}
+                                                <span style={{ fontSize: "0.82rem", color: "#6b7280", alignSelf: "center", marginLeft: "6px", fontWeight: 600 }}>
+                                                  {["Rất tệ", "Tệ", "Bình thường", "Tốt", "Xuất sắc"][rs.rating - 1]}
                                                 </span>
                                               </div>
 
                                               {/* Comment textarea */}
                                               <textarea
                                                 rows={3}
-                                                placeholder="Chia sẻ cảm nhận của bạn về sản phẩm..."
+                                                placeholder="Chia sẻ cảm nhận chi tiết của bạn về sản phẩm..."
                                                 value={rs.comment}
-                                                onChange={e => setReviewState(prev => ({ ...prev, [pid]: { ...rs, comment: e.target.value } }))}
+                                                onChange={e => setReviewState(prev => ({
+                                                  ...prev,
+                                                  [key]: { ...rs, comment: e.target.value, error: "" },
+                                                  [pid]: { ...rs, comment: e.target.value, error: "" }
+                                                }))}
                                                 style={{
                                                   width: "100%", borderRadius: "8px",
-                                                  border: "1px solid #d1d5db", padding: "0.6rem 0.8rem",
+                                                  border: rs.error ? "1.5px solid #ef4444" : "1px solid #d1d5db",
+                                                  padding: "0.65rem 0.85rem",
                                                   fontSize: "0.88rem", resize: "vertical",
                                                   outline: "none", fontFamily: "inherit",
                                                   boxSizing: "border-box",
@@ -2811,30 +3040,58 @@ const AccountPage = () => {
                                               />
 
                                               {rs.error && (
-                                                <div style={{ color: "#dc2626", fontSize: "0.8rem", marginTop: "0.3rem" }}>
-                                                  <i className="bi bi-exclamation-circle" /> {rs.error}
+                                                <div style={{ color: "#dc2626", fontSize: "0.82rem", marginTop: "0.4rem", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
+                                                  <i className="bi bi-exclamation-circle-fill" /> {rs.error}
                                                 </div>
                                               )}
 
-                                              <button
-                                                onClick={() => handleSubmitReview(pid, it.title || it.name || "Sản phẩm", selectedOrder?.id || selectedRealOrder?.id)}
-                                                disabled={rs.loading}
-                                                style={{
-                                                  marginTop: "0.6rem",
-                                                  background: rs.loading ? "#a78bfa" : "#7c3aed",
-                                                  color: "white", border: "none",
-                                                  borderRadius: "8px", padding: "0.5rem 1.2rem",
-                                                  fontSize: "0.85rem", fontWeight: 600,
-                                                  cursor: rs.loading ? "not-allowed" : "pointer",
-                                                  display: "inline-flex", alignItems: "center", gap: "6px",
-                                                }}
-                                              >
-                                                {rs.loading ? (
-                                                  <><i className="bi bi-hourglass-split" /> Đang gửi...</>
-                                                ) : (
-                                                  <><i className="bi bi-send" /> Gửi đánh giá</>
+                                              <div style={{ display: "flex", gap: "8px", marginTop: "0.75rem", justifyContent: "flex-end" }}>
+                                                {isEditing && (
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => setReviewState(prev => ({
+                                                      ...prev,
+                                                      [key]: { ...rs, isEditing: false, error: "" },
+                                                      [pid]: { ...rs, isEditing: false, error: "" }
+                                                    }))}
+                                                    style={{
+                                                      background: "#f1f5f9",
+                                                      border: "1px solid #cbd5e1",
+                                                      borderRadius: "8px",
+                                                      padding: "0.5rem 1rem",
+                                                      fontSize: "0.82rem",
+                                                      fontWeight: 600,
+                                                      color: "#64748b",
+                                                      cursor: "pointer"
+                                                    }}
+                                                  >
+                                                    Hủy
+                                                  </button>
                                                 )}
-                                              </button>
+
+                                                <button
+                                                  type="button"
+                                                  onClick={() => handleSubmitReview(pid, it.title || it.name || "Sản phẩm", currentOrderId)}
+                                                  disabled={rs.loading}
+                                                  style={{
+                                                    background: rs.loading ? "#a78bfa" : "linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)",
+                                                    color: "white", border: "none",
+                                                    borderRadius: "8px", padding: "0.5rem 1.25rem",
+                                                    fontSize: "0.85rem", fontWeight: 700,
+                                                    cursor: rs.loading ? "wait" : "pointer",
+                                                    display: "inline-flex", alignItems: "center", gap: "6px",
+                                                    boxShadow: "0 2px 4px rgba(124, 58, 237, 0.25)"
+                                                  }}
+                                                >
+                                                  {rs.loading ? (
+                                                    <><i className="bi bi-hourglass-split" /> Đang xử lý...</>
+                                                  ) : isEditing ? (
+                                                    <><i className="bi bi-check2-circle" /> Lưu cập nhật</>
+                                                  ) : (
+                                                    <><i className="bi bi-send" /> Gửi đánh giá</>
+                                                  )}
+                                                </button>
+                                              </div>
                                             </>
                                           )}
                                         </div>

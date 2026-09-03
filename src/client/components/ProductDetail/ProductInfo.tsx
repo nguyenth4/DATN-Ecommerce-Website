@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Plus, Minus } from 'lucide-react';
 import { addToCart } from '../../utils/cart';
 import { getWishlist, toggleWishlistProduct } from '../../utils/wishlist';
 import toast from 'react-hot-toast';
@@ -27,7 +28,7 @@ interface ProductInfoProps {
   reviewsCount: number;
   onColorChange: (colorName: string, colorImg: string) => void;
   onStorageChange: (storage: string) => void;
-  onQtyChange: (action: 'inc' | 'dec') => void;
+  onQtyChange: (action: 'inc' | 'dec' | number) => void;
 }
 
 const ProductInfo: React.FC<ProductInfoProps> = ({
@@ -142,18 +143,27 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
       <p className="text-muted" style={{ fontSize: '0.9rem', marginBottom: '1rem' }}>{product.subtitle}</p>
 
       <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', marginBottom: '1.2rem', gap: '0.8rem' }}>
-        <div className="stars" style={{ color: '#ffc107', fontWeight: 'bold' }}>
-          {reviewsCount > 0 ? (
-            "★".repeat(Math.round(product.rating)) + "☆".repeat(5 - Math.round(product.rating))
-          ) : (
-            <span style={{ fontSize: '0.9rem', color: 'var(--gray)' }}>Chưa có đánh giá</span>
+        <div 
+          onClick={() => {
+            const el = document.getElementById('reviews-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', cursor: 'pointer' }}
+          title="Bấm để xem tất cả đánh giá sản phẩm"
+        >
+          <div className="stars" style={{ color: '#ffc107', fontWeight: 'bold' }}>
+            {reviewsCount > 0 ? (
+              "★".repeat(Math.round(product.rating)) + "☆".repeat(5 - Math.round(product.rating))
+            ) : (
+              <span style={{ fontSize: '0.9rem', color: 'var(--gray)' }}>Chưa có đánh giá</span>
+            )}
+          </div>
+          {reviewsCount > 0 && (
+            <span className="text-xs text-muted" style={{ display: 'flex', alignItems: 'center', color: 'var(--indigo, #4f46e5)', textDecoration: 'underline' }}>
+              {product.rating} ({reviewsCount} đánh giá)
+            </span>
           )}
         </div>
-        {reviewsCount > 0 && (
-          <span className="text-xs text-muted" style={{ display: 'flex', alignItems: 'center' }}>
-            {product.rating} ({reviewsCount} đánh giá)
-          </span>
-        )}
         <span style={{ width: '1px', height: '14px', background: 'var(--border)', display: 'inline-block' }}></span>
         {activeVariant.stock > 0 ? (
           <span className="text-xs text-success" style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -361,27 +371,53 @@ const ProductInfo: React.FC<ProductInfoProps> = ({
         <div className="variant-label" style={{ marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: 600 }}>Số lượng</div>
         <div className="qty-control" style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
           <button 
+            type="button"
             className="qty-btn" 
-            style={{ width: '36px', height: '36px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.1rem', opacity: qty <= 1 ? 0.5 : 1 }}
+            style={{ width: '36px', height: '36px', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: qty <= 1 ? 0.5 : 1 }}
             onClick={() => onQtyChange('dec')}
             disabled={qty <= 1}
+            aria-label="Giảm số lượng"
           >
-            <i className="bi bi-dash"></i>
+            <Minus size={16} />
           </button>
           <input 
             type="text" 
+            inputMode="numeric"
+            pattern="[0-9]*"
             className="qty-value" 
             value={qty} 
-            readOnly 
-            style={{ width: '40px', height: '36px', textAlign: 'center', border: 'none', borderLeft: '1px solid var(--border)', borderRight: '1px solid var(--border)', fontWeight: 600 }} 
+            onChange={(e) => {
+              const cleaned = e.target.value.replace(/\D/g, '');
+              const val = parseInt(cleaned, 10);
+              if (!isNaN(val) && val > 0) {
+                onQtyChange(val);
+              }
+            }}
+            onBlur={() => {
+              if (!qty || qty < 1) {
+                onQtyChange(1);
+              }
+            }}
+            style={{ 
+              width: '50px', 
+              height: '36px', 
+              textAlign: 'center', 
+              border: 'none', 
+              borderLeft: '1px solid var(--border)', 
+              borderRight: '1px solid var(--border)', 
+              fontWeight: 600, 
+              outline: 'none' 
+            }} 
           />
           <button 
+            type="button"
             className="qty-btn" 
-            style={{ width: '36px', height: '36px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.1rem', opacity: qty >= activeVariant.stock ? 0.5 : 1 }}
+            style={{ width: '36px', height: '36px', border: 'none', background: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: qty >= activeVariant.stock ? 0.5 : 1 }}
             onClick={() => onQtyChange('inc')}
             disabled={qty >= activeVariant.stock}
+            aria-label="Tăng số lượng"
           >
-            <i className="bi bi-plus"></i>
+            <Plus size={16} />
           </button>
         </div>
       </div>

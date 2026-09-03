@@ -2,8 +2,9 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { Resend } from "resend";
 import fs from "fs";
 import path from "path";
+import os from "os";
 
-const TICKETS_FILE = path.join(process.cwd(), "support_tickets.json");
+const TICKETS_FILE = path.join(os.tmpdir(), "sprylo_support_tickets.json");
 
 const getSavedTickets = () => {
   try {
@@ -83,45 +84,62 @@ export async function POST(
         const adminEmail = "sprylo123@gmail.com";
 
         // 1. Send notification to Admin (sprylo123@gmail.com)
-        await resend.emails.send({
-          from: fromEmail,
-          to: adminEmail,
-          subject: `📩 [Sprylo Contact #${ticketCode}] ${topic} - ${fullName}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b;">
-              <h2 style="color: #4f46e5;">📩 Yêu cầu hỗ trợ mới từ khách hàng</h2>
-              <p><strong>Mã phiếu:</strong> #${ticketCode}</p>
-              <p><strong>Họ và tên:</strong> ${fullName}</p>
-              <p><strong>Email:</strong> ${email}</p>
-              <p><strong>Số điện thoại:</strong> ${phone || "Chưa cung cấp"}</p>
-              <p><strong>Chủ đề:</strong> ${topic}</p>
-              <p><strong>Mã đơn hàng:</strong> ${orderId || "Không có"}</p>
-              <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 16px 0;" />
-              <p><strong>Nội dung tin nhắn:</strong></p>
-              <blockquote style="background: #f8fafc; padding: 12px 16px; border-left: 4px solid #4f46e5; margin: 0;">
-                ${message.replace(/\n/g, '<br/>')}
-              </blockquote>
-            </div>
-          `
-        });
+        try {
+          const adminRes = await resend.emails.send({
+            from: fromEmail,
+            to: adminEmail,
+            subject: `📩 [Sprylo Contact #${ticketCode}] ${topic} - ${fullName}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b;">
+                <h2 style="color: #4f46e5;">📩 Yêu cầu hỗ trợ mới từ khách hàng</h2>
+                <p><strong>Mã phiếu:</strong> #${ticketCode}</p>
+                <p><strong>Họ và tên:</strong> ${fullName}</p>
+                <p><strong>Email:</strong> ${email}</p>
+                <p><strong>Số điện thoại:</strong> ${phone || "Chưa cung cấp"}</p>
+                <p><strong>Chủ đề:</strong> ${topic}</p>
+                <p><strong>Mã đơn hàng:</strong> ${orderId || "Không có"}</p>
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 16px 0;" />
+                <p><strong>Nội dung tin nhắn:</strong></p>
+                <blockquote style="background: #f8fafc; padding: 12px 16px; border-left: 4px solid #4f46e5; margin: 0;">
+                  ${message.replace(/\n/g, '<br/>')}
+                </blockquote>
+              </div>
+            `
+          });
+          if (adminRes.error) {
+            console.error(`[Contact API] Resend returned ERROR for admin email (${adminEmail}):`, adminRes.error);
+          } else {
+            console.log(`[Contact API] Notification email sent to admin (${adminEmail}) for ticket [${ticketCode}], ID:`, adminRes.data?.id);
+          }
+        } catch (adminErr: any) {
+          console.error("[Contact API] Exception sending admin notification email:", adminErr.message || adminErr);
+        }
 
         // 2. Send confirmation to Customer
-        await resend.emails.send({
-          from: fromEmail,
-          to: email,
-          subject: `✅ [Sprylo] Xác nhận đã nhận yêu cầu hỗ trợ #${ticketCode}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b;">
-              <h2 style="color: #4f46e5;">Cảm ơn bạn đã liên hệ với Sprylo!</h2>
-              <p>Xin chào <strong>${fullName}</strong>,</p>
-              <p>Chúng tôi đã nhận được yêu cầu hỗ trợ của bạn với mã phiếu <strong style="color: #4f46e5;">#${ticketCode}</strong>.</p>
-              <p>Đội ngũ tư vấn Sprylo sẽ xử lý và phản hồi bạn qua email này trong vòng 2 - 4 giờ làm việc.</p>
-              <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 16px 0;" />
-              <p style="font-size: 13px; color: #64748b;">Nội dung bạn đã gửi: "${message}"</p>
-            </div>
-          `
-        });
-        console.log(`[Contact API] Emails sent successfully for ticket [${ticketCode}]`);
+        try {
+          const customerRes = await resend.emails.send({
+            from: fromEmail,
+            to: email,
+            subject: `✅ [Sprylo] Xác nhận đã nhận yêu cầu hỗ trợ #${ticketCode}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b;">
+                <h2 style="color: #4f46e5;">Cảm ơn bạn đã liên hệ với Sprylo!</h2>
+                <p>Xin chào <strong>${fullName}</strong>,</p>
+                <p>Chúng tôi đã nhận được yêu cầu hỗ trợ của bạn với mã phiếu <strong style="color: #4f46e5;">#${ticketCode}</strong>.</p>
+                <p>Đội ngũ tư vấn Sprylo sẽ xử lý và phản hồi bạn qua email này trong vòng 2 - 4 giờ làm việc.</p>
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 16px 0;" />
+                <p style="font-size: 13px; color: #64748b;">Nội dung bạn đã gửi: "${message}"</p>
+              </div>
+            `
+          });
+          if (customerRes.error) {
+            console.warn(`[Contact API] Resend returned warning/error for customer email (${email}):`, customerRes.error);
+          } else {
+            console.log(`[Contact API] Confirmation email sent to customer (${email}) for ticket [${ticketCode}], ID:`, customerRes.data?.id);
+          }
+        } catch (customerErr: any) {
+          console.warn("[Contact API] Exception customer email:", customerErr.message || customerErr);
+        }
       } catch (emailErr) {
         console.error("[Contact API] Error sending email via Resend:", emailErr);
       }

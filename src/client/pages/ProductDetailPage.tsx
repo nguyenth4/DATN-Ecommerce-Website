@@ -23,7 +23,7 @@ const ProductDetailPage = () => {
   // Fetch related products dynamically by category (placed here to follow React Rules of Hooks)
   const categoryId = fetchedProduct?.categories?.[0]?.id;
   const { data: relatedData } = useProducts(categoryId ? { category_id: [categoryId] } : undefined);
-  const { data: allProductsData } = useProducts();
+  const { data: allProductsData } = useProducts({ limit: 100 });
 
   // Local States
   const [selectedColor, setSelectedColor] = useState("");
@@ -577,7 +577,7 @@ const ProductDetailPage = () => {
                       : ((activeVariant.stock !== undefined && activeVariant.stock !== null)
                           ? activeVariant.stock
                           : 0);
-                  setQty(q => action === 'inc' ? Math.min(computedStock, q + 1) : Math.max(1, q - 1));
+                  setQty(q => typeof action === 'number' ? Math.min(computedStock, Math.max(1, action)) : (action === 'inc' ? Math.min(computedStock, q + 1) : Math.max(1, q - 1)));
                 }}
               />
             </div>
@@ -654,7 +654,7 @@ const ProductDetailPage = () => {
           </section>
 
           {/* REVIEWS SECTION */}
-          <section className="section" style={{ borderTop: '1px solid var(--border)', paddingTop: '3rem', marginBottom: '2rem' }}>
+          <section id="reviews-section" className="section" style={{ borderTop: '1px solid var(--border)', paddingTop: '3rem', marginBottom: '2rem' }}>
             <h2 style={{ fontSize: '1.5rem', marginBottom: '2rem', fontWeight: 800 }}>Đánh giá của khách hàng</h2>
             <ProductReviewsTab
               productId={productData.id}
